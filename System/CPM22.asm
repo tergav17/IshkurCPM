@@ -11,7 +11,7 @@
 ;   Set memory limit here. This is the amount of contigeous
 ; ram starting from 0000. CP/M will reside at the end of this space.
 ;
-MEM	EQU	62		;for a 62k system (TS802 TEST - WORKS OK).
+MEM	EQU	60		;for a 60k system.
 ;
 IOBYTE	EQU	3		;i/o definition byte.
 TDRIVE	EQU	4		;current drive name and user number.
