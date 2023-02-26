@@ -5,14 +5,14 @@ REM Assemble the CP/M system into a binary image
 REM Then move to outputs folder
 ..\Build\zasm cpm22.asm -u -w -b cpm22.bin
 ..\Build\zasm boot.asm -u -w -b boot.bin
-move cpm22.bin ..\Output >NUL
+move cpm22.bin bin >NUL
 move cpm22.lst ..\Output\Listings >NUL
-move boot.bin ..\Output >NUL
+move boot.bin bin >NUL
 move boot.lst ..\Output\Listings >NUL
 
 REM Assemble the disk image
 cd ..\Build\cpmtools
-.\mkfs.cpm -f osborne1 -b ..\..\Output\boot.bin ishkur.img
+.\mkfs.cpm -f osborne1 -b ..\..\System\bin\boot.bin -b ..\..\System\bin\font.bin -b ..\..\System\bin\cpm22.bin ishkur.img
 move ishkur.img ..\..\Output >NUL
 
 REM This loop is needed because winblows sucks

@@ -44,7 +44,6 @@ del	equ	7fh		;rubout
 ;
 cbase:	jp	command		;execute command processor (ccp).
 	jp	clearbuf	;entry to empty input buffer before starting ccp.
-	jp	boot
 
 ;
 ;   standard cp/m ccp input buffer. format is (max length),
@@ -460,7 +459,7 @@ convert:ld	hl,fcb
 	ld	a,(de)		;get first character.
 	or	a
 	jp	z,convrt1
-	sbc	a,'a'-1		;might be a drive name, convert to binary.
+	sbc	a,'A'-1		;might be a drive name, convert to binary.
 	ld	b,a		;and save.
 	inc	de		;check next character for a ':'.
 	ld	a,(de)
@@ -632,7 +631,7 @@ command:ld	sp,ccpstack	;setup stack area.
 cmmnd1:	ld	sp,ccpstack	;set stack straight.
 	call	crlf		;start a new line on the screen.
 	call	getdsk		;get current drive.
-	add	a,'a'
+	add	a,'A'
 	call	print		;print current drive.
 	ld	a,'>'
 	call	print		;and add prompt.
@@ -829,7 +828,7 @@ direct3:jp	z,direct9	;terminate if no more names.
 	push	bc
 	call	getdsk		;start line with ('a:').
 	pop	bc
-	add	a,'a'
+	add	a,'A'
 	call	printb
 	ld	a,':'
 	call	printb
@@ -1213,7 +1212,7 @@ ccpstack equ	$	;end of ccp stack area.
 ;   batch (or submit) processing information storage.
 ;
 batch:	defb	0		;batch mode flag (0=not active).
-batchfcb: defb	0,'$$$     sub',0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+batchfcb: defb	0,'$$$     SUB',0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 ;
 ;   file control block setup by the ccp.
 ;
@@ -1225,7 +1224,7 @@ nbytes:	defw	0		;byte counter used by type.
 ;
 ;   room for expansion?
 ;
-	defb	0,0,0,0,0,0,0,0,0,0
+	defb	0,0,0,0,0,0,0,0,0,0,0,0,0
 ;
 ;   note that the following six bytes must match those at
 ; (pattrn1) or cp/m will halt. why?
@@ -1239,6 +1238,7 @@ pattrn2:defb	0,22,0,0,0,0	;(* serial number bytes *).
 ;**************************************************************
 ;
 fbase:	jp	fbase1
+	jp	boot
 ;
 ;   bdos error table.
 ;
@@ -1311,19 +1311,19 @@ error4:	ld	hl,filero	;file is read only.
 error5:	call	prterr
 	jp	0		;always reboot on these errors.
 ;
-bdoserr:defb	'bdos err on '
+bdoserr:defb	'Bdos Err on '
 bdosdrv:defb	' : $'
-badsec:	defb	'bad sector$'
-badsel:	defb	'select$'
-filero:	defb	'file '
-diskro:	defb	'r/o$'
+badsec:	defb	'Bad Sector$'
+badsel:	defb	'Select$'
+filero:	defb	'File '
+diskro:	defb	'R/O$'
 ;
 ;   print bdos error message.
 ;
 prterr:	push	hl		;save second message pointer.
 	call	outcrlf		;send (cr)(lf).
 	ld	a,(active)	;get active drive.
-	add	a,'a'		;make ascii.
+	add	a,'A'		;make ascii.
 	ld	(bdosdrv),a	;and put in message.
 	ld	bc,bdoserr	;and print it.
 	call	prtmesg
@@ -3708,7 +3708,7 @@ cksumtbl: defb	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 ;
 ;   extra space ?
 ;
-	defb	0,0,0,0
+	defb	0
 	
 #include "bios.asm"
 ;
