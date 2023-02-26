@@ -7,7 +7,7 @@
 ;
 
 nsec	equ	4		; # of BDOS+BIOS sectors
-mem	equ	58		; CP/M image starts at mem*1024
+mem	equ	56		; CP/M image starts at mem*1024
 				; Should be same as cpm22.asm
 
 	; NABU bootstrap loads in at 0xC000
@@ -65,8 +65,6 @@ drsel:	ld	a,2
 	; Force FDC interrupt
 	ld	a,0xD0
 	out	(c),a
-	ld	b,0x10
-	call	stall
 	
 	; Restore to track 0
 	; We should already be there, but just in case :)
@@ -95,8 +93,6 @@ reads:	ld	a,(cursec)
 	; Issue read command
 	ld	a,0x88
 	out	(c),a
-	ld	b,0x10
-	call	stall
 	
 	; Wait for data to show up
 dwait:	in	a,(c)

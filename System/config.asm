@@ -16,7 +16,7 @@
 ;
 ;   Set memory base here. 
 ;
-mem	equ	58		; CP/M image starts at mem*1024
+mem	equ	56		; CP/M image starts at mem*1024
 
 
 ;
@@ -59,7 +59,7 @@ auxsio:	defw	0	; nulldev
 ;**************************************************************
 ;
 
-; A device of "0" will be read as a non-existant devic 
+; A device of "0" will be read as a non-existant device
 bdevsw:	defw	0,	0	; 'A'
 	defw	0,	0	; 'B'
 	defw	0,	0	; 'C'
@@ -76,6 +76,16 @@ bdevsw:	defw	0,	0	; 'A'
 	defw	0,	0	; 'N'
 	defw	0,	0	; 'O'
 	defw	0,	0	; 'P'
+	
+; One of the block devices needs to have the responsibiliy
+; of loading the CCP into memory. Define the jump vector here
+resccp:	ret
+
+; Additionally, if Ishkur is using a graphical device, that
+; device may temporarily need to access the Graphical Resource
+; Block (GRB) to load in fonts and such. This is up to 2k in
+; size, and goes in the location that the CCP resides
+resgrb:	ret
 
 ;
 ;**************************************************************
@@ -85,3 +95,4 @@ bdevsw:	defw	0,	0	; 'A'
 ;**************************************************************
 ;
 #include "tms9918.asm"
+#include "nabu1797.asm"
