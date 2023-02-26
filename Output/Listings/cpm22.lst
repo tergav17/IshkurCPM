@@ -1,6 +1,6 @@
               	; --------------------------------------
               	; zasm: assemble "cpm22.asm"
-              	; date: 2023-02-26 02:03:41
+              	; date: 2023-02-26 12:46:36
               	; --------------------------------------
 
 
@@ -15,11 +15,8 @@
               	;*      Modified to build as single image from source
               	;*
               	;**************************************************************
-              	;
-              	;   Set memory base here. 
-              	;
-003A:         	mem	equ	58		;CP/M image starts at mem*1024
-              	;
+              	
+              	
 0003:         	iobyte	equ	3		;i/o definition byte.
 0004:         	tdrive	equ	4		;current drive name and user number.
 0005:         	entry	equ	5		;entry point for the cp/m bdos.
@@ -1334,9 +1331,9 @@ F049: E9      		jp	(hl)		;execute desired function.
               	;
 0029:         	nfuncts equ	41		;number of functions in followin table.
               	;
-F04A: 04FECBF2	functns:defw	wboot,getcon,outcon,getrdr,punch,list,dircio,getiob
+F04A: 03FECBF2	functns:defw	wboot,getcon,outcon,getrdr,punch,list,dircio,getiob
 F04E: 93F1D1F2	
-F052: 13FE10FE	
+F052: 07FE06FE	
 F056: D7F2F0F2	
 F05A: F6F2FBF2		defw	setiob,prtstr,rdbuff,getcsts,getver,rstdsk,setdsk,openfil
 F05E: E4F101F3	
@@ -1408,7 +1405,7 @@ F101: 7E      		ld	a,(hl)		;anything present already?
 F102: 3600    		ld	(hl),0		;...either case clear it.
 F104: B7      		or	a
 F105: C0      		ret	nz		;yes, use it.
-F106: C30AFE  		jp	conin		;nope, go get a character responce.
+F106: C304FE  		jp	conin		;nope, go get a character responce.
               	;
               	;   input and echo a character.
               	;
@@ -1444,13 +1441,13 @@ F125: C9      		ret
 F126: 3A11F3  	ckconsol: ld	a,(charbuf)	;check buffer.
 F129: B7      		or	a		;if anything, just return without checking.
 F12A: C248F1  		jp	nz,ckcon2
-F12D: CD07FE  		call	const		;nothing in buffer. check console.
+F12D: CD03FE  		call	const		;nothing in buffer. check console.
 F130: E601    		and	01h		;look at bit 0.
 F132: C8      		ret	z		;return if nothing.
-F133: CD0AFE  		call	conin		;ok, get it.
+F133: CD04FE  		call	conin		;ok, get it.
 F136: FE13    		cp	cntrls		;if not control-s, return with zero cleared.
 F138: C245F1  		jp	nz,ckcon1
-F13B: CD0AFE  		call	conin		;halt processing until another char
+F13B: CD04FE  		call	conin		;halt processing until another char
 F13E: FE03    		cp	cntrlc		;is typed. control-c?
 F140: CA0000  		jp	z,0		;yes, reboot now.
 F143: AF      		xor	a		;no, just pretend nothing was ever ready.
@@ -1470,12 +1467,12 @@ F152: C5      		push	bc
 F153: CD26F1  		call	ckconsol	;check console (we don't care whats there).
 F156: C1      		pop	bc
 F157: C5      		push	bc
-F158: CD0DFE  		call	conout		;output (c) to the screen.
+F158: CD05FE  		call	conout		;output (c) to the screen.
 F15B: C1      		pop	bc
 F15C: C5      		push	bc
 F15D: 3A10F3  		ld	a,(prtflag)	;check printer flip-flop flag.
 F160: B7      		or	a
-F161: C410FE  		call	nz,list		;print it also if non-zero.
+F161: C406FE  		call	nz,list		;print it also if non-zero.
 F164: C1      		pop	bc
 F165: 79      	outchr1:ld	a,c		;update cursors position.
 F166: 210FF3  		ld	hl,curpos
@@ -1530,9 +1527,9 @@ F1A6: C9      		ret
               	;
 F1A7: CDAFF1  	backup:	call	backup1		;backup the screen 1 place.
 F1AA: 0E20    		ld	c,' '		;then blank that character.
-F1AC: CD0DFE  		call	conout
+F1AC: CD05FE  		call	conout
 F1AF: 0E08    	backup1:ld	c,bs		;then back space once more.
-F1B1: C30DFE  		jp	conout
+F1B1: C305FE  		jp	conout
               	;
               	;   signal a deleted line. print a '#' at the end and start
               	; over.
@@ -1700,7 +1697,7 @@ F2CE: C304F3  		jp	setstat		;save status and return.
               	;
               	;   function to get a character from the tape reader device.
               	;
-F2D1: CD16FE  	getrdr:	call	reader		;get a character from reader, set status and return.
+F2D1: CD08FE  	getrdr:	call	reader		;get a character from reader, set status and return.
 F2D4: C304F3  		jp	setstat
               	;
               	;  function to perform direct console i/o. if (c) contains (ff)
@@ -1711,12 +1708,12 @@ F2D7: 79      	dircio:	ld	a,c		;test for (ff).
 F2D8: 3C      		inc	a
 F2D9: CAE3F2  		jp	z,dirc1
 F2DC: 3C      		inc	a		;test for (fe).
-F2DD: CA07FE  		jp	z,const
-F2E0: C30DFE  		jp	conout		;just output (c).
-F2E3: CD07FE  	dirc1:	call	const		;this is an input request.
+F2DD: CA03FE  		jp	z,const
+F2E0: C305FE  		jp	conout		;just output (c).
+F2E3: CD03FE  	dirc1:	call	const		;this is an input request.
 F2E6: B7      		or	a
 F2E7: CA94FD  		jp	z,goback1	;not ready? just return (directly).
-F2EA: CD0AFE  		call	conin		;yes, get character.
+F2EA: CD04FE  		call	conin		;yes, get character.
 F2ED: C304F3  		jp	setstat		;set status and return.
               	;
               	;   function to return the i/o byte.
@@ -1801,7 +1798,7 @@ F359: C353F3  		jp	de2hl1		;and repeat.
               	;
 F35C: 3A45F3  	select:	ld	a,(active)	;get active disk.
 F35F: 4F      		ld	c,a
-F360: CD1CFE  		call	seldsk		;select it.
+F360: CD0AFE  		call	seldsk		;select it.
 F363: 7C      		ld	a,h		;valid drive?
 F364: B5      		or	l		;valid drive?
 F365: C8      		ret	z		;return if not.
@@ -1845,7 +1842,7 @@ F3A3: C9      		ret
               	;
               	;   routine to home the disk track head and clear pointers.
               	;
-F3A4: CD19FE  	homedrv:call	home		;home the head.
+F3A4: CD09FE  	homedrv:call	home		;home the head.
 F3A7: AF      		xor	a
 F3A8: 2AB8FD  		ld	hl,(scratch2)	;set our track pointer also.
 F3AB: 77      		ld	(hl),a
@@ -1859,12 +1856,12 @@ F3B4: C9      		ret
               	;
               	;   do the actual disk read and check the error return status.
               	;
-F3B5: CD28FE  	doread:	call	read
+F3B5: CD0EFE  	doread:	call	read
 F3B8: C3BEF3  		jp	ioret
               	;
               	;   do the actual disk write and handle any bios error.
               	;
-F3BB: CD2BFE  	dowrite:call	write
+F3BB: CD0FFE  	dowrite:call	write
 F3BE: B7      	ioret:	or	a
 F3BF: C8      		ret	z		;return unless an error occured.
 F3C0: 210CF0  		ld	hl,badsctr	;bad read/write on this sector.
@@ -1937,7 +1934,7 @@ F417: 2AD1FD  		ld	hl,(offset)	;adjust for first track offset.
 F41A: 19      		add	hl,de
 F41B: 44      		ld	b,h
 F41C: 4D      		ld	c,l
-F41D: CD1FFE  		call	settrk		;select this track.
+F41D: CD0BFE  		call	settrk		;select this track.
 F420: D1      		pop	de		;reset current track pointer.
 F421: 2AB8FD  		ld	hl,(scratch2)
 F424: 73      		ld	(hl),e
@@ -1957,10 +1954,10 @@ F433: 9A      		sbc	a,d
 F434: 47      		ld	b,a
 F435: 2AD3FD  		ld	hl,(xlate)	;translate this sector according to this table.
 F438: EB      		ex	de,hl
-F439: CD31FE  		call	sectrn		;let the bios translate it.
+F439: CD11FE  		call	sectrn		;let the bios translate it.
 F43C: 4D      		ld	c,l
 F43D: 44      		ld	b,h
-F43E: C322FE  		jp	setsec		;and select it.
+F43E: C30CFE  		jp	setsec		;and select it.
               	;
               	;   compute block number from record number (savnrec) and
               	; extent number (savext).
@@ -2323,7 +2320,7 @@ F5E3: 21BCFD  	dirdma:	ld	hl,dirbuf
 F5E6: 4E      	dirdma1:ld	c,(hl)
 F5E7: 23      		inc	hl
 F5E8: 46      		ld	b,(hl)		;setup (bc) and go to the bios to set it.
-F5E9: C325FE  		jp	setdma
+F5E9: C30DFE  		jp	setdma
               	;
               	;   move the directory buffer into user's dma space.
               	;
@@ -3791,25 +3788,151 @@ FDFF: 00      		defb	0
               	;*
               	;**************************************************************
               	;
-FE00: 76      	boot:	halt
-FE01: C300FE  		jp	boot
               	
-FE04: C30000  	wboot:	jp	0
-FE07: C30000  	const:	jp	0
-FE0A: C30000  	conin:	jp	0
-FE0D: C30000  	conout:	jp	0
-FE10: C30000  	list:	jp	0
-FE13: C30000  	punch:	jp	0
-FE16: C30000  	reader:	jp	0
-FE19: C30000  	home:	jp	0
-FE1C: C30000  	seldsk:	jp	0
-FE1F: C30000  	settrk:	jp	0
-FE22: C30000  	setsec:	jp	0
-FE25: C30000  	setdma:	jp	0
-FE28: C30000  	read:	jp	0
-FE2B: C30000  	write:	jp	0
-FE2E: C30000  	prstat:	jp	0
-FE31: C30000  	sectrn:	jp	0
+              	; Cold boot routine
+              	; Not much special happens here, so it jumps directly to wboot
+FE00: C300FE  	boot:	jp	boot
+              	
+              	; Warm boot routine
+              	; Sends wboot signal to device bus, loads CCP, and inits CP/M
+FE03:         	wboot:	
+              	
+              	
+              	
+FE03: C9      	const:	ret
+FE04: C9      	conin:	ret
+FE05: C9      	conout:	ret
+FE06: C9      	list:	ret
+FE07: C9      	punch:	ret
+FE08: C9      	reader:	ret
+FE09: C9      	home:	ret
+FE0A: C9      	seldsk:	ret
+FE0B: C9      	settrk:	ret
+FE0C: C9      	setsec:	ret
+FE0D: C9      	setdma:	ret
+FE0E: C9      	read:	ret
+FE0F: C9      	write:	ret
+FE10: C9      	prstat:	ret
+FE11: C9      	sectrn:	ret
+              	#include "config.asm"
+              	;
+              	;**************************************************************
+              	;*
+              	;*          I S H K U R   S Y S T E M   C O N F I G
+              	;*
+              	;*      This file contains points that should be modifed
+              	;*      if new devices are to be added to IshkurCP/M. At
+              	;*      a mimumum, they need to be included at the bottom
+              	;*      of the file, and added to their appropriate dev
+              	;*      switch. Some devices may need additional config
+              	;*      directly in their source files
+              	;*       
+              	;*
+              	;**************************************************************
+              	;
+              	;
+              	;   Set memory base here. 
+              	;
+003A:         	mem	equ	58		; CP/M image starts at mem*1024
+              	
+              	
+              	;
+              	;**************************************************************
+              	;*
+              	;*        C H A R A C T E R   D E V I C E   S W I T C H
+              	;*
+              	;*      Currently, 3 character devices are supported. These
+              	;*	devices are the console, the printer, and the "punch"
+              	;*      (can be thought of as an auxillary serial device).
+              	;*      All character devices use the same interface
+              	;*
+              	;**************************************************************
+              	;
+              	
+              	; Device console, for user interactions with system
+FE12: 58FE    	consol:	defw	tmsdev	; TMS9918 is console
+              	
+              	; Printer, only the init and output functions can be used
+FE14: 0000    	printr:	defw	0	; nulldev
+              	
+              	; Auxiliary SIO, interfaces with the read/punch calls
+FE16: 0000    	auxsio:	defw	0	; nulldev
+              	
+              	;
+              	;**************************************************************
+              	;*
+              	;*           B L O C K   D E V I C E   S W I T C H
+              	;*
+              	;*       IshkurCP/M can support up to 16 logical disks
+              	;*       A single driver can be mapped to a number of
+              	;*       these disks. Each logical disk is defined by a
+              	;*       4-byte record. The first 2 bytes are a pointer
+              	;*       to the device entry, and the last 2 are passed
+              	;*       as an argument to the device. Usually this 
+              	;*       takes the form of a minor number for indexing
+              	;*       sub-disks on the same driver
+              	;*
+              	;*
+              	;**************************************************************
+              	;
+              	
+              	; A device of "0" will be read as a non-existant devic 
+FE18: 00000000	bdevsw:	defw	0,	0	; 'A'
+FE1C: 00000000		defw	0,	0	; 'B'
+FE20: 00000000		defw	0,	0	; 'C'
+FE24: 00000000		defw	0,	0	; 'D'
+FE28: 00000000		defw	0,	0	; 'E'
+FE2C: 00000000		defw	0,	0	; 'F'
+FE30: 00000000		defw	0,	0	; 'G'
+FE34: 00000000		defw	0,	0	; 'H'
+FE38: 00000000		defw	0,	0	; 'I'
+FE3C: 00000000		defw	0,	0	; 'J'
+FE40: 00000000		defw	0,	0	; 'K'
+FE44: 00000000		defw	0,	0	; 'L'
+FE48: 00000000		defw	0,	0	; 'M'
+FE4C: 00000000		defw	0,	0	; 'N'
+FE50: 00000000		defw	0,	0	; 'O'
+FE54: 00000000		defw	0,	0	; 'P'
+              	
+              	;
+              	;**************************************************************
+              	;*
+              	;*        D E V I C E   D R I V E R   I N C L U D E S
+              	;*
+              	;**************************************************************
+              	;
+              	#include "tms9918.asm"
+              	;
+              	;**************************************************************
+              	;*
+              	;*      T M S 9 9 1 8   C H A R A C T E R   D E V I C E
+              	;*
+              	;*      This device emulated a VT52 terminal using the
+              	;*      TMS9918A graphics chip. The 2kb font record is
+              	;*      not resident is memory, and must be provided by
+              	;*      a compatable        
+              	;* 
+              	;**************************************************************
+              	;
+              	
+              	; Driver jump table
+FE58: C364FE  	tmsdev:	jp	tm_init
+FE5B: C365FE  		jp	tm_stat
+FE5E: C366FE  		jp	tm_read
+FE61: C367FE  		jp	tm_writ
+              		
+              	; TMS9918 Init
+              	; Load font record, set up terminal
+FE64: C9      	tm_init:ret
+              	
+              	
+FE65: C9      	tm_stat:ret
+              	
+              	
+FE66: C9      	tm_read:ret
+              	
+              	
+FE67: C9      	tm_writ:ret
               	;
               	;*
               	;******************   E N D   O F   C P / M   *****************
@@ -3819,513 +3942,522 @@ FE31: C30000  	sectrn:	jp	0
 
 ; +++ segments +++
 
-#CODE          = $E800 = 59392,  size = $1634 =  5684
+#CODE          = $E800 = 59392,  size = $1668 =  5736
 
 ; +++ global symbols +++
 
-_end     = $FE34 = 65076          cpm22.asm:43 (unused)
-_size    = $1634 =  5684          cpm22.asm:43 (unused)
-active   = $F345 = 62277          cpm22.asm:1701
-adda2hl  = $F567 = 62823          cpm22.asm:2130
-addhl    = $EA59 = 59993          cpm22.asm:432
-alloc0   = $FDCD = 64973          cpm22.asm:3678
-alloc1   = $FDCF = 64975          cpm22.asm:3679
-alocvect = $FDC2 = 64962          cpm22.asm:3668
-auto     = $FDE1 = 64993          cpm22.asm:3693
-autoflag = $FDE3 = 64995          cpm22.asm:3695
-autosel  = $FC54 = 64596          cpm22.asm:3408
-autosl1  = $FC78 = 64632          cpm22.asm:3424
-backup   = $F1A7 = 61863          cpm22.asm:1461
-backup1  = $F1AF = 61871          cpm22.asm:1464
-badload  = $EF7A = 61306          cpm22.asm:1191
-badsctr  = $F00C = 61452          cpm22.asm:1245
-badsec   = $F0CD = 61645          cpm22.asm:1316
-badsel   = $F0D8 = 61656          cpm22.asm:1317
-badslct  = $F00E = 61454          cpm22.asm:1246
-batch    = $EFAB = 61355          cpm22.asm:1214
-batchfcb = $EFAC = 61356          cpm22.asm:1215
-bdosdrv  = $F0C9 = 61641          cpm22.asm:1315
-bdoserr  = $F0BD = 61629          cpm22.asm:1314
-bigdisk  = $FDE0 = 64992          cpm22.asm:3692
-bitmap   = $F6A6 = 63142          cpm22.asm:2423
-bitmap1  = $F6B4 = 63156          cpm22.asm:2438
-bitmap2  = $F6D5 = 63189          cpm22.asm:2459
-bitmap3  = $F6F9 = 63225          cpm22.asm:2476
-blkmask  = $FDC7 = 64967          cpm22.asm:3674
-blknmbr  = $FDE8 = 65000          cpm22.asm:3699
-blkshft  = $FDC6 = 64966          cpm22.asm:3673
-boot     = $FE00 = 65024          bios.asm:8
-bs       = $0008 =     8          cpm22.asm:28
-cbase    = $E800 = 59392          cpm22.asm:45
-ccpstack = $EFAB = 61355          cpm22.asm:1210
-cdrive   = $EFEF = 61423          cpm22.asm:1221
-charbuf  = $F311 = 62225          cpm22.asm:1690
-check    = $EA30 = 59952          cpm22.asm:398
-checkdir = $F5A1 = 62881          cpm22.asm:2203
-checksum = $F4FA = 62714          cpm22.asm:2042
-chgdrv   = $EFF0 = 61424          cpm22.asm:1222
-chgnam1  = $F82A = 63530          cpm22.asm:2715
-chgnames = $F819 = 63513          cpm22.asm:2707
-chkblk   = $F487 = 62599          cpm22.asm:1949
-chkchar  = $F117 = 61719          cpm22.asm:1358
-chkcon   = $E9C2 = 59842          cpm22.asm:323
-chkdir1  = $F5C7 = 62919          cpm22.asm:2223
-chknmbr  = $F58F = 62863          cpm22.asm:2176
-chkrofl  = $F547 = 62791          cpm22.asm:2106
-chksum1  = $F500 = 62720          cpm22.asm:2045
-chkvect  = $FDC0 = 64960          cpm22.asm:3667
-chkwprt  = $F557 = 62807          cpm22.asm:2117
-ckbitmap = $F638 = 63032          cpm22.asm:2317
-ckbmap1  = $F659 = 63065          cpm22.asm:2352
-ckcon1   = $F145 = 61765          cpm22.asm:1388
-ckcon2   = $F148 = 61768          cpm22.asm:1389
-ckconsol = $F126 = 61734          cpm22.asm:1374
-ckfilpos = $F5F8 = 62968          cpm22.asm:2266
-ckrof1   = $F54A = 62794          cpm22.asm:2107
-cksumtbl = $FDEF = 65007          cpm22.asm:3707
-clearbuf = $EB58 = 60248          cpm22.asm:598
-clears2  = $F575 = 62837          cpm22.asm:2147
-close    = $E8DA = 59610          cpm22.asm:138
-closefil = $FCA8 = 64680          cpm22.asm:3455
-closeflg = $FDD5 = 64981          cpm22.asm:3684
-closeit  = $F8A5 = 63653          cpm22.asm:2801
-closeit1 = $F8D0 = 63696          cpm22.asm:2821
-closeit2 = $F8DE = 63710          cpm22.asm:2829
-closeit3 = $F8E4 = 63716          cpm22.asm:2833
-closeit4 = $F8EB = 63723          cpm22.asm:2836
-closeit5 = $F900 = 63744          cpm22.asm:2849
-closeit6 = $F91A = 63770          cpm22.asm:2867
-closeit7 = $F922 = 63778          cpm22.asm:2870
-cmdadr   = $EBC1 = 60353          cpm22.asm:670
-cmdtbl   = $EB10 = 60176          cpm22.asm:552
-cmmnd1   = $EB82 = 60290          cpm22.asm:631
-cmmnd2   = $EB98 = 60312          cpm22.asm:642
-cntrlc   = $0003 =     3          cpm22.asm:26
-cntrle   = $0005 =     5          cpm22.asm:27
-cntrlp   = $0010 =    16          cpm22.asm:33
-cntrlr   = $0012 =    18          cpm22.asm:34
-cntrls   = $0013 =    19          cpm22.asm:35
-cntrlu   = $0015 =    21          cpm22.asm:36
-cntrlx   = $0018 =    24          cpm22.asm:37
-cntrlz   = $001A =    26          cpm22.asm:38
-comblk   = $F47A = 62586          cpm22.asm:1940
-comfile  = $EF83 = 61315          cpm22.asm:1192
-command  = $EB5C = 60252          cpm22.asm:608
-comprand = $FBA8 = 64424          cpm22.asm:3274
-conin    = $FE0A = 65034          bios.asm:13
-conout   = $FE0D = 65037          bios.asm:14
-const    = $FE07 = 65031          bios.asm:12
-convert  = $EA60 = 60000          cpm22.asm:446
-convfst  = $EA5E = 59998          cpm22.asm:440
-convrt1  = $EA89 = 60041          cpm22.asm:469
-convrt2  = $EA90 = 60048          cpm22.asm:472
-convrt3  = $EA96 = 60054          cpm22.asm:479
-convrt4  = $EA98 = 60056          cpm22.asm:480
-convrt5  = $EAA9 = 60073          cpm22.asm:487
-convrt6  = $EAAB = 60075          cpm22.asm:489
-convrt7  = $EAAF = 60079          cpm22.asm:491
-convrt8  = $EAB9 = 60089          cpm22.asm:495
-counter  = $FDDB = 64987          cpm22.asm:3690
-cr       = $000D =    13          cpm22.asm:32
-create   = $E909 = 59657          cpm22.asm:188
-crlf     = $E898 = 59544          cpm22.asm:80
-curpos   = $F30F = 62223          cpm22.asm:1688
-de2hl    = $F352 = 62290          cpm22.asm:1719
-de2hl1   = $F353 = 62291          cpm22.asm:1720
-decode   = $EBF8 = 60408          cpm22.asm:697
-decode1  = $EC08 = 60424          cpm22.asm:703
-decode2  = $EC2A = 60458          cpm22.asm:723 (unused)
-decode3  = $EC33 = 60467          cpm22.asm:728
-decode4  = $EC3A = 60474          cpm22.asm:732 (unused)
-defdma   = $F5DD = 62941          cpm22.asm:2241
-del      = $007F =   127          cpm22.asm:39
-delbatch = $E9DD = 59869          cpm22.asm:348
-delete   = $E8EF = 59631          cpm22.asm:159
-delfile  = $FCDA = 64730          cpm22.asm:3486
-dirbuf   = $FDBC = 64956          cpm22.asm:3665
-dirc1    = $F2E3 = 62179          cpm22.asm:1646
-dircio   = $F2D7 = 62167          cpm22.asm:1640
-dirdma   = $F5E3 = 62947          cpm22.asm:2246
-dirdma1  = $F5E6 = 62950          cpm22.asm:2251
-direct   = $EC77 = 60535          cpm22.asm:794
-direct1  = $EC88 = 60552          cpm22.asm:801
-direct2  = $EC8F = 60559          cpm22.asm:805
-direct3  = $EC98 = 60568          cpm22.asm:809
-direct4  = $ECCC = 60620          cpm22.asm:836
-direct5  = $ECD4 = 60628          cpm22.asm:839
-direct6  = $ECD9 = 60633          cpm22.asm:841
-direct7  = $ED0E = 60686          cpm22.asm:865
-direct8  = $ED0F = 60687          cpm22.asm:866
-direct9  = $ED1B = 60699          cpm22.asm:870
-dirread  = $F5D7 = 62935          cpm22.asm:2236
-dirsize  = $FDCB = 64971          cpm22.asm:3677
-dirwrite = $F5C9 = 62921          cpm22.asm:2228
-diskpb   = $FDBE = 64958          cpm22.asm:3666
-diskro   = $F0E4 = 61668          cpm22.asm:1319
-dmaset   = $E9D8 = 59864          cpm22.asm:343
-doread   = $F3B5 = 62389          cpm22.asm:1790
-dowrite  = $F3BB = 62395          cpm22.asm:1795
-drect63  = $ECF7 = 60663          cpm22.asm:855
-drect65  = $ECF9 = 60665          cpm22.asm:856
-dselect  = $EC54 = 60500          cpm22.asm:764
-dsksel   = $E8BD = 59581          cpm22.asm:112
-dsksize  = $FDC9 = 64969          cpm22.asm:3676
-emptyfcb = $FDAF = 64943          cpm22.asm:3652
-entry    = $0005 =     5          cpm22.asm:19
-entry1   = $E8C3 = 59587          cpm22.asm:119
-entry2   = $E8F4 = 59636          cpm22.asm:165
-eparam   = $FDD9 = 64985          cpm22.asm:3688
-erafil1  = $F7A7 = 63399          cpm22.asm:2593
-erafile  = $F79F = 63391          cpm22.asm:2590
-erase    = $ED1F = 60703          cpm22.asm:879
-erase1   = $ED42 = 60738          cpm22.asm:894
-error1   = $F09C = 61596          cpm22.asm:1297
-error2   = $F0A8 = 61608          cpm22.asm:1303
-error3   = $F0AE = 61614          cpm22.asm:1306
-error4   = $F0B4 = 61620          cpm22.asm:1309
-error5   = $F0B7 = 61623          cpm22.asm:1311
-exists   = $EE82 = 61058          cpm22.asm:1056
-extblk   = $F461 = 62561          cpm22.asm:1921
-extblk1  = $F474 = 62580          cpm22.asm:1931
-extmask  = $FDC8 = 64968          cpm22.asm:3675
-extract  = $EC4B = 60491          cpm22.asm:754
-fbase    = $F006 = 61446          cpm22.asm:1240 (unused)
-fbase1   = $F014 = 61460          cpm22.asm:1253
-fcb      = $EFCD = 61389          cpm22.asm:1219
-fcb2hl   = $F561 = 62817          cpm22.asm:2125
-fcbpos   = $FDEC = 65004          cpm22.asm:3701
-fcbset   = $F800 = 63488          cpm22.asm:2685
-fcreate  = $FCEF = 64751          cpm22.asm:3503
-ff       = $000C =    12          cpm22.asm:31 (unused)
-filepos  = $FDED = 65005          cpm22.asm:3702
-filero   = $F0DF = 61663          cpm22.asm:1318
-filesize = $FD50 = 64848          cpm22.asm:3577
-findfst  = $F71B = 63259          cpm22.asm:2510
-findnxt  = $F730 = 63280          cpm22.asm:2523
-fndnxt1  = $F74D = 63309          cpm22.asm:2536
-fndnxt2  = $F756 = 63318          cpm22.asm:2540
-fndnxt3  = $F776 = 63350          cpm22.asm:2556
-fndnxt4  = $F77F = 63359          cpm22.asm:2565
-fndnxt5  = $F786 = 63366          cpm22.asm:2570
-fndnxt6  = $F797 = 63383          cpm22.asm:2583
-fndspa1  = $F7C3 = 63427          cpm22.asm:2623
-fndspa2  = $F7D4 = 63444          cpm22.asm:2646
-fndspa3  = $F7EF = 63471          cpm22.asm:2667
-fndspa4  = $F7F7 = 63479          cpm22.asm:2677
-fndspace = $F7C1 = 63425          cpm22.asm:2617
-fndstat  = $FDD7 = 64983          cpm22.asm:3686
-functns  = $F04A = 61514          cpm22.asm:1288
-getaloc  = $FD14 = 64788          cpm22.asm:3531
-getback  = $EF86 = 61318          cpm22.asm:1198
-getback1 = $EF89 = 61321          cpm22.asm:1199
-getblk1  = $F448 = 62536          cpm22.asm:1899
-getblk2  = $F456 = 62550          cpm22.asm:1908
-getblk3  = $F45F = 62559          cpm22.asm:1913
-getblock = $F441 = 62529          cpm22.asm:1896
-getchar  = $F0FE = 61694          cpm22.asm:1336
-getcon   = $F2CB = 62155          cpm22.asm:1628
-getcrnt  = $FD07 = 64775          cpm22.asm:3520
-getcsts  = $F301 = 62209          cpm22.asm:1673
-getdsk   = $E9D0 = 59856          cpm22.asm:334
-getecho  = $F109 = 61705          cpm22.asm:1345
-getempty = $F927 = 63783          cpm22.asm:2877
-getext   = $EAC0 = 60096          cpm22.asm:502
-getext1  = $EAC8 = 60104          cpm22.asm:506
-getext2  = $EAD9 = 60121          cpm22.asm:513
-getext3  = $EADB = 60123          cpm22.asm:515
-getext4  = $EADF = 60127          cpm22.asm:517
-getext5  = $EAE9 = 60137          cpm22.asm:521
-getext6  = $EAF0 = 60144          cpm22.asm:525
-getext7  = $EAF2 = 60146          cpm22.asm:526
-getext8  = $EB01 = 60161          cpm22.asm:538
-getext9  = $EB09 = 60169          cpm22.asm:543
-getfst   = $FCAE = 64686          cpm22.asm:3462
-getfst1  = $FCC5 = 64709          cpm22.asm:3473
-getinp   = $E939 = 59705          cpm22.asm:239
-getinp1  = $E996 = 59798          cpm22.asm:295
-getinp2  = $E9A7 = 59815          cpm22.asm:304
-getinp3  = $E9AB = 59819          cpm22.asm:306
-getinp4  = $E9BA = 59834          cpm22.asm:315
-getiob   = $F2F0 = 62192          cpm22.asm:1654
-getlog   = $FD01 = 64769          cpm22.asm:3515
-getmt1   = $F949 = 63817          cpm22.asm:2893
-getnext  = $F95D = 63837          cpm22.asm:2907
-getnxt   = $FCCB = 64715          cpm22.asm:3478
-getparm  = $FD29 = 64809          cpm22.asm:3548
-getprm1  = $FD2C = 64812          cpm22.asm:3549
-getrdr   = $F2D1 = 62161          cpm22.asm:1633
-getrov   = $FD1A = 64794          cpm22.asm:3536
-gets2    = $F56C = 62828          cpm22.asm:2139
-getsetuc = $E915 = 59669          cpm22.asm:204
-getuser  = $FD30 = 64816          cpm22.asm:3556
-getusr   = $E913 = 59667          cpm22.asm:199
-getver   = $FC81 = 64641          cpm22.asm:3432
-getwprt  = $F521 = 62753          cpm22.asm:2079
-goback   = $FD77 = 64887          cpm22.asm:3612
-goback1  = $FD94 = 64916          cpm22.asm:3624
-gtnext1  = $F986 = 63878          cpm22.asm:2927
-gtnext2  = $F991 = 63889          cpm22.asm:2936
-gtnext3  = $F9AF = 63919          cpm22.asm:2947
-gtnext4  = $F9B2 = 63922          cpm22.asm:2948
-gtnext5  = $F9B9 = 63929          cpm22.asm:2955
-halt     = $EBCF = 60367          cpm22.asm:675
-hl2de    = $EC42 = 60482          cpm22.asm:744
-home     = $FE19 = 65049          bios.asm:18
-homedrv  = $F3A4 = 62372          cpm22.asm:1776
-inbuff   = $E806 = 59398          cpm22.asm:52
-inpoint  = $E888 = 59528          cpm22.asm:60
-iobyte   = $0003 =     3          cpm22.asm:17
-ioerr1   = $F308 = 62216          cpm22.asm:1683
-ioret    = $F3BE = 62398          cpm22.asm:1796
-jumphl   = $F34D = 62285          cpm22.asm:1711
-lf       = $000A =    10          cpm22.asm:30
-list     = $FE10 = 65040          bios.asm:15
-logical  = $F48D = 62605          cpm22.asm:1960
-logicl1  = $F493 = 62611          cpm22.asm:1962
-login    = $FDB2 = 64946          cpm22.asm:3654
-logindrv = $FC24 = 64548          cpm22.asm:3376
-logoff   = $FD56 = 64854          cpm22.asm:3586
-logsect  = $FDEA = 65002          cpm22.asm:3700
-mem      = $003A =    58          cpm22.asm:15
-mode     = $FDD8 = 64984          cpm22.asm:3687
-morefls  = $F582 = 62850          cpm22.asm:2163
-move3    = $EC40 = 60480          cpm22.asm:740
-movecd   = $E929 = 59689          cpm22.asm:221
-movedir  = $F5EC = 62956          cpm22.asm:2258
-moveword = $F897 = 63639          cpm22.asm:2784
-namepnt  = $E88A = 59530          cpm22.asm:61
-nbytes   = $EFF1 = 61425          cpm22.asm:1223
-newline  = $F1B4 = 61876          cpm22.asm:1470
-newln1   = $F1BC = 61884          cpm22.asm:1473
-nfuncts  = $0029 =    41          cpm22.asm:1286
-nofile   = $EBF0 = 60400          cpm22.asm:690
-nonblank = $EA4F = 59983          cpm22.asm:422
-none     = $EBEA = 60394          cpm22.asm:688
-nospace  = $EE07 = 60935          cpm22.asm:998
-numcmds  = $0006 =     6          cpm22.asm:551
-nxent1   = $F61C = 63004          cpm22.asm:2296
-nxent2   = $F623 = 63011          cpm22.asm:2299
-nxentry  = $F608 = 62984          cpm22.asm:2288
-offset   = $FDD1 = 64977          cpm22.asm:3680
-olddrv   = $FDE2 = 64994          cpm22.asm:3694
-open     = $E8CB = 59595          cpm22.asm:126
-openfcb  = $E8D0 = 59600          cpm22.asm:131
-openfil  = $FC9F = 64671          cpm22.asm:3449
-openit   = $F854 = 63572          cpm22.asm:2741
-openit1  = $F85D = 63581          cpm22.asm:2745
-openit2  = $F88E = 63630          cpm22.asm:2773
-outchar  = $F14B = 61771          cpm22.asm:1396
-outchr1  = $F165 = 61797          cpm22.asm:1410
-outchr2  = $F17C = 61820          cpm22.asm:1426
-outcon   = $F193 = 61843          cpm22.asm:1447
-outcon1  = $F199 = 61849          cpm22.asm:1450
-outcrlf  = $F1CC = 61900          cpm22.asm:1483
-outflag  = $F30D = 62221          cpm22.asm:1686
-params   = $F346 = 62278          cpm22.asm:1702
-pattrn1  = $EB28 = 60200          cpm22.asm:562
-pattrn2  = $F000 = 61440          cpm22.asm:1232
-pline    = $E8A7 = 59559          cpm22.asm:93
-pline2   = $E8AC = 59564          cpm22.asm:96
-position = $FB06 = 64262          cpm22.asm:3151
-positn1  = $FB0A = 64266          cpm22.asm:3156
-positn2  = $FB4A = 64330          cpm22.asm:3202
-positn3  = $FB82 = 64386          cpm22.asm:3234
-positn4  = $FB87 = 64391          cpm22.asm:3240
-positn5  = $FB8E = 64398          cpm22.asm:3247
-print    = $E88C = 59532          cpm22.asm:66
-printb   = $E892 = 59538          cpm22.asm:72
-prstat   = $FE2E = 65070          bios.asm:25 (unused)
-prterr   = $F0E8 = 61672          cpm22.asm:1323
-prtflag  = $F310 = 62224          cpm22.asm:1689
-prtmesg  = $F1D6 = 61910          cpm22.asm:1490
-prtstr   = $F2FB = 62203          cpm22.asm:1666
-punch    = $FE13 = 65043          bios.asm:16
-putdma   = $FD0D = 64781          cpm22.asm:3525
-ransiz1  = $FBE7 = 64487          cpm22.asm:3330
-ransiz2  = $FC09 = 64521          cpm22.asm:3352
-ransiz3  = $FC0F = 64527          cpm22.asm:3354
-ransize  = $FBD5 = 64469          cpm22.asm:3319
-rdbuf1   = $F1F2 = 61938          cpm22.asm:1509
-rdbuf10  = $F273 = 62067          cpm22.asm:1571
-rdbuf11  = $F27B = 62075          cpm22.asm:1577
-rdbuf12  = $F28D = 62093          cpm22.asm:1589
-rdbuf13  = $F29C = 62108          cpm22.asm:1596
-rdbuf14  = $F2A9 = 62121          cpm22.asm:1604
-rdbuf15  = $F2AC = 62124          cpm22.asm:1607
-rdbuf16  = $F2C0 = 62144          cpm22.asm:1619
-rdbuf17  = $F2C4 = 62148          cpm22.asm:1621
-rdbuf2   = $F1F4 = 61940          cpm22.asm:1511
-rdbuf3   = $F219 = 61977          cpm22.asm:1528
-rdbuf4   = $F229 = 61993          cpm22.asm:1537
-rdbuf5   = $F23A = 62010          cpm22.asm:1545
-rdbuf6   = $F24B = 62027          cpm22.asm:1554
-rdbuf7   = $F251 = 62033          cpm22.asm:1557
-rdbuf8   = $F262 = 62050          cpm22.asm:1564
-rdbuf9   = $F26E = 62062          cpm22.asm:1569
-rdbuff   = $F1E4 = 61924          cpm22.asm:1502
-rderr    = $EBDF = 60383          cpm22.asm:684
-rderror  = $EBD9 = 60377          cpm22.asm:682
-rdrandom = $FD44 = 64836          cpm22.asm:3567
-rdrec    = $E8F9 = 59641          cpm22.asm:172
-rdseq    = $F9BF = 63935          cpm22.asm:2960
-rdseq1   = $F9C4 = 63940          cpm22.asm:2962
-rdseq2   = $F9E9 = 63977          cpm22.asm:2977
-rdseq3   = $F9FE = 63998          cpm22.asm:2987
-rdwrtflg = $FDD6 = 64982          cpm22.asm:3685
-read     = $FE28 = 65064          bios.asm:23
-reader   = $FE16 = 65046          bios.asm:17
-readfcb  = $E8FE = 59646          cpm22.asm:177
-readran  = $FB96 = 64406          cpm22.asm:3254
-readseq  = $FCE3 = 64739          cpm22.asm:3493
-relblock = $FDDA = 64986          cpm22.asm:3689
-renam    = $E90E = 59662          cpm22.asm:194
-rename   = $EE10 = 60944          cpm22.asm:1006
-rename1  = $EE3F = 60991          cpm22.asm:1024
-rename2  = $EE59 = 61017          cpm22.asm:1038
-rename3  = $EE5E = 61022          cpm22.asm:1041 (unused)
-rename4  = $EE6D = 61037          cpm22.asm:1049
-rename5  = $EE73 = 61043          cpm22.asm:1051
-rename6  = $EE79 = 61049          cpm22.asm:1053
-renfile  = $FCF8 = 64760          cpm22.asm:3509
-resdsk   = $E8B8 = 59576          cpm22.asm:107
-resetdr  = $EC66 = 60518          cpm22.asm:778
-rodisk   = $F010 = 61456          cpm22.asm:1247
-rofile   = $F012 = 61458          cpm22.asm:1248
-rstdsk   = $FC86 = 64646          cpm22.asm:3437
-rtn      = $F307 = 62215          cpm22.asm:1679
-rtncode  = $EFEE = 61422          cpm22.asm:1220
-samext   = $F70A = 63242          cpm22.asm:2491
-savatr1  = $F843 = 63555          cpm22.asm:2731
-save     = $EDAD = 60845          cpm22.asm:951
-save1    = $EDD4 = 60884          cpm22.asm:969
-save2    = $EDF1 = 60913          cpm22.asm:987
-save3    = $EDFB = 60923          cpm22.asm:994
-save4    = $EE01 = 60929          cpm22.asm:996
-saveattr = $F83E = 63550          cpm22.asm:2729
-savefcb  = $FDDC = 64988          cpm22.asm:3691
-savext   = $FDE5 = 64997          cpm22.asm:3697
-savnrec  = $FDE6 = 64998          cpm22.asm:3698
-savnxt   = $FDE4 = 64996          cpm22.asm:3696
-scratch1 = $FDB6 = 64950          cpm22.asm:3659
-scratch2 = $FDB8 = 64952          cpm22.asm:3660
-scratch3 = $FDBA = 64954          cpm22.asm:3661
-search   = $EB2E = 60206          cpm22.asm:570
-search1  = $EB33 = 60211          cpm22.asm:572
-search2  = $EB3C = 60220          cpm22.asm:577
-search3  = $EB4F = 60239          cpm22.asm:589
-search4  = $EB54 = 60244          cpm22.asm:592
-sectors  = $FDC4 = 64964          cpm22.asm:3672
-sectrn   = $FE31 = 65073          bios.asm:26
-seldsk   = $FE1C = 65052          bios.asm:19
-select   = $F35C = 62300          cpm22.asm:1730
-select1  = $F3A0 = 62368          cpm22.asm:1770
-setattr  = $FD20 = 64800          cpm22.asm:3541
-setbit   = $F50E = 62734          cpm22.asm:2062
-setcdrv  = $E91A = 59674          cpm22.asm:209
-setdir   = $F59F = 62879          cpm22.asm:2196
-setdma   = $FE25 = 65061          bios.asm:22
-setdsk   = $FC48 = 64584          cpm22.asm:3397
-setext   = $F4A9 = 62633          cpm22.asm:1977
-setfile  = $F66E = 63086          cpm22.asm:2381
-setfl1   = $F678 = 63096          cpm22.asm:2386
-setfl2   = $F68B = 63115          cpm22.asm:2398
-setfl3   = $F691 = 63121          cpm22.asm:2404
-setfl4   = $F6A0 = 63136          cpm22.asm:2413
-sethlde  = $F4B1 = 62641          cpm22.asm:1985
-setiob   = $F2F6 = 62198          cpm22.asm:1659
-setnrec  = $F4D5 = 62677          cpm22.asm:2011
-setran   = $FC11 = 64529          cpm22.asm:3360
-sets2b7  = $F57B = 62843          cpm22.asm:2153
-setsec   = $FE22 = 65058          bios.asm:21
-setstat  = $F304 = 62212          cpm22.asm:1678
-settrk   = $FE1F = 65055          bios.asm:20
-setuser  = $FD3E = 64830          cpm22.asm:3561
-shiftl   = $F507 = 62727          cpm22.asm:2053
-shiftl1  = $F508 = 62728          cpm22.asm:2054
-shiftr   = $F4ED = 62701          cpm22.asm:2027
-shiftr1  = $F4EE = 62702          cpm22.asm:2028
-showit   = $F182 = 61826          cpm22.asm:1434
-slcterr  = $F34A = 62282          cpm22.asm:1707
-space    = $E8A2 = 59554          cpm22.asm:87
-srchfcb  = $E8E9 = 59625          cpm22.asm:154
-srchfst  = $E8DF = 59615          cpm22.asm:144
-srchnxt  = $E8E4 = 59620          cpm22.asm:149
-starting = $F30E = 62222          cpm22.asm:1687
-status   = $F348 = 62280          cpm22.asm:1703
-stbitmap = $F65F = 63071          cpm22.asm:2361
-stbmap1  = $F667 = 63079          cpm22.asm:2372
-stddma   = $E9D5 = 59861          cpm22.asm:339
-stfilpos = $F601 = 62977          cpm22.asm:2276
-stkarea  = $F344 = 62276          cpm22.asm:1698
-stnrec1  = $F4E1 = 62689          cpm22.asm:2016
-strdata  = $F4BE = 62654          cpm22.asm:1995
-ststatus = $F704 = 63236          cpm22.asm:2483
-subhl    = $F598 = 62872          cpm22.asm:2186
-synerr   = $EA09 = 59913          cpm22.asm:377
-synerr1  = $EA0F = 59919          cpm22.asm:379
-synerr2  = $EA22 = 59938          cpm22.asm:389
-tab      = $0009 =     9          cpm22.asm:29
-tbase    = $0100 =   256          cpm22.asm:22
-tbuff    = $0080 =   128          cpm22.asm:21
-tdrive   = $0004 =     4          cpm22.asm:18
-tfcb     = $005C =    92          cpm22.asm:20
-trksec   = $F3C6 = 62406          cpm22.asm:1804
-trksec1  = $F3D4 = 62420          cpm22.asm:1813
-trksec2  = $F3E7 = 62439          cpm22.asm:1826
-trksec3  = $F3FD = 62461          cpm22.asm:1842
-trksec4  = $F412 = 62482          cpm22.asm:1859
-type     = $ED5D = 60765          cpm22.asm:908
-type1    = $ED74 = 60788          cpm22.asm:916
-type2    = $ED77 = 60791          cpm22.asm:917 (unused)
-type3    = $ED87 = 60807          cpm22.asm:926
-type4    = $EDA0 = 60832          cpm22.asm:939
-type5    = $EDA7 = 60839          cpm22.asm:942
-unknown  = $EEA5 = 61093          cpm22.asm:1080
-unkwn0   = $EF71 = 61297          cpm22.asm:1188
-unkwn1   = $EEC4 = 61124          cpm22.asm:1095
-unkwn2   = $EECD = 61133          cpm22.asm:1099 (unused)
-unkwn3   = $EEE1 = 61153          cpm22.asm:1110
-unkwn4   = $EF01 = 61185          cpm22.asm:1129
-unkwn5   = $EF30 = 61232          cpm22.asm:1150
-unkwn6   = $EF3E = 61246          cpm22.asm:1160
-unkwn7   = $EF43 = 61251          cpm22.asm:1162
-unkwn8   = $EF4F = 61263          cpm22.asm:1170
-unkwn9   = $EF6B = 61291          cpm22.asm:1186
-update   = $F804 = 63492          cpm22.asm:2692
-update1  = $F813 = 63507          cpm22.asm:2700
-upper    = $E930 = 59696          cpm22.asm:228
-user     = $EE8E = 61070          cpm22.asm:1064
-userdma  = $FDB4 = 64948          cpm22.asm:3655
-userno   = $F344 = 62276          cpm22.asm:1700
-usrstack = $F312 = 62226          cpm22.asm:1694
-verify   = $E9F5 = 59893          cpm22.asm:363
-verify1  = $E9FD = 59901          cpm22.asm:366
-wboot    = $FE04 = 65028          bios.asm:11
-write    = $FE2B = 65067          bios.asm:24
-writeran = $FB9F = 64415          cpm22.asm:3261
-wrtprt   = $FDB0 = 64944          cpm22.asm:3653
-wrtprtd  = $F52F = 62767          cpm22.asm:2089
-wrtrec   = $E904 = 59652          cpm22.asm:183
-wrtseq   = $FCE9 = 64745          cpm22.asm:3498
-wtrandom = $FD4A = 64842          cpm22.asm:3572
-wtseq    = $FA01 = 64001          cpm22.asm:2991
-wtseq1   = $FA06 = 64006          cpm22.asm:2993
-wtseq10  = $FAD5 = 64213          cpm22.asm:3108
-wtseq11  = $FB01 = 64257          cpm22.asm:3132
-wtseq12  = $FB03 = 64259          cpm22.asm:3133
-wtseq2   = $FA3E = 64062          cpm22.asm:3016
-wtseq3   = $FA4B = 64075          cpm22.asm:3022
-wtseq4   = $FA67 = 64103          cpm22.asm:3034
-wtseq5   = $FA6F = 64111          cpm22.asm:3041
-wtseq6   = $FA71 = 64113          cpm22.asm:3042
-wtseq7   = $FA8F = 64143          cpm22.asm:3065
-wtseq8   = $FA9D = 64157          cpm22.asm:3072
-wtseq9   = $FABE = 64190          cpm22.asm:3092
-wtseq99  = $FAE2 = 64226          cpm22.asm:3119 (unused)
-wtspecl  = $FD9E = 64926          cpm22.asm:3638
-xlate    = $FDD3 = 64979          cpm22.asm:3681
-yesno    = $ED52 = 60754          cpm22.asm:900
+_end     = $FE68 = 65128          cpm22.asm:40 (unused)
+_size    = $1668 =  5736          cpm22.asm:40 (unused)
+active   = $F345 = 62277          cpm22.asm:1698
+adda2hl  = $F567 = 62823          cpm22.asm:2127
+addhl    = $EA59 = 59993          cpm22.asm:429
+alloc0   = $FDCD = 64973          cpm22.asm:3675
+alloc1   = $FDCF = 64975          cpm22.asm:3676
+alocvect = $FDC2 = 64962          cpm22.asm:3665
+auto     = $FDE1 = 64993          cpm22.asm:3690
+autoflag = $FDE3 = 64995          cpm22.asm:3692
+autosel  = $FC54 = 64596          cpm22.asm:3405
+autosl1  = $FC78 = 64632          cpm22.asm:3421
+auxsio   = $FE16 = 65046          config.asm:42 (unused)
+backup   = $F1A7 = 61863          cpm22.asm:1458
+backup1  = $F1AF = 61871          cpm22.asm:1461
+badload  = $EF7A = 61306          cpm22.asm:1188
+badsctr  = $F00C = 61452          cpm22.asm:1242
+badsec   = $F0CD = 61645          cpm22.asm:1313
+badsel   = $F0D8 = 61656          cpm22.asm:1314
+badslct  = $F00E = 61454          cpm22.asm:1243
+batch    = $EFAB = 61355          cpm22.asm:1211
+batchfcb = $EFAC = 61356          cpm22.asm:1212
+bdevsw   = $FE18 = 65048          config.asm:63 (unused)
+bdosdrv  = $F0C9 = 61641          cpm22.asm:1312
+bdoserr  = $F0BD = 61629          cpm22.asm:1311
+bigdisk  = $FDE0 = 64992          cpm22.asm:3689
+bitmap   = $F6A6 = 63142          cpm22.asm:2420
+bitmap1  = $F6B4 = 63156          cpm22.asm:2435
+bitmap2  = $F6D5 = 63189          cpm22.asm:2456
+bitmap3  = $F6F9 = 63225          cpm22.asm:2473
+blkmask  = $FDC7 = 64967          cpm22.asm:3671
+blknmbr  = $FDE8 = 65000          cpm22.asm:3696
+blkshft  = $FDC6 = 64966          cpm22.asm:3670
+boot     = $FE00 = 65024          bios.asm:11
+bs       = $0008 =     8          cpm22.asm:25
+cbase    = $E800 = 59392          cpm22.asm:42
+ccpstack = $EFAB = 61355          cpm22.asm:1207
+cdrive   = $EFEF = 61423          cpm22.asm:1218
+charbuf  = $F311 = 62225          cpm22.asm:1687
+check    = $EA30 = 59952          cpm22.asm:395
+checkdir = $F5A1 = 62881          cpm22.asm:2200
+checksum = $F4FA = 62714          cpm22.asm:2039
+chgdrv   = $EFF0 = 61424          cpm22.asm:1219
+chgnam1  = $F82A = 63530          cpm22.asm:2712
+chgnames = $F819 = 63513          cpm22.asm:2704
+chkblk   = $F487 = 62599          cpm22.asm:1946
+chkchar  = $F117 = 61719          cpm22.asm:1355
+chkcon   = $E9C2 = 59842          cpm22.asm:320
+chkdir1  = $F5C7 = 62919          cpm22.asm:2220
+chknmbr  = $F58F = 62863          cpm22.asm:2173
+chkrofl  = $F547 = 62791          cpm22.asm:2103
+chksum1  = $F500 = 62720          cpm22.asm:2042
+chkvect  = $FDC0 = 64960          cpm22.asm:3664
+chkwprt  = $F557 = 62807          cpm22.asm:2114
+ckbitmap = $F638 = 63032          cpm22.asm:2314
+ckbmap1  = $F659 = 63065          cpm22.asm:2349
+ckcon1   = $F145 = 61765          cpm22.asm:1385
+ckcon2   = $F148 = 61768          cpm22.asm:1386
+ckconsol = $F126 = 61734          cpm22.asm:1371
+ckfilpos = $F5F8 = 62968          cpm22.asm:2263
+ckrof1   = $F54A = 62794          cpm22.asm:2104
+cksumtbl = $FDEF = 65007          cpm22.asm:3704
+clearbuf = $EB58 = 60248          cpm22.asm:595
+clears2  = $F575 = 62837          cpm22.asm:2144
+close    = $E8DA = 59610          cpm22.asm:135
+closefil = $FCA8 = 64680          cpm22.asm:3452
+closeflg = $FDD5 = 64981          cpm22.asm:3681
+closeit  = $F8A5 = 63653          cpm22.asm:2798
+closeit1 = $F8D0 = 63696          cpm22.asm:2818
+closeit2 = $F8DE = 63710          cpm22.asm:2826
+closeit3 = $F8E4 = 63716          cpm22.asm:2830
+closeit4 = $F8EB = 63723          cpm22.asm:2833
+closeit5 = $F900 = 63744          cpm22.asm:2846
+closeit6 = $F91A = 63770          cpm22.asm:2864
+closeit7 = $F922 = 63778          cpm22.asm:2867
+cmdadr   = $EBC1 = 60353          cpm22.asm:667
+cmdtbl   = $EB10 = 60176          cpm22.asm:549
+cmmnd1   = $EB82 = 60290          cpm22.asm:628
+cmmnd2   = $EB98 = 60312          cpm22.asm:639
+cntrlc   = $0003 =     3          cpm22.asm:23
+cntrle   = $0005 =     5          cpm22.asm:24
+cntrlp   = $0010 =    16          cpm22.asm:30
+cntrlr   = $0012 =    18          cpm22.asm:31
+cntrls   = $0013 =    19          cpm22.asm:32
+cntrlu   = $0015 =    21          cpm22.asm:33
+cntrlx   = $0018 =    24          cpm22.asm:34
+cntrlz   = $001A =    26          cpm22.asm:35
+comblk   = $F47A = 62586          cpm22.asm:1937
+comfile  = $EF83 = 61315          cpm22.asm:1189
+command  = $EB5C = 60252          cpm22.asm:605
+comprand = $FBA8 = 64424          cpm22.asm:3271
+conin    = $FE04 = 65028          bios.asm:20
+conout   = $FE05 = 65029          bios.asm:21
+consol   = $FE12 = 65042          config.asm:36 (unused)
+const    = $FE03 = 65027          bios.asm:19
+convert  = $EA60 = 60000          cpm22.asm:443
+convfst  = $EA5E = 59998          cpm22.asm:437
+convrt1  = $EA89 = 60041          cpm22.asm:466
+convrt2  = $EA90 = 60048          cpm22.asm:469
+convrt3  = $EA96 = 60054          cpm22.asm:476
+convrt4  = $EA98 = 60056          cpm22.asm:477
+convrt5  = $EAA9 = 60073          cpm22.asm:484
+convrt6  = $EAAB = 60075          cpm22.asm:486
+convrt7  = $EAAF = 60079          cpm22.asm:488
+convrt8  = $EAB9 = 60089          cpm22.asm:492
+counter  = $FDDB = 64987          cpm22.asm:3687
+cr       = $000D =    13          cpm22.asm:29
+create   = $E909 = 59657          cpm22.asm:185
+crlf     = $E898 = 59544          cpm22.asm:77
+curpos   = $F30F = 62223          cpm22.asm:1685
+de2hl    = $F352 = 62290          cpm22.asm:1716
+de2hl1   = $F353 = 62291          cpm22.asm:1717
+decode   = $EBF8 = 60408          cpm22.asm:694
+decode1  = $EC08 = 60424          cpm22.asm:700
+decode2  = $EC2A = 60458          cpm22.asm:720 (unused)
+decode3  = $EC33 = 60467          cpm22.asm:725
+decode4  = $EC3A = 60474          cpm22.asm:729 (unused)
+defdma   = $F5DD = 62941          cpm22.asm:2238
+del      = $007F =   127          cpm22.asm:36
+delbatch = $E9DD = 59869          cpm22.asm:345
+delete   = $E8EF = 59631          cpm22.asm:156
+delfile  = $FCDA = 64730          cpm22.asm:3483
+dirbuf   = $FDBC = 64956          cpm22.asm:3662
+dirc1    = $F2E3 = 62179          cpm22.asm:1643
+dircio   = $F2D7 = 62167          cpm22.asm:1637
+dirdma   = $F5E3 = 62947          cpm22.asm:2243
+dirdma1  = $F5E6 = 62950          cpm22.asm:2248
+direct   = $EC77 = 60535          cpm22.asm:791
+direct1  = $EC88 = 60552          cpm22.asm:798
+direct2  = $EC8F = 60559          cpm22.asm:802
+direct3  = $EC98 = 60568          cpm22.asm:806
+direct4  = $ECCC = 60620          cpm22.asm:833
+direct5  = $ECD4 = 60628          cpm22.asm:836
+direct6  = $ECD9 = 60633          cpm22.asm:838
+direct7  = $ED0E = 60686          cpm22.asm:862
+direct8  = $ED0F = 60687          cpm22.asm:863
+direct9  = $ED1B = 60699          cpm22.asm:867
+dirread  = $F5D7 = 62935          cpm22.asm:2233
+dirsize  = $FDCB = 64971          cpm22.asm:3674
+dirwrite = $F5C9 = 62921          cpm22.asm:2225
+diskpb   = $FDBE = 64958          cpm22.asm:3663
+diskro   = $F0E4 = 61668          cpm22.asm:1316
+dmaset   = $E9D8 = 59864          cpm22.asm:340
+doread   = $F3B5 = 62389          cpm22.asm:1787
+dowrite  = $F3BB = 62395          cpm22.asm:1792
+drect63  = $ECF7 = 60663          cpm22.asm:852
+drect65  = $ECF9 = 60665          cpm22.asm:853
+dselect  = $EC54 = 60500          cpm22.asm:761
+dsksel   = $E8BD = 59581          cpm22.asm:109
+dsksize  = $FDC9 = 64969          cpm22.asm:3673
+emptyfcb = $FDAF = 64943          cpm22.asm:3649
+entry    = $0005 =     5          cpm22.asm:16
+entry1   = $E8C3 = 59587          cpm22.asm:116
+entry2   = $E8F4 = 59636          cpm22.asm:162
+eparam   = $FDD9 = 64985          cpm22.asm:3685
+erafil1  = $F7A7 = 63399          cpm22.asm:2590
+erafile  = $F79F = 63391          cpm22.asm:2587
+erase    = $ED1F = 60703          cpm22.asm:876
+erase1   = $ED42 = 60738          cpm22.asm:891
+error1   = $F09C = 61596          cpm22.asm:1294
+error2   = $F0A8 = 61608          cpm22.asm:1300
+error3   = $F0AE = 61614          cpm22.asm:1303
+error4   = $F0B4 = 61620          cpm22.asm:1306
+error5   = $F0B7 = 61623          cpm22.asm:1308
+exists   = $EE82 = 61058          cpm22.asm:1053
+extblk   = $F461 = 62561          cpm22.asm:1918
+extblk1  = $F474 = 62580          cpm22.asm:1928
+extmask  = $FDC8 = 64968          cpm22.asm:3672
+extract  = $EC4B = 60491          cpm22.asm:751
+fbase    = $F006 = 61446          cpm22.asm:1237 (unused)
+fbase1   = $F014 = 61460          cpm22.asm:1250
+fcb      = $EFCD = 61389          cpm22.asm:1216
+fcb2hl   = $F561 = 62817          cpm22.asm:2122
+fcbpos   = $FDEC = 65004          cpm22.asm:3698
+fcbset   = $F800 = 63488          cpm22.asm:2682
+fcreate  = $FCEF = 64751          cpm22.asm:3500
+ff       = $000C =    12          cpm22.asm:28 (unused)
+filepos  = $FDED = 65005          cpm22.asm:3699
+filero   = $F0DF = 61663          cpm22.asm:1315
+filesize = $FD50 = 64848          cpm22.asm:3574
+findfst  = $F71B = 63259          cpm22.asm:2507
+findnxt  = $F730 = 63280          cpm22.asm:2520
+fndnxt1  = $F74D = 63309          cpm22.asm:2533
+fndnxt2  = $F756 = 63318          cpm22.asm:2537
+fndnxt3  = $F776 = 63350          cpm22.asm:2553
+fndnxt4  = $F77F = 63359          cpm22.asm:2562
+fndnxt5  = $F786 = 63366          cpm22.asm:2567
+fndnxt6  = $F797 = 63383          cpm22.asm:2580
+fndspa1  = $F7C3 = 63427          cpm22.asm:2620
+fndspa2  = $F7D4 = 63444          cpm22.asm:2643
+fndspa3  = $F7EF = 63471          cpm22.asm:2664
+fndspa4  = $F7F7 = 63479          cpm22.asm:2674
+fndspace = $F7C1 = 63425          cpm22.asm:2614
+fndstat  = $FDD7 = 64983          cpm22.asm:3683
+functns  = $F04A = 61514          cpm22.asm:1285
+getaloc  = $FD14 = 64788          cpm22.asm:3528
+getback  = $EF86 = 61318          cpm22.asm:1195
+getback1 = $EF89 = 61321          cpm22.asm:1196
+getblk1  = $F448 = 62536          cpm22.asm:1896
+getblk2  = $F456 = 62550          cpm22.asm:1905
+getblk3  = $F45F = 62559          cpm22.asm:1910
+getblock = $F441 = 62529          cpm22.asm:1893
+getchar  = $F0FE = 61694          cpm22.asm:1333
+getcon   = $F2CB = 62155          cpm22.asm:1625
+getcrnt  = $FD07 = 64775          cpm22.asm:3517
+getcsts  = $F301 = 62209          cpm22.asm:1670
+getdsk   = $E9D0 = 59856          cpm22.asm:331
+getecho  = $F109 = 61705          cpm22.asm:1342
+getempty = $F927 = 63783          cpm22.asm:2874
+getext   = $EAC0 = 60096          cpm22.asm:499
+getext1  = $EAC8 = 60104          cpm22.asm:503
+getext2  = $EAD9 = 60121          cpm22.asm:510
+getext3  = $EADB = 60123          cpm22.asm:512
+getext4  = $EADF = 60127          cpm22.asm:514
+getext5  = $EAE9 = 60137          cpm22.asm:518
+getext6  = $EAF0 = 60144          cpm22.asm:522
+getext7  = $EAF2 = 60146          cpm22.asm:523
+getext8  = $EB01 = 60161          cpm22.asm:535
+getext9  = $EB09 = 60169          cpm22.asm:540
+getfst   = $FCAE = 64686          cpm22.asm:3459
+getfst1  = $FCC5 = 64709          cpm22.asm:3470
+getinp   = $E939 = 59705          cpm22.asm:236
+getinp1  = $E996 = 59798          cpm22.asm:292
+getinp2  = $E9A7 = 59815          cpm22.asm:301
+getinp3  = $E9AB = 59819          cpm22.asm:303
+getinp4  = $E9BA = 59834          cpm22.asm:312
+getiob   = $F2F0 = 62192          cpm22.asm:1651
+getlog   = $FD01 = 64769          cpm22.asm:3512
+getmt1   = $F949 = 63817          cpm22.asm:2890
+getnext  = $F95D = 63837          cpm22.asm:2904
+getnxt   = $FCCB = 64715          cpm22.asm:3475
+getparm  = $FD29 = 64809          cpm22.asm:3545
+getprm1  = $FD2C = 64812          cpm22.asm:3546
+getrdr   = $F2D1 = 62161          cpm22.asm:1630
+getrov   = $FD1A = 64794          cpm22.asm:3533
+gets2    = $F56C = 62828          cpm22.asm:2136
+getsetuc = $E915 = 59669          cpm22.asm:201
+getuser  = $FD30 = 64816          cpm22.asm:3553
+getusr   = $E913 = 59667          cpm22.asm:196
+getver   = $FC81 = 64641          cpm22.asm:3429
+getwprt  = $F521 = 62753          cpm22.asm:2076
+goback   = $FD77 = 64887          cpm22.asm:3609
+goback1  = $FD94 = 64916          cpm22.asm:3621
+gtnext1  = $F986 = 63878          cpm22.asm:2924
+gtnext2  = $F991 = 63889          cpm22.asm:2933
+gtnext3  = $F9AF = 63919          cpm22.asm:2944
+gtnext4  = $F9B2 = 63922          cpm22.asm:2945
+gtnext5  = $F9B9 = 63929          cpm22.asm:2952
+halt     = $EBCF = 60367          cpm22.asm:672
+hl2de    = $EC42 = 60482          cpm22.asm:741
+home     = $FE09 = 65033          bios.asm:25
+homedrv  = $F3A4 = 62372          cpm22.asm:1773
+inbuff   = $E806 = 59398          cpm22.asm:49
+inpoint  = $E888 = 59528          cpm22.asm:57
+iobyte   = $0003 =     3          cpm22.asm:14
+ioerr1   = $F308 = 62216          cpm22.asm:1680
+ioret    = $F3BE = 62398          cpm22.asm:1793
+jumphl   = $F34D = 62285          cpm22.asm:1708
+lf       = $000A =    10          cpm22.asm:27
+list     = $FE06 = 65030          bios.asm:22
+logical  = $F48D = 62605          cpm22.asm:1957
+logicl1  = $F493 = 62611          cpm22.asm:1959
+login    = $FDB2 = 64946          cpm22.asm:3651
+logindrv = $FC24 = 64548          cpm22.asm:3373
+logoff   = $FD56 = 64854          cpm22.asm:3583
+logsect  = $FDEA = 65002          cpm22.asm:3697
+mem      = $003A =    58          config.asm:19
+mode     = $FDD8 = 64984          cpm22.asm:3684
+morefls  = $F582 = 62850          cpm22.asm:2160
+move3    = $EC40 = 60480          cpm22.asm:737
+movecd   = $E929 = 59689          cpm22.asm:218
+movedir  = $F5EC = 62956          cpm22.asm:2255
+moveword = $F897 = 63639          cpm22.asm:2781
+namepnt  = $E88A = 59530          cpm22.asm:58
+nbytes   = $EFF1 = 61425          cpm22.asm:1220
+newline  = $F1B4 = 61876          cpm22.asm:1467
+newln1   = $F1BC = 61884          cpm22.asm:1470
+nfuncts  = $0029 =    41          cpm22.asm:1283
+nofile   = $EBF0 = 60400          cpm22.asm:687
+nonblank = $EA4F = 59983          cpm22.asm:419
+none     = $EBEA = 60394          cpm22.asm:685
+nospace  = $EE07 = 60935          cpm22.asm:995
+numcmds  = $0006 =     6          cpm22.asm:548
+nxent1   = $F61C = 63004          cpm22.asm:2293
+nxent2   = $F623 = 63011          cpm22.asm:2296
+nxentry  = $F608 = 62984          cpm22.asm:2285
+offset   = $FDD1 = 64977          cpm22.asm:3677
+olddrv   = $FDE2 = 64994          cpm22.asm:3691
+open     = $E8CB = 59595          cpm22.asm:123
+openfcb  = $E8D0 = 59600          cpm22.asm:128
+openfil  = $FC9F = 64671          cpm22.asm:3446
+openit   = $F854 = 63572          cpm22.asm:2738
+openit1  = $F85D = 63581          cpm22.asm:2742
+openit2  = $F88E = 63630          cpm22.asm:2770
+outchar  = $F14B = 61771          cpm22.asm:1393
+outchr1  = $F165 = 61797          cpm22.asm:1407
+outchr2  = $F17C = 61820          cpm22.asm:1423
+outcon   = $F193 = 61843          cpm22.asm:1444
+outcon1  = $F199 = 61849          cpm22.asm:1447
+outcrlf  = $F1CC = 61900          cpm22.asm:1480
+outflag  = $F30D = 62221          cpm22.asm:1683
+params   = $F346 = 62278          cpm22.asm:1699
+pattrn1  = $EB28 = 60200          cpm22.asm:559
+pattrn2  = $F000 = 61440          cpm22.asm:1229
+pline    = $E8A7 = 59559          cpm22.asm:90
+pline2   = $E8AC = 59564          cpm22.asm:93
+position = $FB06 = 64262          cpm22.asm:3148
+positn1  = $FB0A = 64266          cpm22.asm:3153
+positn2  = $FB4A = 64330          cpm22.asm:3199
+positn3  = $FB82 = 64386          cpm22.asm:3231
+positn4  = $FB87 = 64391          cpm22.asm:3237
+positn5  = $FB8E = 64398          cpm22.asm:3244
+print    = $E88C = 59532          cpm22.asm:63
+printb   = $E892 = 59538          cpm22.asm:69
+printr   = $FE14 = 65044          config.asm:39 (unused)
+prstat   = $FE10 = 65040          bios.asm:32 (unused)
+prterr   = $F0E8 = 61672          cpm22.asm:1320
+prtflag  = $F310 = 62224          cpm22.asm:1686
+prtmesg  = $F1D6 = 61910          cpm22.asm:1487
+prtstr   = $F2FB = 62203          cpm22.asm:1663
+punch    = $FE07 = 65031          bios.asm:23
+putdma   = $FD0D = 64781          cpm22.asm:3522
+ransiz1  = $FBE7 = 64487          cpm22.asm:3327
+ransiz2  = $FC09 = 64521          cpm22.asm:3349
+ransiz3  = $FC0F = 64527          cpm22.asm:3351
+ransize  = $FBD5 = 64469          cpm22.asm:3316
+rdbuf1   = $F1F2 = 61938          cpm22.asm:1506
+rdbuf10  = $F273 = 62067          cpm22.asm:1568
+rdbuf11  = $F27B = 62075          cpm22.asm:1574
+rdbuf12  = $F28D = 62093          cpm22.asm:1586
+rdbuf13  = $F29C = 62108          cpm22.asm:1593
+rdbuf14  = $F2A9 = 62121          cpm22.asm:1601
+rdbuf15  = $F2AC = 62124          cpm22.asm:1604
+rdbuf16  = $F2C0 = 62144          cpm22.asm:1616
+rdbuf17  = $F2C4 = 62148          cpm22.asm:1618
+rdbuf2   = $F1F4 = 61940          cpm22.asm:1508
+rdbuf3   = $F219 = 61977          cpm22.asm:1525
+rdbuf4   = $F229 = 61993          cpm22.asm:1534
+rdbuf5   = $F23A = 62010          cpm22.asm:1542
+rdbuf6   = $F24B = 62027          cpm22.asm:1551
+rdbuf7   = $F251 = 62033          cpm22.asm:1554
+rdbuf8   = $F262 = 62050          cpm22.asm:1561
+rdbuf9   = $F26E = 62062          cpm22.asm:1566
+rdbuff   = $F1E4 = 61924          cpm22.asm:1499
+rderr    = $EBDF = 60383          cpm22.asm:681
+rderror  = $EBD9 = 60377          cpm22.asm:679
+rdrandom = $FD44 = 64836          cpm22.asm:3564
+rdrec    = $E8F9 = 59641          cpm22.asm:169
+rdseq    = $F9BF = 63935          cpm22.asm:2957
+rdseq1   = $F9C4 = 63940          cpm22.asm:2959
+rdseq2   = $F9E9 = 63977          cpm22.asm:2974
+rdseq3   = $F9FE = 63998          cpm22.asm:2984
+rdwrtflg = $FDD6 = 64982          cpm22.asm:3682
+read     = $FE0E = 65038          bios.asm:30
+reader   = $FE08 = 65032          bios.asm:24
+readfcb  = $E8FE = 59646          cpm22.asm:174
+readran  = $FB96 = 64406          cpm22.asm:3251
+readseq  = $FCE3 = 64739          cpm22.asm:3490
+relblock = $FDDA = 64986          cpm22.asm:3686
+renam    = $E90E = 59662          cpm22.asm:191
+rename   = $EE10 = 60944          cpm22.asm:1003
+rename1  = $EE3F = 60991          cpm22.asm:1021
+rename2  = $EE59 = 61017          cpm22.asm:1035
+rename3  = $EE5E = 61022          cpm22.asm:1038 (unused)
+rename4  = $EE6D = 61037          cpm22.asm:1046
+rename5  = $EE73 = 61043          cpm22.asm:1048
+rename6  = $EE79 = 61049          cpm22.asm:1050
+renfile  = $FCF8 = 64760          cpm22.asm:3506
+resdsk   = $E8B8 = 59576          cpm22.asm:104
+resetdr  = $EC66 = 60518          cpm22.asm:775
+rodisk   = $F010 = 61456          cpm22.asm:1244
+rofile   = $F012 = 61458          cpm22.asm:1245
+rstdsk   = $FC86 = 64646          cpm22.asm:3434
+rtn      = $F307 = 62215          cpm22.asm:1676
+rtncode  = $EFEE = 61422          cpm22.asm:1217
+samext   = $F70A = 63242          cpm22.asm:2488
+savatr1  = $F843 = 63555          cpm22.asm:2728
+save     = $EDAD = 60845          cpm22.asm:948
+save1    = $EDD4 = 60884          cpm22.asm:966
+save2    = $EDF1 = 60913          cpm22.asm:984
+save3    = $EDFB = 60923          cpm22.asm:991
+save4    = $EE01 = 60929          cpm22.asm:993
+saveattr = $F83E = 63550          cpm22.asm:2726
+savefcb  = $FDDC = 64988          cpm22.asm:3688
+savext   = $FDE5 = 64997          cpm22.asm:3694
+savnrec  = $FDE6 = 64998          cpm22.asm:3695
+savnxt   = $FDE4 = 64996          cpm22.asm:3693
+scratch1 = $FDB6 = 64950          cpm22.asm:3656
+scratch2 = $FDB8 = 64952          cpm22.asm:3657
+scratch3 = $FDBA = 64954          cpm22.asm:3658
+search   = $EB2E = 60206          cpm22.asm:567
+search1  = $EB33 = 60211          cpm22.asm:569
+search2  = $EB3C = 60220          cpm22.asm:574
+search3  = $EB4F = 60239          cpm22.asm:586
+search4  = $EB54 = 60244          cpm22.asm:589
+sectors  = $FDC4 = 64964          cpm22.asm:3669
+sectrn   = $FE11 = 65041          bios.asm:33
+seldsk   = $FE0A = 65034          bios.asm:26
+select   = $F35C = 62300          cpm22.asm:1727
+select1  = $F3A0 = 62368          cpm22.asm:1767
+setattr  = $FD20 = 64800          cpm22.asm:3538
+setbit   = $F50E = 62734          cpm22.asm:2059
+setcdrv  = $E91A = 59674          cpm22.asm:206
+setdir   = $F59F = 62879          cpm22.asm:2193
+setdma   = $FE0D = 65037          bios.asm:29
+setdsk   = $FC48 = 64584          cpm22.asm:3394
+setext   = $F4A9 = 62633          cpm22.asm:1974
+setfile  = $F66E = 63086          cpm22.asm:2378
+setfl1   = $F678 = 63096          cpm22.asm:2383
+setfl2   = $F68B = 63115          cpm22.asm:2395
+setfl3   = $F691 = 63121          cpm22.asm:2401
+setfl4   = $F6A0 = 63136          cpm22.asm:2410
+sethlde  = $F4B1 = 62641          cpm22.asm:1982
+setiob   = $F2F6 = 62198          cpm22.asm:1656
+setnrec  = $F4D5 = 62677          cpm22.asm:2008
+setran   = $FC11 = 64529          cpm22.asm:3357
+sets2b7  = $F57B = 62843          cpm22.asm:2150
+setsec   = $FE0C = 65036          bios.asm:28
+setstat  = $F304 = 62212          cpm22.asm:1675
+settrk   = $FE0B = 65035          bios.asm:27
+setuser  = $FD3E = 64830          cpm22.asm:3558
+shiftl   = $F507 = 62727          cpm22.asm:2050
+shiftl1  = $F508 = 62728          cpm22.asm:2051
+shiftr   = $F4ED = 62701          cpm22.asm:2024
+shiftr1  = $F4EE = 62702          cpm22.asm:2025
+showit   = $F182 = 61826          cpm22.asm:1431
+slcterr  = $F34A = 62282          cpm22.asm:1704
+space    = $E8A2 = 59554          cpm22.asm:84
+srchfcb  = $E8E9 = 59625          cpm22.asm:151
+srchfst  = $E8DF = 59615          cpm22.asm:141
+srchnxt  = $E8E4 = 59620          cpm22.asm:146
+starting = $F30E = 62222          cpm22.asm:1684
+status   = $F348 = 62280          cpm22.asm:1700
+stbitmap = $F65F = 63071          cpm22.asm:2358
+stbmap1  = $F667 = 63079          cpm22.asm:2369
+stddma   = $E9D5 = 59861          cpm22.asm:336
+stfilpos = $F601 = 62977          cpm22.asm:2273
+stkarea  = $F344 = 62276          cpm22.asm:1695
+stnrec1  = $F4E1 = 62689          cpm22.asm:2013
+strdata  = $F4BE = 62654          cpm22.asm:1992
+ststatus = $F704 = 63236          cpm22.asm:2480
+subhl    = $F598 = 62872          cpm22.asm:2183
+synerr   = $EA09 = 59913          cpm22.asm:374
+synerr1  = $EA0F = 59919          cpm22.asm:376
+synerr2  = $EA22 = 59938          cpm22.asm:386
+tab      = $0009 =     9          cpm22.asm:26
+tbase    = $0100 =   256          cpm22.asm:19
+tbuff    = $0080 =   128          cpm22.asm:18
+tdrive   = $0004 =     4          cpm22.asm:15
+tfcb     = $005C =    92          cpm22.asm:17
+tm_init  = $FE64 = 65124          tms9918.asm:22
+tm_read  = $FE66 = 65126          tms9918.asm:28
+tm_stat  = $FE65 = 65125          tms9918.asm:25
+tm_writ  = $FE67 = 65127          tms9918.asm:31
+tmsdev   = $FE58 = 65112          tms9918.asm:15
+trksec   = $F3C6 = 62406          cpm22.asm:1801
+trksec1  = $F3D4 = 62420          cpm22.asm:1810
+trksec2  = $F3E7 = 62439          cpm22.asm:1823
+trksec3  = $F3FD = 62461          cpm22.asm:1839
+trksec4  = $F412 = 62482          cpm22.asm:1856
+type     = $ED5D = 60765          cpm22.asm:905
+type1    = $ED74 = 60788          cpm22.asm:913
+type2    = $ED77 = 60791          cpm22.asm:914 (unused)
+type3    = $ED87 = 60807          cpm22.asm:923
+type4    = $EDA0 = 60832          cpm22.asm:936
+type5    = $EDA7 = 60839          cpm22.asm:939
+unknown  = $EEA5 = 61093          cpm22.asm:1077
+unkwn0   = $EF71 = 61297          cpm22.asm:1185
+unkwn1   = $EEC4 = 61124          cpm22.asm:1092
+unkwn2   = $EECD = 61133          cpm22.asm:1096 (unused)
+unkwn3   = $EEE1 = 61153          cpm22.asm:1107
+unkwn4   = $EF01 = 61185          cpm22.asm:1126
+unkwn5   = $EF30 = 61232          cpm22.asm:1147
+unkwn6   = $EF3E = 61246          cpm22.asm:1157
+unkwn7   = $EF43 = 61251          cpm22.asm:1159
+unkwn8   = $EF4F = 61263          cpm22.asm:1167
+unkwn9   = $EF6B = 61291          cpm22.asm:1183
+update   = $F804 = 63492          cpm22.asm:2689
+update1  = $F813 = 63507          cpm22.asm:2697
+upper    = $E930 = 59696          cpm22.asm:225
+user     = $EE8E = 61070          cpm22.asm:1061
+userdma  = $FDB4 = 64948          cpm22.asm:3652
+userno   = $F344 = 62276          cpm22.asm:1697
+usrstack = $F312 = 62226          cpm22.asm:1691
+verify   = $E9F5 = 59893          cpm22.asm:360
+verify1  = $E9FD = 59901          cpm22.asm:363
+wboot    = $FE03 = 65027          bios.asm:15
+write    = $FE0F = 65039          bios.asm:31
+writeran = $FB9F = 64415          cpm22.asm:3258
+wrtprt   = $FDB0 = 64944          cpm22.asm:3650
+wrtprtd  = $F52F = 62767          cpm22.asm:2086
+wrtrec   = $E904 = 59652          cpm22.asm:180
+wrtseq   = $FCE9 = 64745          cpm22.asm:3495
+wtrandom = $FD4A = 64842          cpm22.asm:3569
+wtseq    = $FA01 = 64001          cpm22.asm:2988
+wtseq1   = $FA06 = 64006          cpm22.asm:2990
+wtseq10  = $FAD5 = 64213          cpm22.asm:3105
+wtseq11  = $FB01 = 64257          cpm22.asm:3129
+wtseq12  = $FB03 = 64259          cpm22.asm:3130
+wtseq2   = $FA3E = 64062          cpm22.asm:3013
+wtseq3   = $FA4B = 64075          cpm22.asm:3019
+wtseq4   = $FA67 = 64103          cpm22.asm:3031
+wtseq5   = $FA6F = 64111          cpm22.asm:3038
+wtseq6   = $FA71 = 64113          cpm22.asm:3039
+wtseq7   = $FA8F = 64143          cpm22.asm:3062
+wtseq8   = $FA9D = 64157          cpm22.asm:3069
+wtseq9   = $FABE = 64190          cpm22.asm:3089
+wtseq99  = $FAE2 = 64226          cpm22.asm:3116 (unused)
+wtspecl  = $FD9E = 64926          cpm22.asm:3635
+xlate    = $FDD3 = 64979          cpm22.asm:3678
+yesno    = $ED52 = 60754          cpm22.asm:897
 
 
-total time: 0.0188 sec.
+total time: 0.0205 sec.
 no errors

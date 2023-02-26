@@ -9,11 +9,8 @@
 ;*      Modified to build as single image from source
 ;*
 ;**************************************************************
-;
-;   Set memory base here. 
-;
-mem	equ	58		;CP/M image starts at mem*1024
-;
+
+
 iobyte	equ	3		;i/o definition byte.
 tdrive	equ	4		;current drive name and user number.
 entry	equ	5		;entry point for the cp/m bdos.
@@ -3711,6 +3708,7 @@ cksumtbl: defb	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 	defb	0
 	
 #include "bios.asm"
+#include "config.asm"
 ;
 ;*
 ;******************   E N D   O F   C P / M   *****************

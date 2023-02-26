@@ -5,22 +5,29 @@
 ;*
 ;**************************************************************
 ;
-boot:	halt
-	jp	boot
 
-wboot:	jp	0
-const:	jp	0
-conin:	jp	0
-conout:	jp	0
-list:	jp	0
-punch:	jp	0
-reader:	jp	0
-home:	jp	0
-seldsk:	jp	0
-settrk:	jp	0
-setsec:	jp	0
-setdma:	jp	0
-read:	jp	0
-write:	jp	0
-prstat:	jp	0
-sectrn:	jp	0
+; Cold boot routine
+; Not much special happens here, so it jumps directly to wboot
+boot:	jp	boot
+
+; Warm boot routine
+; Sends wboot signal to device bus, loads CCP, and inits CP/M
+wboot:	
+
+
+
+const:	ret
+conin:	ret
+conout:	ret
+list:	ret
+punch:	ret
+reader:	ret
+home:	ret
+seldsk:	ret
+settrk:	ret
+setsec:	ret
+setdma:	ret
+read:	ret
+write:	ret
+prstat:	ret
+sectrn:	ret
