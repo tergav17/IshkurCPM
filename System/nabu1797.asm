@@ -47,7 +47,7 @@ nf_ini2:ld	a,c
 	ld	c,a
 	ld	(nf_io),a
 	
-	; Select the drive(s)
+	; Select drive A
 	ld	a,2
 	call	nf_dvsl
 	

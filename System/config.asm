@@ -60,8 +60,10 @@ auxsio:	defw	0	; nulldev
 ;
 
 ; A device of "0" will be read as a non-existant device
-bdevsw:	defw	0,	0	; 'A'
-	defw	0,	0	; 'B'
+; The 'init' signal can be sent to the same devices many 
+; times of it has multipe entires in this table.
+bdevsw:	defw	nfddev,	0	; 'A'
+	defw	nfddev,	1	; 'B'
 	defw	0,	0	; 'C'
 	defw	0,	0	; 'D'
 	defw	0,	0	; 'E'

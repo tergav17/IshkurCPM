@@ -8,11 +8,27 @@
 
 ; Cold boot routine
 ; Not much special happens here, so it jumps directly to wboot
-boot:	jp	boot
+boot:	jp	wboot
 
 ; Warm boot routine
-; Sends wboot signal to device bus, loads CCP, and inits CP/M
-wboot:	
+; Sends init signal to device bus, loads CCP, and inits CP/M
+wboot:	ld	sp,cbase
+
+	; Send init signals to all devices
+	ld	hl,bdevsw
+	ld	b,16
+	push	hl
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+	ld	a,d
+	and	e
+	jr	z,wboot1
+	
+	
+	
+wboot1:
 
 
 
@@ -31,3 +47,7 @@ read:	ret
 write:	ret
 prstat:	ret
 sectrn:	ret
+
+; Small hook to call the (HL) register
+callhl:
+	jp	(hl)
