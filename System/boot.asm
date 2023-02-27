@@ -96,15 +96,11 @@ reads:	ld	a,(cursec)
 	
 	; Wait for data to show up
 dwait:	in	a,(c)
-	or	a
 	rra
 	jr	nc,nexts
 	rra
-	jr	c,dread
-	or	a
 	jr	nc,dwait
-	jr	panic
-dread:	ld	b,c		; Data is here, read it in
+	ld	b,c		; Data is here, read it in
 	ld	c,d
 	ini
 	inc	b
