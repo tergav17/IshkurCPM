@@ -70,11 +70,6 @@ tm_ini0:ld	b,0
 	ld	(tm_curx),a
 	ld	(tm_escs),a
 	
-	ld	c,0
-	ld	d,0
-	ld	e,'A'
-	;call	tm_putc
-	
 	ret
 
 
@@ -84,7 +79,9 @@ tm_stat:ret
 tm_read:ret
 
 
-tm_writ:ret
+tm_writ:call	tm_wri0
+	ret
+tm_wri0:
 
 ; Puts a character on the screen
 ; c = X position
@@ -95,51 +92,42 @@ tm_writ:ret
 tm_putc:ld	b,0
 	ld	a,c
 	cp	40
+	ld	hl,0x4800	; Place in buffer 0x0800
 	call	c,tm_put0	; 0-39 frame
 	ld	a,c
 	cp	20
-	ret	z
-	cp	60
-	call	c,tm_put1	; 20-59 frame
+	ret	c
+	sub	20
+	cp	40
+	ld	hl,0x4C00	; Place in buffer 0x0800
+	call	c,tm_put0	; 20-59 frame
 	ld	a,c
 	cp	40
-	ret	z
+	ret	c
 	sub	40
 	ld	c,a
 	ld	hl,0x5000	; Place in buffer 0x1000
-	push	hl
 	jr	tm_put2
 
-tm_put0:push	bc		; Place in buffer 0x0800
+tm_put0:push	bc		
 	push	de
-	ld	hl,0x4800
-	push	hl
-	call	tm_put2
-	pop	de
-	push	bc
-	ret
-tm_put1:push	bc		; Place in buffer 0x0C00
-	push	de
-	ld	a,c
-	sub	20
 	ld	c,a
-	ld	hl,0x4C00
-	push	hl
 	call	tm_put2
 	pop	de
-	push	bc
+	pop	bc
 	ret
 
-tm_put2:xor	a
+tm_put2:push	hl
+tm_put3:xor	a
 	cp	d
-	jr	z,tm_put3
+	jr	z,tm_put4
 	dec	d
 	ld	hl,40
 	add	hl,bc
 	ld	b,h
 	ld	c,l
-	jr	tm_put2
-tm_put3:pop	hl
+	jr	tm_put3
+tm_put4:pop	hl
 	add	hl,bc
 	ld	b,h
 	ld	c,l
