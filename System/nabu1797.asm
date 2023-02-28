@@ -108,11 +108,11 @@ nf_r2k: ld	a,2
 nf_ccp1:in	a,(c)
 	inc	a
 	out	(c),a
+	dec	c
+	dec	c
 	
 	; Read into memory again
-	ld	hl,cbase
 	call	nf_rphy
-	pop	bc
 	or	a
 	ret	z
 	call	nf_init		; Error!

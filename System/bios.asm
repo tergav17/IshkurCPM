@@ -17,7 +17,7 @@ wboot:	ld	sp,cbase
 	; Send init signals to all devices
 	ld	hl,bdevsw
 	ld	b,16
-	push	hl
+wboot0:	push	hl
 	ld	e,(hl)
 	inc	hl
 	ld	d,(hl)
@@ -25,10 +25,36 @@ wboot:	ld	sp,cbase
 	ld	a,d
 	and	e
 	jr	z,wboot1
+	; Entry not 0, try to call it
+	ld	a,(hl)
+	inc	hl
+	ld	l,(hl)
+	ex	de,hl
+	push	bc
+	call	callhl
+	pop	bc
+	; Move on to next entry
+wboot1:	pop	hl
+	ld	de,4
+	add	hl,de
+	djnz	wboot0
 	
+	; Call init for all character devices
+	ld	hl,(consol)
+	call	callhl
+	ld	hl,(printr)
+	ld	a,h
+	and	l
+	call	nz,callhl
+	ld	hl,(auxsio)
+	ld	a,h
+	and	l
+	call	nz,callhl
 	
+	; Load the CCP
+	call	resccp
 	
-wboot1:
+infloop:jr	infloop
 
 
 

@@ -81,13 +81,13 @@ bdevsw:	defw	nfddev,	0	; 'A'
 	
 ; One of the block devices needs to have the responsibiliy
 ; of loading the CCP into memory. Define the jump vector here
-resccp:	ret
+resccp:	jp	nf_ccp
 
 ; Additionally, if Ishkur is using a graphical device, that
 ; device may temporarily need to access the Graphical Resource
 ; Block (GRB) to load in fonts and such. This is up to 2k in
 ; size, and goes in the location that the CCP resides
-resgrb:	ret
+resgrb:	jp	nf_grb
 
 ;
 ;**************************************************************

@@ -546,12 +546,12 @@ getext9:dec	c
 ;   cp/m command table. note commands can be either 3 or 4 characters long.
 ;
 numcmds equ	6		;number of commands
-cmdtbl:	defb	'dir '
-	defb	'era '
-	defb	'type'
-	defb	'save'
-	defb	'ren '
-	defb	'user'
+cmdtbl:	defb	'DIR '
+	defb	'ERA '
+	defb	'TYPE'
+	defb	'SAVE'
+	defb	'REN '
+	defb	'USER'
 ;
 ;   the following six bytes must agree with those at (pattrn2)
 ; or cp/m will halt. why?
