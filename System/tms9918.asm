@@ -150,8 +150,8 @@ tm_ucu0:ld	a,(tm_curx)
 	ld	a,(tm_cury)
 	ld	d,a
 	call	tm_putc
-	ld	a,(tm_cura)
-tm_ucu1:inc	a
+tm_ucu1:ld	a,(tm_cura)
+	inc	a
 	cp	60
 	jr	nz,tm_ucu2
 	xor	a
