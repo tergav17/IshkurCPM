@@ -12,7 +12,8 @@ boot:	jp	wboot
 
 ; Warm boot routine
 ; Sends init signal to device bus, loads CCP, and inits CP/M
-wboot:	ld	sp,cbase
+wboot:	di
+	ld	sp,cbase
 
 	; Send init signals to all devices
 	ld	hl,bdevsw
@@ -50,6 +51,9 @@ wboot1:	pop	hl
 	ld	a,h
 	or	l
 	call	nz,callhl
+	
+	; Call config init
+	call	cfinit
 	
 	; Load the CCP
 	call	resccp

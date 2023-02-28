@@ -65,10 +65,10 @@ tm_ini0:ld	b,0
 	
 	; Clear the terminal
 	call	tm_cls
-	ld	a,0
-	ld	(tm_curx),a
-	ld	(tm_curx),a
-	ld	(tm_escs),a
+	ld	hl,0
+	ld	(tm_curx),hl
+	ld	(tm_cura),hl
+	ld	(tm_escs),hl
 	
 	ret
 
@@ -137,6 +137,33 @@ tm_put4:pop	hl
 	ret
 	
 
+; Updates the cursor animation, assumed 60hz
+;
+;
+tm_ucur:ld	a,(tm_cura)
+	or	a
+	jr	nz,tm_ucu3
+	ld	a,(tm_curc)
+	ld	e,a
+tm_ucu0:ld	a,(tm_curx)
+	ld	c,a
+	ld	a,(tm_cury)
+	ld	d,a
+	call	tm_putc
+	ld	a,(tm_cura)
+tm_ucu1:inc	a
+	cp	60
+	jr	nz,tm_ucu2
+	xor	a
+tm_ucu2:ld	(tm_cura),a
+	ret
+tm_ucu3:cp	30
+	jr	nz,tm_ucu1
+	ld	a,(tm_curc)
+	xor	0x80
+	jr	tm_ucu0
+	
+
 ; Clears out all 3 screen buffers
 ;
 ; uses: af, bc, de
@@ -165,4 +192,7 @@ tm_addr:in	a,(tm_latc)
 ; Variables
 tm_curx:defb	0	; Cursor X
 tm_cury:defb	0	; Cursor Y
+tm_cura:defb	0	; Cursor animation
+tm_curc:defb	0	; Cursor character
 tm_escs:defb	0	; Escape state
+tm_aaaa:defb	0	; Not defined yet

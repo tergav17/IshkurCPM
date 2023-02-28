@@ -23,6 +23,62 @@ mem	equ	56		; CP/M image starts at mem*1024
 ;
 cache	equ	0xFC00		; Start of 1k cache memory
 cache_o:defw	0		; Current owner of the cache
+
+;
+;**************************************************************
+;*
+;*        W A R M   B O O T   C O N F I G   H O O K
+;*
+;*    This function is called at the end of a warm boot
+;*    to set up hardware-specific stuff. 
+;*
+;**************************************************************
+;
+
+cfinit:	ld	a,0x00		; Bank out ROM
+	out	(0x00),a
+	
+	ld	a,0xC3		; Set up IRQ handler
+	ld	(0x38),a	
+	ld	hl,cfirq
+	ld	(0x39),hl
+	
+	ld	a,16		; Enable clock
+	out	(0x41),a
+	ld	a,0x10
+	out	(0x40),a
+	
+	
+	im	1		; Start interrupts
+	ei
+	ret
+
+;
+;**************************************************************
+;*
+;*            I N T E R R U P T   H A N D L I N G
+;*
+;*     This function will be called in order to handle an
+;*     interrupt if the need arises. Hooking drivers up to
+;*     this code may be a little bit more involved.
+;*
+;**************************************************************
+;
+
+cfirq:	push	af
+	push	bc
+	push	de
+	push	hl
+	
+	call	tm_ucur
+	
+	pop	hl
+	pop	de
+	pop	bc
+	pop	af
+	reti
+
+
 ;
 ;**************************************************************
 ;*
