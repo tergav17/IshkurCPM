@@ -100,12 +100,12 @@ nf_r2k: ld	a,2
 	call	nf_rphy
 	pop	bc
 	or	a
-	jr	z,nf_ccp1
+	jr	z,nf_r2k0
 	call	nf_init		; Error!
 	jr	nf_r2k
 	
 	; Increment sector
-nf_ccp1:in	a,(c)
+nf_r2k0:in	a,(c)
 	inc	a
 	out	(c),a
 	dec	c
@@ -117,6 +117,10 @@ nf_ccp1:in	a,(c)
 	ret	z
 	call	nf_init		; Error!
 	jr	nf_r2k
+	
+	; De-select drive
+nf_r2k1:ld	a,0
+	jp	nf_dvsl
 
 nf_sel:	ret
 nf_strk:ret

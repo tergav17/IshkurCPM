@@ -23,13 +23,8 @@ base:	nop
 	jr	tmsini
 
 ; Panic!
-; Set the screen to red and loop 
-panic:	in	a,(0xA1)
-	ld	a,0x96
-	out	(0xA1),a
-	ld	a,0x87
-	out	(0xA1),a
-panic1:	jp	panic1	
+; Just jump to the start of ROM at this point
+panic:	jp	0
 	
 	; Change TMS color mode to indicate successful boot
 tmsini:	in	a,(0xA1)

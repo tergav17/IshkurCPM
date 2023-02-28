@@ -1,6 +1,6 @@
               	; --------------------------------------
               	; zasm: assemble "cpm22.asm"
-              	; date: 2023-02-27 18:05:06
+              	; date: 2023-02-27 23:09:31
               	; --------------------------------------
 
 
@@ -3806,7 +3806,7 @@ F60D: 23      		inc	hl
 F60E: 56      		ld	d,(hl)
 F60F: 23      		inc	hl
 F610: 7A      		ld	a,d
-F611: A3      		and	e
+F611: B3      		or	e
 F612: 2809    		jr	z,wboot1
               		; Entry not 0, try to call it
 F614: 7E      		ld	a,(hl)
@@ -3827,11 +3827,11 @@ F624: 2A4FF6  		ld	hl,(consol)
 F627: CD4EF6  		call	callhl
 F62A: 2A51F6  		ld	hl,(printr)
 F62D: 7C      		ld	a,h
-F62E: A5      		and	l
+F62E: B5      		or	l
 F62F: C44EF6  		call	nz,callhl
 F632: 2A53F6  		ld	hl,(auxsio)
 F635: 7C      		ld	a,h
-F636: A5      		and	l
+F636: B5      		or	l
 F637: C44EF6  		call	nz,callhl
               		
               		; Load the CCP
@@ -3925,8 +3925,8 @@ F653: 0000    	auxsio:	defw	0	; nulldev
               	; A device of "0" will be read as a non-existant device
               	; The 'init' signal can be sent to the same devices many 
               	; times of it has multipe entires in this table.
-F655: ABF60000	bdevsw:	defw	nfddev,	0	; 'A'
-F659: ABF60100		defw	nfddev,	1	; 'B'
+F655: 12F70000	bdevsw:	defw	nfddev,	0	; 'A'
+F659: 12F70100		defw	nfddev,	1	; 'B'
 F65D: 00000000		defw	0,	0	; 'C'
 F661: 00000000		defw	0,	0	; 'D'
 F665: 00000000		defw	0,	0	; 'E'
@@ -3944,13 +3944,13 @@ F691: 00000000		defw	0,	0	; 'P'
               		
               	; One of the block devices needs to have the responsibiliy
               	; of loading the CCP into memory. Define the jump vector here
-F695: C3F7F6  	resccp:	jp	nf_ccp
+F695: C35EF7  	resccp:	jp	nf_ccp
               	
               	; Additionally, if Ishkur is using a graphical device, that
               	; device may temporarily need to access the Graphical Resource
               	; Block (GRB) to load in fonts and such. This is up to 2k in
               	; size, and goes in the location that the CCP resides
-F698: C3F0F6  	resgrb:	jp	nf_grb
+F698: C357F7  	resgrb:	jp	nf_grb
               	
               	;
               	;**************************************************************
@@ -3968,29 +3968,108 @@ F698: C3F0F6  	resgrb:	jp	nf_grb
               	;*      This device emulated a VT52 terminal using the
               	;*      TMS9918A graphics chip. The 2kb font record is
               	;*      not resident is memory, and must be provided by
-              	;*      a compatable        
+              	;*      a compatable block I/O device.
               	;* 
               	;**************************************************************
               	;
               	
+              	; TMS9918 Configuration
+00A0:         	tm_data	equ	0xA0	; TMS9918 data register (mode=0)
+00A1:         	tm_latc	equ	0xA1	; TMS9917 latch register (mode=1)
+              	
               	; Driver jump table
 F69B: C3A7F6  	tmsdev:	jp	tm_init
-F69E: C3A8F6  		jp	tm_stat
-F6A1: C3A9F6  		jp	tm_read
-F6A4: C3AAF6  		jp	tm_writ
+F69E: C3F1F6  		jp	tm_stat
+F6A1: C3F2F6  		jp	tm_read
+F6A4: C3F3F6  		jp	tm_writ
               		
-              	; TMS9918 Init
+              	; TMS9918 init
               	; Load font record, set up terminal
-F6A7: C9      	tm_init:ret
+F6A7: CD98F6  	tm_init:call	resgrb
+              	
+              		; Set TMS to text mode
+F6AA: DBA1    		in	a,(tm_latc)
+F6AC: 3E00    		ld	a,0x00
+F6AE: D3A1    		out	(tm_latc),a
+F6B0: 3E80    		ld	a,0x80
+F6B2: D3A1    		out	(tm_latc),a
+F6B4: DBA1    		in	a,(tm_latc)
+F6B6: 3ED0    		ld	a,0xD0
+F6B8: D3A1    		out	(tm_latc),a
+F6BA: 3E81    		ld	a,0x81
+F6BC: D3A1    		out	(tm_latc),a
+              		
+              		; Set TMS name table to 0x0800
+F6BE: DBA1    		in	a,(tm_latc)
+F6C0: 3E02    		ld	a,0x02
+F6C2: D3A1    		out	(tm_latc),a
+F6C4: 3E82    		ld	a,0x82
+F6C6: D3A1    		out	(tm_latc),a
+              	
+              		
+              		; Set TMS pattern generator block to 0
+F6C8: DBA1    		in	a,(tm_latc)
+F6CA: AF      		xor	a
+F6CB: D3A1    		out	(tm_latc),a
+F6CD: 3E84    		ld	a,0x84
+F6CF: D3A1    		out	(tm_latc),a
+              		
+              		; Write the GRB
+F6D1: 010040  		ld	bc,0x4000
+F6D4: CD07F7  		call	tm_addr
+F6D7: 2100E0  		ld	hl,cbase
+F6DA: 0EA0    		ld	c,tm_data
+F6DC: 3E08    		ld	a,8	; Transfer 8*256 = 2048
+F6DE: 0600    	tm_ini0:ld	b,0
+F6E0: EDB3    		otir
+F6E2: 3D      		dec	a
+F6E3: 20F9    		jr	nz,tm_ini0
+              		
+              		; Clear the terminal
+F6E5: CDF4F6  		call	tm_cls
+F6E8: 3E00    		ld	a,0
+F6EA: 3210F7  		ld	(tm_curx),a
+F6ED: 3210F7  		ld	(tm_curx),a
+              	
+F6F0: C9      		ret
               	
               	
-F6A8: C9      	tm_stat:ret
+F6F1: C9      	tm_stat:ret
               	
               	
-F6A9: C9      	tm_read:ret
+F6F2: C9      	tm_read:ret
               	
               	
-F6AA: C9      	tm_writ:ret
+F6F3: C9      	tm_writ:ret
+              	
+              	; Clears out all 3 screen buffers
+              	;
+              	; uses: af, bc, de
+F6F4: 010048  	tm_cls:	ld	bc,0x4800
+F6F7: CD07F7  		call	tm_addr
+F6FA: 0EA0    		ld	c,tm_data
+F6FC: 11000C  		ld	de,0x0C00
+F6FF: ED71    	tm_cls0:out	(c),0
+F701: 1B      		dec	de
+F702: 7A      		ld	a,d
+F703: B3      		or	e
+F704: 20F9    		jr	nz,tm_cls0
+F706: C9      		ret
+              	
+              	; Sets the TMS address for either reading or writing
+              	; bc = Address 
+              	;
+              	; uses: af, bc
+F707: DBA1    	tm_addr:in	a,(tm_latc)
+F709: 79      		ld	a,c
+F70A: D3A1    		out	(tm_latc),a
+F70C: 78      		ld	a,b
+F70D: D3A1    		out	(tm_latc),a
+F70F: C9      		ret
+              		
+              	; Variables
+F710: 00      	tm_curx:defb	0	; Cursor X
+F711: 00      	tm_cury:defb	0	; Cursor X
               	#include "nabu1797.asm"
               	;
               	;**************************************************************
@@ -4011,113 +4090,117 @@ F6AA: C9      	tm_writ:ret
               	;* 
               	;**************************************************************
               	;
-F6AB: C3C0F6  	nfddev:	jp	nf_init	
-F6AE: C336F7  		jp	nf_sel
-F6B1: C337F7  		jp	nf_strk
-F6B4: C338F7  		jp	nf_ssec
-F6B7: C339F7  		jp	nf_sdma
-F6BA: C33AF7  		jp	nf_read
-F6BD: C33BF7  		jp	nf_writ
+F712: C327F7  	nfddev:	jp	nf_init	
+F715: C3A2F7  		jp	nf_sel
+F718: C3A3F7  		jp	nf_strk
+F71B: C3A4F7  		jp	nf_ssec
+F71E: C3A5F7  		jp	nf_sdma
+F721: C3A6F7  		jp	nf_read
+F724: C3A7F7  		jp	nf_writ
               		
               	; Initialize device
-F6C0: AF      	nf_init:xor	a
-F6C1: 3275F7  		ld	(nf_io),a
+F727: AF      	nf_init:xor	a
+F728: 32E1F7  		ld	(nf_io),a
               	
               		; Look for the FDC
-F6C4: 0ECF    		ld	c,0xCF
-F6C6: ED78    	nf_ini1:in	a,(c)
-F6C8: FE10    		cp	0x10
-F6CA: 2808    		jr	z,nf_ini2
-F6CC: 0C      		inc	c
-F6CD: C8      		ret	z	; Should not be possible!
-F6CE: 3E0F    		ld	a,0x0F
-F6D0: 81      		add	a,c
-F6D1: 4F      		ld	c,a
-F6D2: 18F2    		jr	nf_ini1
+F72B: 0ECF    		ld	c,0xCF
+F72D: ED78    	nf_ini1:in	a,(c)
+F72F: FE10    		cp	0x10
+F731: 2808    		jr	z,nf_ini2
+F733: 0C      		inc	c
+F734: C8      		ret	z	; Should not be possible!
+F735: 3E0F    		ld	a,0x0F
+F737: 81      		add	a,c
+F738: 4F      		ld	c,a
+F739: 18F2    		jr	nf_ini1
               		
               		; Get command register
-F6D4: 79      	nf_ini2:ld	a,c
-F6D5: D60F    		sub	15
-F6D7: 4F      		ld	c,a
-F6D8: 3275F7  		ld	(nf_io),a
+F73B: 79      	nf_ini2:ld	a,c
+F73C: D60F    		sub	15
+F73E: 4F      		ld	c,a
+F73F: 32E1F7  		ld	(nf_io),a
               		
               		; Select drive A
-F6DB: 3E02    		ld	a,2
-F6DD: CD58F7  		call	nf_dvsl
+F742: 3E02    		ld	a,2
+F744: CDC4F7  		call	nf_dvsl
               		
               		; Force FDC interrupt
-F6E0: 3ED0    		ld	a,0xD0
-F6E2: ED79    		out	(c),a
+F747: 3ED0    		ld	a,0xD0
+F749: ED79    		out	(c),a
               		
               		; Restore to track 0
-F6E4: 3E09    		ld	a,0x09
-F6E6: ED79    		out	(c),a 
-F6E8: CD6AF7  		call	nf_busy
+F74B: 3E09    		ld	a,0x09
+F74D: ED79    		out	(c),a 
+F74F: CDD6F7  		call	nf_busy
               		
               		; Disable device
-F6EB: AF      		xor	a
-F6EC: CD58F7  		call	nf_dvsl
-F6EF: C9      		ret
+F752: AF      		xor	a
+F753: CDC4F7  		call	nf_dvsl
+F756: C9      		ret
               		
               	; Loads the GRB into memory from sector 2-3
-F6F0: 3E02    	nf_grb:	ld	a,2
-F6F2: 3276F7  		ld	(nf_2ksc),a
-F6F5: 1805    		jr	nf_r2k
+F757: 3E02    	nf_grb:	ld	a,2
+F759: 32E2F7  		ld	(nf_2ksc),a
+F75C: 1805    		jr	nf_r2k
               		
               	; Loads the CCP into memory from sectors 4-5
-F6F7: 3E04    	nf_ccp:	ld	a,4
-F6F9: 3276F7  		ld	(nf_2ksc),a
+F75E: 3E04    	nf_ccp:	ld	a,4
+F760: 32E2F7  		ld	(nf_2ksc),a
               	
               	; Reads in a 2K bytes, starting at track 0, sector (nf_2ksc)
               	; This is placed into the cbase
-F6FC: 3E02    	nf_r2k: ld	a,2
-F6FE: CD58F7  		call	nf_dvsl
+F763: 3E02    	nf_r2k: ld	a,2
+F765: CDC4F7  		call	nf_dvsl
               		
               		; Restore to track 0
-F701: 3A75F7  		ld	a,(nf_io)
-F704: 4F      		ld	c,a
-F705: 3E09    		ld	a,0x09
-F707: ED79    		out	(c),a 
-F709: CD6AF7  		call	nf_busy
+F768: 3AE1F7  		ld	a,(nf_io)
+F76B: 4F      		ld	c,a
+F76C: 3E09    		ld	a,0x09
+F76E: ED79    		out	(c),a 
+F770: CDD6F7  		call	nf_busy
               		
               		; Set sector # to 4
-F70C: 3A76F7  		ld	a,(nf_2ksc)
-F70F: 0C      		inc	c
-F710: 0C      		inc	c
-F711: ED79    		out	(c),a
-F713: C5      		push	bc
-F714: 0D      		dec	c
-F715: 0D      		dec	c
+F773: 3AE2F7  		ld	a,(nf_2ksc)
+F776: 0C      		inc	c
+F777: 0C      		inc	c
+F778: ED79    		out	(c),a
+F77A: C5      		push	bc
+F77B: 0D      		dec	c
+F77C: 0D      		dec	c
               		
               		; Read into memory
-F716: 2100E0  		ld	hl,cbase
-F719: CD3CF7  		call	nf_rphy
-F71C: C1      		pop	bc
-F71D: B7      		or	a
-F71E: 2805    		jr	z,nf_ccp1
-F720: CDC0F6  		call	nf_init		; Error!
-F723: 18D7    		jr	nf_r2k
+F77D: 2100E0  		ld	hl,cbase
+F780: CDA8F7  		call	nf_rphy
+F783: C1      		pop	bc
+F784: B7      		or	a
+F785: 2805    		jr	z,nf_r2k0
+F787: CD27F7  		call	nf_init		; Error!
+F78A: 18D7    		jr	nf_r2k
               		
               		; Increment sector
-F725: ED78    	nf_ccp1:in	a,(c)
-F727: 3C      		inc	a
-F728: ED79    		out	(c),a
-F72A: 0D      		dec	c
-F72B: 0D      		dec	c
+F78C: ED78    	nf_r2k0:in	a,(c)
+F78E: 3C      		inc	a
+F78F: ED79    		out	(c),a
+F791: 0D      		dec	c
+F792: 0D      		dec	c
               		
               		; Read into memory again
-F72C: CD3CF7  		call	nf_rphy
-F72F: B7      		or	a
-F730: C8      		ret	z
-F731: CDC0F6  		call	nf_init		; Error!
-F734: 18C6    		jr	nf_r2k
+F793: CDA8F7  		call	nf_rphy
+F796: B7      		or	a
+F797: C8      		ret	z
+F798: CD27F7  		call	nf_init		; Error!
+F79B: 18C6    		jr	nf_r2k
+              		
+              		; De-select drive
+F79D: 3E00    	nf_r2k1:ld	a,0
+F79F: C3C4F7  		jp	nf_dvsl
               	
-F736: C9      	nf_sel:	ret
-F737: C9      	nf_strk:ret
-F738: C9      	nf_ssec:ret
-F739: C9      	nf_sdma:ret
-F73A: C9      	nf_read:ret
-F73B: C9      	nf_writ:ret
+F7A2: C9      	nf_sel:	ret
+F7A3: C9      	nf_strk:ret
+F7A4: C9      	nf_ssec:ret
+F7A5: C9      	nf_sdma:ret
+F7A6: C9      	nf_read:ret
+F7A7: C9      	nf_writ:ret
               	
               	; Reads a physical sector
               	; Track and sector should be set up
@@ -4126,66 +4209,66 @@ F73B: C9      	nf_writ:ret
               	;
               	; Returns a=0 if successful
               	; uses: af, bc, de, hl
-F73C: 51      	nf_rphy:ld	d,c
-F73D: 59      		ld	e,c
-F73E: 14      		inc	d
-F73F: 14      		inc	d
-F740: 14      		inc	d
+F7A8: 51      	nf_rphy:ld	d,c
+F7A9: 59      		ld	e,c
+F7AA: 14      		inc	d
+F7AB: 14      		inc	d
+F7AC: 14      		inc	d
               		
               		; Read command
-F741: 3E88    		ld	a,0x88
-F743: ED79    		out	(c),a
-F745: ED78    	nf_rph1:in	a,(c)
-F747: 1F      		rra	
-F748: 3009    		jr	nc,nf_rph2
-F74A: 1F      		rra
-F74B: 30F8    		jr	nc,nf_rph1
-F74D: 4A      		ld	c,d
-F74E: EDA2    		ini
-F750: 4B      		ld	c,e
-F751: 18F2    		jr	nf_rph1
-F753: ED78    	nf_rph2:in	a,(c)
-F755: E6FC    		and	0xFC
-F757: C9      		ret
+F7AD: 3E88    		ld	a,0x88
+F7AF: ED79    		out	(c),a
+F7B1: ED78    	nf_rph1:in	a,(c)
+F7B3: 1F      		rra	
+F7B4: 3009    		jr	nc,nf_rph2
+F7B6: 1F      		rra
+F7B7: 30F8    		jr	nc,nf_rph1
+F7B9: 4A      		ld	c,d
+F7BA: EDA2    		ini
+F7BC: 4B      		ld	c,e
+F7BD: 18F2    		jr	nf_rph1
+F7BF: ED78    	nf_rph2:in	a,(c)
+F7C1: E6FC    		and	0xFC
+F7C3: C9      		ret
               	
               	; Selects or deselects a drive
               	; a = Drive density / selection
               	;
               	; uses: af
-F758: C5      	nf_dvsl:push	bc
-F759: 47      		ld	b,a
-F75A: 3A75F7  		ld	a,(nf_io)
-F75D: C60F    		add	a,0x0F
-F75F: 4F      		ld	c,a
-F760: 78      		ld	a,b
-F761: ED79    		out	(c),a
-F763: 06FF    		ld	b,0xFF
-F765: CD70F7  		call	nf_stal
-F768: C1      		pop	bc
-F769: C9      		ret
+F7C4: C5      	nf_dvsl:push	bc
+F7C5: 47      		ld	b,a
+F7C6: 3AE1F7  		ld	a,(nf_io)
+F7C9: C60F    		add	a,0x0F
+F7CB: 4F      		ld	c,a
+F7CC: 78      		ld	a,b
+F7CD: ED79    		out	(c),a
+F7CF: 06FF    		ld	b,0xFF
+F7D1: CDDCF7  		call	nf_stal
+F7D4: C1      		pop	bc
+F7D5: C9      		ret
               		
               	
               	; Waits until FDC is not busy
               	; c = FDC command address
               	;
               	; uses: af
-F76A: ED78    	nf_busy:in	a,(c)
-F76C: 1F      		rra
-F76D: 38FB    		jr	c,nf_busy
-F76F: C9      		ret
+F7D6: ED78    	nf_busy:in	a,(c)
+F7D8: 1F      		rra
+F7D9: 38FB    		jr	c,nf_busy
+F7DB: C9      		ret
               		
               	; Waits a little bit
               	;
               	; uses: b
-F770: C5      	nf_stal:push	bc
-F771: C1      		pop	bc
-F772: 10FC    		djnz	nf_stal
-F774: C9      		ret
+F7DC: C5      	nf_stal:push	bc
+F7DD: C1      		pop	bc
+F7DE: 10FC    		djnz	nf_stal
+F7E0: C9      		ret
               	
               	
               	; Variables
-F775: 00      	nf_io:	defb	0	; FDC address
-F776: 00      	nf_2ksc:defb	0	; Start of 2K block to load in
+F7E1: 00      	nf_io:	defb	0	; FDC address
+F7E2: 00      	nf_2ksc:defb	0	; Start of 2K block to load in
               	;
               	;*
               	;******************   E N D   O F   C P / M   *****************
@@ -4195,12 +4278,12 @@ F776: 00      	nf_2ksc:defb	0	; Start of 2K block to load in
 
 ; +++ segments +++
 
-#CODE          = $E000 = 57344,  size = $1777 =  6007
+#CODE          = $E000 = 57344,  size = $17E3 =  6115
 
 ; +++ global symbols +++
 
-_end     = $F777 = 63351          cpm22.asm:40 (unused)
-_size    = $1777 =  6007          cpm22.asm:40 (unused)
+_end     = $F7E3 = 63459          cpm22.asm:40 (unused)
+_size    = $17E3 =  6115          cpm22.asm:40 (unused)
 active   = $EB45 = 60229          cpm22.asm:1698
 adda2hl  = $ED67 = 60775          cpm22.asm:2127
 addhl    = $E259 = 57945          cpm22.asm:429
@@ -4478,28 +4561,29 @@ namepnt  = $E08A = 57482          cpm22.asm:58
 nbytes   = $E7F1 = 59377          cpm22.asm:1220
 newline  = $E9B4 = 59828          cpm22.asm:1467
 newln1   = $E9BC = 59836          cpm22.asm:1470
-nf_2ksc  = $F776 = 63350          nabu1797.asm:194
-nf_busy  = $F76A = 63338          nabu1797.asm:178
-nf_ccp   = $F6F7 = 63223          nabu1797.asm:74
-nf_ccp1  = $F725 = 63269          nabu1797.asm:108
-nf_dvsl  = $F758 = 63320          nabu1797.asm:161
-nf_grb   = $F6F0 = 63216          nabu1797.asm:69
-nf_ini1  = $F6C6 = 63174          nabu1797.asm:34
-nf_ini2  = $F6D4 = 63188          nabu1797.asm:45
-nf_init  = $F6C0 = 63168          nabu1797.asm:29
-nf_io    = $F775 = 63349          nabu1797.asm:193
-nf_r2k   = $F6FC = 63228          nabu1797.asm:79
-nf_read  = $F73A = 63290          nabu1797.asm:125
-nf_rph1  = $F745 = 63301          nabu1797.asm:144
-nf_rph2  = $F753 = 63315          nabu1797.asm:153
-nf_rphy  = $F73C = 63292          nabu1797.asm:135
-nf_sdma  = $F739 = 63289          nabu1797.asm:124
-nf_sel   = $F736 = 63286          nabu1797.asm:121
-nf_ssec  = $F738 = 63288          nabu1797.asm:123
-nf_stal  = $F770 = 63344          nabu1797.asm:186
-nf_strk  = $F737 = 63287          nabu1797.asm:122
-nf_writ  = $F73B = 63291          nabu1797.asm:126
-nfddev   = $F6AB = 63147          nabu1797.asm:20
+nf_2ksc  = $F7E2 = 63458          nabu1797.asm:198
+nf_busy  = $F7D6 = 63446          nabu1797.asm:182
+nf_ccp   = $F75E = 63326          nabu1797.asm:74
+nf_dvsl  = $F7C4 = 63428          nabu1797.asm:165
+nf_grb   = $F757 = 63319          nabu1797.asm:69
+nf_ini1  = $F72D = 63277          nabu1797.asm:34
+nf_ini2  = $F73B = 63291          nabu1797.asm:45
+nf_init  = $F727 = 63271          nabu1797.asm:29
+nf_io    = $F7E1 = 63457          nabu1797.asm:197
+nf_r2k   = $F763 = 63331          nabu1797.asm:79
+nf_r2k0  = $F78C = 63372          nabu1797.asm:108
+nf_r2k1  = $F79D = 63389          nabu1797.asm:122 (unused)
+nf_read  = $F7A6 = 63398          nabu1797.asm:129
+nf_rph1  = $F7B1 = 63409          nabu1797.asm:148
+nf_rph2  = $F7BF = 63423          nabu1797.asm:157
+nf_rphy  = $F7A8 = 63400          nabu1797.asm:139
+nf_sdma  = $F7A5 = 63397          nabu1797.asm:128
+nf_sel   = $F7A2 = 63394          nabu1797.asm:125
+nf_ssec  = $F7A4 = 63396          nabu1797.asm:127
+nf_stal  = $F7DC = 63452          nabu1797.asm:190
+nf_strk  = $F7A3 = 63395          nabu1797.asm:126
+nf_writ  = $F7A7 = 63399          nabu1797.asm:130
+nfddev   = $F712 = 63250          nabu1797.asm:20
 nfuncts  = $0029 =    41          cpm22.asm:1283
 nofile   = $E3F0 = 58352          cpm22.asm:687
 nonblank = $E24F = 57935          cpm22.asm:419
@@ -4594,7 +4678,7 @@ renfile  = $F4F8 = 62712          cpm22.asm:3506
 resccp   = $F695 = 63125          config.asm:84
 resdsk   = $E0B8 = 57528          cpm22.asm:104
 resetdr  = $E466 = 58470          cpm22.asm:775
-resgrb   = $F698 = 63128          config.asm:90 (unused)
+resgrb   = $F698 = 63128          config.asm:90
 rodisk   = $E810 = 59408          cpm22.asm:1244
 rofile   = $E812 = 59410          cpm22.asm:1245
 rstdsk   = $F486 = 62598          cpm22.asm:3434
@@ -4675,11 +4759,19 @@ tbase    = $0100 =   256          cpm22.asm:19
 tbuff    = $0080 =   128          cpm22.asm:18
 tdrive   = $0004 =     4          cpm22.asm:15
 tfcb     = $005C =    92          cpm22.asm:17
-tm_init  = $F6A7 = 63143          tms9918.asm:22
-tm_read  = $F6A9 = 63145          tms9918.asm:28
-tm_stat  = $F6A8 = 63144          tms9918.asm:25
-tm_writ  = $F6AA = 63146          tms9918.asm:31
-tmsdev   = $F69B = 63131          tms9918.asm:15
+tm_addr  = $F707 = 63239          tms9918.asm:101
+tm_cls   = $F6F4 = 63220          tms9918.asm:86
+tm_cls0  = $F6FF = 63231          tms9918.asm:90
+tm_curx  = $F710 = 63248          tms9918.asm:109
+tm_cury  = $F711 = 63249          tms9918.asm:110 (unused)
+tm_data  = $00A0 =   160          tms9918.asm:15
+tm_ini0  = $F6DE = 63198          tms9918.asm:61
+tm_init  = $F6A7 = 63143          tms9918.asm:26
+tm_latc  = $00A1 =   161          tms9918.asm:16
+tm_read  = $F6F2 = 63218          tms9918.asm:78
+tm_stat  = $F6F1 = 63217          tms9918.asm:75
+tm_writ  = $F6F3 = 63219          tms9918.asm:81
+tmsdev   = $F69B = 63131          tms9918.asm:19
 trksec   = $EBC6 = 60358          cpm22.asm:1801
 trksec1  = $EBD4 = 60372          cpm22.asm:1810
 trksec2  = $EBE7 = 60391          cpm22.asm:1823
@@ -4740,5 +4832,5 @@ xlate    = $F5D3 = 62931          cpm22.asm:3678
 yesno    = $E552 = 58706          cpm22.asm:897
 
 
-total time: 0.0200 sec.
+total time: 0.0234 sec.
 no errors

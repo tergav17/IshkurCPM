@@ -23,7 +23,7 @@ wboot0:	push	hl
 	ld	d,(hl)
 	inc	hl
 	ld	a,d
-	and	e
+	or	e
 	jr	z,wboot1
 	; Entry not 0, try to call it
 	ld	a,(hl)
@@ -44,11 +44,11 @@ wboot1:	pop	hl
 	call	callhl
 	ld	hl,(printr)
 	ld	a,h
-	and	l
+	or	l
 	call	nz,callhl
 	ld	hl,(auxsio)
 	ld	a,h
-	and	l
+	or	l
 	call	nz,callhl
 	
 	; Load the CCP
