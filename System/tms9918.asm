@@ -32,7 +32,7 @@ tm_init:call	resgrb
 	ld	a,0x80
 	out	(tm_latc),a
 	in	a,(tm_latc)
-	ld	a,0xD0
+	ld	a,0xF0
 	out	(tm_latc),a
 	ld	a,0x81
 	out	(tm_latc),a
@@ -66,9 +66,31 @@ tm_ini0:ld	b,0
 	; Clear the terminal
 	call	tm_cls
 	ld	hl,0
-	ld	(tm_curx),hl
-	ld	(tm_cura),hl
-	ld	(tm_escs),hl
+	ld	(tm_curx),hl	; curx and cury
+	ld	(tm_curc),hl	; curc and escs
+	
+	ld	c,"H"
+	call	tm_writ
+	ld	c,"e"
+	call	tm_writ
+	ld	c,"l"
+	call	tm_writ
+	ld	c,"l"
+	call	tm_writ
+	ld	c,"o"
+	call	tm_writ
+	ld	c,0x0D
+	call	tm_writ
+	ld	c,0x0A
+	call	tm_writ
+	ld	c,"N"
+	call	tm_writ
+	ld	c,"A"
+	call	tm_writ
+	ld	c,"B"
+	call	tm_writ
+	ld	c,"U"
+	call	tm_writ
 	
 	ret
 
@@ -79,9 +101,46 @@ tm_stat:ret
 tm_read:ret
 
 
-tm_writ:call	tm_wri0
+; Writes a character to the screen
+; c = Character to write
+;
+; uses: af, bc, de, hl
+tm_writ:ld	a,0x1F
+	cp	c
+	jp	nc,tm_wri0
+	ld	e,c
+	ld	a,(tm_curx)
+	ld	c,a
+	ld	a,(tm_cury)
+	ld	d,a
+	call	tm_putc		; Write character
+	
+	; Increment character
+	ld	a,(tm_curx)
+	inc	a
+	ld	(tm_curx),a
+	cp	80
+	ret	nz
+	xor	a
+	ld	(tm_curx),a
+tm_lf:	ld	a,(tm_cury)
+	inc	a
+	ld	(tm_cury),a
+	cp	24
+	ret	nz
+	; do a line feed here
+	ld	a,23
+	ld	(tm_cury),a
 	ret
-tm_wri0:
+tm_cr:	xor	a
+	ld	(tm_curx),a
+	ret
+tm_wri0:ld	a,c
+	cp	0x0D	; '\r'
+	jr	z,tm_cr
+	cp	0x0A	; '\n'
+	jr	z,tm_lf
+	ret
 
 ; Puts a character on the screen
 ; c = X position
@@ -135,34 +194,6 @@ tm_put4:pop	hl
 	ld	a,e
 	out	(tm_data),a
 	ret
-	
-
-; Updates the cursor animation, assumed 60hz
-;
-;
-tm_ucur:ld	a,(tm_cura)
-	or	a
-	jr	nz,tm_ucu3
-	ld	a,(tm_curc)
-	ld	e,a
-tm_ucu0:ld	a,(tm_curx)
-	ld	c,a
-	ld	a,(tm_cury)
-	ld	d,a
-	call	tm_putc
-tm_ucu1:ld	a,(tm_cura)
-	inc	a
-	cp	60
-	jr	nz,tm_ucu2
-	xor	a
-tm_ucu2:ld	(tm_cura),a
-	ret
-tm_ucu3:cp	30
-	jr	nz,tm_ucu1
-	ld	a,(tm_curc)
-	xor	0x80
-	jr	tm_ucu0
-	
 
 ; Clears out all 3 screen buffers
 ;
@@ -192,7 +223,5 @@ tm_addr:in	a,(tm_latc)
 ; Variables
 tm_curx:defb	0	; Cursor X
 tm_cury:defb	0	; Cursor Y
-tm_cura:defb	0	; Cursor animation
 tm_curc:defb	0	; Cursor character
 tm_escs:defb	0	; Escape state
-tm_aaaa:defb	0	; Not defined yet

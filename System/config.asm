@@ -35,7 +35,7 @@ cache_o:defw	0		; Current owner of the cache
 ;**************************************************************
 ;
 
-cfinit:	ld	a,0x00		; Bank out ROM
+cfinit:	ld	a,0x01		; Bank out ROM
 	out	(0x00),a
 	
 	ld	a,0xC3		; Set up IRQ handler
@@ -43,14 +43,14 @@ cfinit:	ld	a,0x00		; Bank out ROM
 	ld	hl,cfirq
 	ld	(0x39),hl
 	
-	ld	a,16		; Enable clock
+	ld	a,0x0E		; Enable clock
 	out	(0x41),a
 	ld	a,0x10
 	out	(0x40),a
 	
 	
 	im	1		; Start interrupts
-	ei
+	di
 	ret
 
 ;
@@ -65,17 +65,7 @@ cfinit:	ld	a,0x00		; Bank out ROM
 ;**************************************************************
 ;
 
-cfirq:	push	af
-	push	bc
-	push	de
-	push	hl
-	
-	call	tm_ucur
-	
-	pop	hl
-	pop	de
-	pop	bc
-	pop	af
+cfirq:	ei
 	reti
 
 
