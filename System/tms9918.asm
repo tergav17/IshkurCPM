@@ -71,6 +71,9 @@ tm_ini0:ld	b,0
 	ld	hl,0
 	ld	(tm_curx),hl	; curx and cury
 	ld	(tm_outc),hl	; curc and escs
+	
+	ld	a,0xFF
+	ld	(tm_outc),a
 
 	ret
 
@@ -91,6 +94,11 @@ tm_stat:ld	a,(tm_outc)
 	ret
 
 
+tm_test:call	tm_read
+	ld	c,a
+	call	tm_writ
+	jr	tm_test
+
 ; Waits for the user to press a key, and returns it
 ;
 ; Returns ASCII key in A
@@ -99,9 +107,9 @@ tm_read:ld	a,(tm_curx)	; Read the character at cursor
 	cp	40
 	jr	c,tm_rea0
 	sub	40
-	ld	hl,0x9000
+	ld	hl,0x1000
 	jr	tm_rea1
-tm_rea0:ld	hl,0x8800
+tm_rea0:ld	hl,0x0800
 tm_rea1:ld	c,a
 	ld	b,0
 	add	hl,bc
@@ -115,21 +123,53 @@ tm_rea2:or	a
 tm_rea3:ld	b,h
 	ld	c,l
 	call	tm_addr
-	in	a,(tm_tm_latc)
+	in	a,(tm_data)
+	ld	a,0
+	ld	d,a
 	ld	c,a
-	ld	b,255
+	ld	b,190
 	
 tm_rea4:call	tm_stat
 	inc	a
-	jr	nz,tm_rea4
+	jr	nz,tm_rea5
+	ld	c,d
+	call	tm_rea6
 	ld	a,(tm_outc) ; Perform translation
+	ld	b,a
+	ld	a,0xFF
+	ld	(tm_outc),a
+	ld	a,b
 	ret
 	
-tm_rea5:djnz	tm_rea4
+tm_rea5:call	tm_stal
+	djnz	tm_rea4
 	ld	a,0x80
 	xor	c
+	ld	c,a
+	ld	b,190
+	call	tm_rea6
+	jr	tm_rea4
+
+
+tm_rea6:push	bc
+	push	de
+	ld	e,c
+	ld	a,(tm_curx)
+	ld	c,a
+	ld	a,(tm_cury)
+	ld	d,a
+	call	tm_putc
+	pop	de
+	pop	bc
+	ret
+	
+tm_stal:push	bc
 	ld	b,255
-	push	bc
+tm_sta1:push	bc
+	pop	bc
+	djnz	tm_sta1
+	pop	bc
+	ret
 
 
 ; Writes a character to the screen
@@ -173,14 +213,8 @@ tm_wri0:ld	a,c
 	jr	z,tm_lf
 	ret
 
-tm_test:call	tm_getc
-	or	a
-	jp	m,tm_test
-	ld	c,a
-	call	tm_writ
-	jr	tm_test
-
 ; Grabs the latest key pressed by the keyboard
+; Discard keyboard errors
 ; Returns key in A, or 0xFF if none
 ;
 ; uses: af
@@ -189,6 +223,14 @@ tm_getc:in	a,(tm_keys)
 	dec	a
 	ret	m
 	in	a,(tm_keyd)
+	push	af
+	and	0xF0
+	cp	0x90
+	jr	z,tm_get0
+	pop	af
+	ret
+tm_get0:pop	af
+	ld	a,0xFF
 	ret
 
 ; Puts a character on the screen
