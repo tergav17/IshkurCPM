@@ -30,6 +30,7 @@ wboot0:	push	hl
 	ld	a,(hl)
 	inc	hl
 	ld	l,(hl)
+	ld	h,a
 	ex	de,hl
 	push	bc
 	call	callhl
@@ -117,6 +118,41 @@ prstat:	ld	a,0
 sectrn:	ld	h,b
 	ld	l,c
 	ret
+	
+	
+; Switch indirect helper function
+; Registers BC and DE should be pushed to stack
+; HL will pass as argument field
+; b = Device #
+; c = Call #
+; hl = Start of switch
+;
+; returns c=0 if device not found
+; uses: all
+swindir:ld	d,0	; Switches must not exceed 256 bytes
+	ld	e,b
+	sla	e
+	sla	e
+	add	hl,de
+	ld	a,(hl)	; Indirect
+	inc	hl
+	ld	e,(hl)
+	ld	d,a
+	inc	hl
+	ld	a,(hl)
+	inc	hl
+	ld	l,(hl)
+	ld	h,a
+	ld	a,d
+	cp	e
+	jr	nz,swindi1
+	pop	de	; Not found!
+	pop	bc
+	ld	c,0
+	ret
+swindi1:ex	de,hl
+	push	de
+	
 
 ; Small hook to call the (HL) register
 callhl:
