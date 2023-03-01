@@ -93,16 +93,10 @@ tm_stat:ld	a,(tm_outc)
 	ld	a,0xFF
 	ret
 
-
-tm_test:call	tm_read
-	ld	c,a
-	call	tm_writ
-	jr	tm_test
-
 ; Waits for the user to press a key, and returns it
 ;
 ; Returns ASCII key in A
-; uses:
+; uses: af, bc, de, hl
 tm_read:ld	a,(tm_curx)	; Read the character at cursor
 	cp	40
 	jr	c,tm_rea0
@@ -124,21 +118,29 @@ tm_rea3:ld	b,h
 	ld	c,l
 	call	tm_addr
 	in	a,(tm_data)
-	ld	a,0
 	ld	d,a
 	ld	c,a
-	ld	b,190
+	ld	b,1
 	
 tm_rea4:call	tm_stat
 	inc	a
 	jr	nz,tm_rea5
 	ld	c,d
 	call	tm_rea6
-	ld	a,(tm_outc) ; Perform translation
+	ld	a,(tm_outc)
 	ld	b,a
 	ld	a,0xFF
 	ld	(tm_outc),a
 	ld	a,b
+	
+	; Perform key mapping
+	or	a
+	jp	p,tm_map0
+	xor	a,0
+	ret
+tm_map0:cp	0x7F	; DEL -> BS
+	jr	nz,$+4
+	ld	a,8
 	ret
 	
 tm_rea5:call	tm_stal
@@ -199,19 +201,79 @@ tm_lf:	ld	a,(tm_cury)
 	ld	(tm_cury),a
 	cp	24
 	ret	nz
-	; do a line feed here
+	call	tm_dsco
 	ld	a,23
 	ld	(tm_cury),a
 	ret
 tm_cr:	xor	a
 	ld	(tm_curx),a
 	ret
+tm_bs:	ld	a,(tm_curx)
+	dec	a
+	ld	(tm_curx),a
+	ret	p
+	ld	a,79
+	ld	(tm_curx),a
+	ld	a,(tm_cury)
+	dec	a
+	ld	(tm_cury),a
+	ret	p
+	xor	a
+	ld	(tm_curx),a
+	ld	(tm_cury),a
+	ret
+	
+	ret
 tm_wri0:ld	a,c
 	cp	0x0D	; '\r'
 	jr	z,tm_cr
 	cp	0x0A	; '\n'
 	jr	z,tm_lf
+	cp	0x08	; '\b'
+	jr	z,tm_bs
 	ret
+	
+; Scroll all 3 frame buffers down
+;
+; uses: af, bc, de, hl
+tm_dsco:ld	hl,tmsdev	; Claim cache
+	ld	(cache_o),hl
+	ld	hl,0x0800+40
+	call	tm_dsc0
+	ld	hl,0x0C00+40
+	call	tm_dsc0
+	ld	hl,0x1000+40
+
+	; Shift a buffer down
+tm_dsc0:push	hl
+	call	tm_addh
+	ld	b,4
+	ld	hl,cache
+tm_dsc1:push	bc
+	ld	b,230
+	ld	c,tm_data
+	inir
+	pop	bc
+	djnz	tm_dsc1
+	xor	a
+	ld	b,40
+tm_dsc2:ld	(hl),a
+	inc	hl
+	djnz	tm_dsc2
+	pop	hl
+	ld	de,0x4000-40
+	add	hl,de
+	call	tm_addh
+	ld	hl,cache
+	ld	b,4
+tm_dsc3:push	bc
+	ld	b,240
+	ld	c,tm_data
+	otir
+	pop	bc
+	djnz	tm_dsc3
+	ret
+	
 
 ; Grabs the latest key pressed by the keyboard
 ; Discard keyboard errors
@@ -304,6 +366,8 @@ tm_cls0:out	(c),0
 ; bc = Address 
 ;
 ; uses: af, bc
+tm_addh:ld	b,h		; Does HL instead of BC
+	ld	c,l
 tm_addr:in	a,(tm_latc)
 	ld	a,c
 	out	(tm_latc),a

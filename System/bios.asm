@@ -45,7 +45,7 @@ wboot0:	ld	hl,bdevsw
 
 ; This is not a true function, but a block of code to be copied
 ; to CP/M lower memory
-cpmlow:	jp	tm_test	; should be wboot, but we want to halt
+cpmlow:	jp	wboot	; should be wboot, but we want to halt
 	defb	0,0
 	jp	fbase
 
