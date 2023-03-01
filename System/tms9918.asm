@@ -68,37 +68,22 @@ tm_ini0:ld	b,0
 	ld	hl,0
 	ld	(tm_curx),hl	; curx and cury
 	ld	(tm_curc),hl	; curc and escs
-	
-	ld	c,"H"
-	call	tm_writ
-	ld	c,"e"
-	call	tm_writ
-	ld	c,"l"
-	call	tm_writ
-	ld	c,"l"
-	call	tm_writ
-	ld	c,"o"
-	call	tm_writ
-	ld	c,0x0D
-	call	tm_writ
-	ld	c,0x0A
-	call	tm_writ
-	ld	c,"N"
-	call	tm_writ
-	ld	c,"A"
-	call	tm_writ
-	ld	c,"B"
-	call	tm_writ
-	ld	c,"U"
-	call	tm_writ
-	
+
 	ret
 
 
-tm_stat:ret
+; Gets the status of the keyboard
+;
+; Returns a=0xFF if there is a key to read 
+tm_stat:xor	a
+	ret
 
 
-tm_read:ret
+; Waits for the user to press a key, and returns it
+;
+; Returns ASCII key in A
+tm_read:ld	a,0
+	ret
 
 
 ; Writes a character to the screen

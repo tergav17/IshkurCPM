@@ -61,10 +61,27 @@ wboot1:	pop	hl
 infloop:jr	infloop
 
 
+; Console status
+; Jump to consol.init
+const:	ld	hl,(consol)
+	ld	de,3
+	add	hl,de
+	jp	(hl)
+	
+; Console read
+; Jump to consol.read
+conin:	ld	hl,(consol)
+	ld	de,6
+	add	hl,de
+	jp	(hl)
+	
+; Console write
+; Jump to consol.writ
+conout:	ld	hl,(consol)
+	ld	de,9
+	add	hl,de
+	jp	(hl)
 
-const:	ret
-conin:	ret
-conout:	ret
 list:	ret
 punch:	ret
 reader:	ret
