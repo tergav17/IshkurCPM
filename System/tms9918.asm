@@ -82,7 +82,7 @@ tm_stat:xor	a
 ; Waits for the user to press a key, and returns it
 ;
 ; Returns ASCII key in A
-tm_read:ld	a,0
+tm_read:xor	a
 	ret
 
 

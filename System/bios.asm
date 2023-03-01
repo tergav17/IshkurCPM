@@ -52,48 +52,71 @@ wboot1:	pop	hl
 	or	l
 	call	nz,callhl
 	
-	; Call config init
-	call	cfinit
-	
 	; Load the CCP
 	call	resccp
 	
-infloop:jr	infloop
+	; Call config init
+	call	cfinit
+	
+	; Set up lower memory
+	ld	hl,cpmlow
+	ld	de,0
+	ld	bc,8
+	ldir
+	
+	jp	cbase
+
+
+; This is not a true function, but a block of code to be copied
+; to CP/M lower memory
+cpmlow:	jp	0	; should be wboot, but we want to halt
+	defb	0,0
+	jp	fbase
 
 
 ; Console status
-; Jump to consol.init
+; Jump to consol->init
 const:	ld	hl,(consol)
 	ld	de,3
 	add	hl,de
 	jp	(hl)
 	
 ; Console read
-; Jump to consol.read
+; Jump to consol->read
 conin:	ld	hl,(consol)
 	ld	de,6
 	add	hl,de
 	jp	(hl)
 	
 ; Console write
-; Jump to consol.writ
-conout:	ld	hl,(consol)
+; Jump to consol->writ
+conout:	push	bc
+	ld	hl,(consol)
 	ld	de,9
 	add	hl,de
+	pop	bc
 	jp	(hl)
 
 list:	ret
 punch:	ret
-reader:	ret
-home:	ret
-seldsk:	ret
+reader:	ld	a,0x1A
+	ret
+home:	ld	bc,0
+	ret
+seldsk:	ld	hl,0
+	ret
 settrk:	ret
 setsec:	ret
 setdma:	ret
-read:	ret
-write:	ret
-prstat:	ret
-sectrn:	ret
+read:	ld	a,1
+	ret
+write:	ld	a,1
+	ret
+prstat:	ld	a,0
+	ret
+sectrn:	ld	h,b
+	ld	l,c
+	ret
 
 ; Small hook to call the (HL) register
 callhl:
