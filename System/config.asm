@@ -68,30 +68,6 @@ cfinit:	ld	a,0x01		; Bank out ROM
 cfirq:	ei
 	reti
 
-
-;
-;**************************************************************
-;*
-;*        C H A R A C T E R   D E V I C E   S W I T C H
-;*
-;*      Currently, 3 character devices are supported. These
-;*	devices are the console, the printer, and the "punch"
-;*      (can be thought of as an auxillary serial device).
-;*      All character devices use the same interface
-;*
-;**************************************************************
-;
-
-; Device console, for user interactions with system
-consol:	defw	tmsdev	; TMS9918 is console
-
-; Printer, only the init and output functions can be used
-printr:	defw	0	; nulldev
-
-; Auxiliary SIO, interfaces with the read/punch calls
-auxsio:	defw	0	; nulldev
-
-;
 ;**************************************************************
 ;*
 ;*           B L O C K   D E V I C E   S W I T C H
@@ -108,10 +84,20 @@ auxsio:	defw	0	; nulldev
 ;*
 ;**************************************************************
 ;
+	
+; One of the block devices needs to have the responsibiliy
+; of loading the CCP into memory. Define the jump vector here
+resccp:	jp	nf_ccp
+
+; Additionally, if Ishkur is using a graphical device, that
+; device may temporarily need to access the Graphical Resource
+; Block (GRB) to load in fonts and such. This is up to 2k in
+; size, and goes in the location that the CCP resides
+resgrb:	jp	nf_grb
 
 ; A device of "0" will be read as a non-existant device
 ; The 'init' signal can be sent to the same devices many 
-; times of it has multipe entires in this table.
+; times if it has multipe entires in this table.
 bdevsw:	defw	nfddev,	0	; 'A'
 	defw	nfddev,	1	; 'B'
 	defw	0,	0	; 'C'
@@ -128,16 +114,33 @@ bdevsw:	defw	nfddev,	0	; 'A'
 	defw	0,	0	; 'N'
 	defw	0,	0	; 'O'
 	defw	0,	0	; 'P'
-	
-; One of the block devices needs to have the responsibiliy
-; of loading the CCP into memory. Define the jump vector here
-resccp:	jp	nf_ccp
 
-; Additionally, if Ishkur is using a graphical device, that
-; device may temporarily need to access the Graphical Resource
-; Block (GRB) to load in fonts and such. This is up to 2k in
-; size, and goes in the location that the CCP resides
-resgrb:	jp	nf_grb
+;
+; Character device switch MUST come directly after in memory!
+;
+;**************************************************************
+;*
+;*        C H A R A C T E R   D E V I C E   S W I T C H
+;*
+;*      Currently, 4 character devices are supported. These
+;*      devices are the console, the printer, and two "punches"
+;*      (can be thought of as an auxillary serial device).
+;*      All character devices use the same interface, which
+;*      allows for easy indireciton. 
+;*
+;*	Device switch logic works about the same of the block
+;*	devices.
+;*
+;**************************************************************
+;
+
+; A device of "0" will be read as a non-existant device
+; The 'init' signal can be sent to the same devices many 
+; times if it has multipe entires in this table.
+cdevsw:	defw	tmsdev,	0	; Console device
+	defw	0,	0	; Printer device
+	defw	0,	0	; Aux I/O device #1
+	defw	0,	0	; Aux I/O device #2
 
 ;
 ;**************************************************************

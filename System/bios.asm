@@ -16,43 +16,18 @@ wboot:	di
 	ld	sp,cbase
 
 	; Send init signals to all devices
-	ld	hl,bdevsw
-	ld	b,16
-wboot0:	push	hl
-	ld	e,(hl)
-	inc	hl
-	ld	d,(hl)
-	inc	hl
-	ld	a,d
-	or	e
-	jr	z,wboot1
-	; Entry not 0, try to call it
-	ld	a,(hl)
-	inc	hl
-	ld	l,(hl)
-	ld	h,a
-	ex	de,hl
+	ld	bc,0
+wboot0:	ld	hl,bdevsw
 	push	bc
-	call	callhl
+	push	bc
+	push	de
+	call	swindir
 	pop	bc
-	; Move on to next entry
-wboot1:	pop	hl
-	ld	de,4
-	add	hl,de
-	djnz	wboot0
-	
-	; Call init for all character devices
-	ld	hl,(consol)
-	call	callhl
-	ld	hl,(printr)
-	ld	a,h
-	or	l
-	call	nz,callhl
-	ld	hl,(auxsio)
-	ld	a,h
-	or	l
-	call	nz,callhl
-	
+	inc	b
+	ld	a,20
+	cp	b
+	jr	nz,wboot0
+
 	; Load the CCP
 	call	resccp
 	
@@ -70,34 +45,50 @@ wboot1:	pop	hl
 
 ; This is not a true function, but a block of code to be copied
 ; to CP/M lower memory
-cpmlow:	jp	0	; should be wboot, but we want to halt
+cpmlow:	jp	tm_test	; should be wboot, but we want to halt
 	defb	0,0
 	jp	fbase
 
 
 ; Console status
-; Jump to consol->init
-const:	ld	hl,(consol)
+; Defaults to device 0 right now
+const:	ld	hl,cdevsw
+	ld	a,(hl)
+	inc	hl
+	ld	h,(hl)
+	ld	l,a
+	or	h
+	ret	z
 	ld	de,3
 	add	hl,de
-	jp	(hl)
+callhl:	jp	(hl)
 	
 ; Console read
-; Jump to consol->read
-conin:	ld	hl,(consol)
+; Defaults to device 0 right now
+conin:	ld	hl,cdevsw
+	ld	a,(hl)
+	inc	hl
+	ld	h,(hl)
+	ld	l,a
+	or	h
+	ret	z
 	ld	de,6
 	add	hl,de
 	jp	(hl)
 	
 ; Console write
-; Jump to consol->writ
-conout:	push	bc
-	ld	hl,(consol)
+; Defaults to device 0 right now
+conout:	ld	hl,cdevsw
+	ld	a,(hl)
+	inc	hl
+	ld	h,(hl)
+	ld	l,a
+	or	h
+	ret	z
 	ld	de,9
 	add	hl,de
-	pop	bc
 	jp	(hl)
-
+	
 list:	ret
 punch:	ret
 reader:	ld	a,0x1A
@@ -124,36 +115,53 @@ sectrn:	ld	h,b
 ; Registers BC and DE should be pushed to stack
 ; HL will pass as argument field
 ; b = Device #
-; c = Call #
+; c = Call Offset
 ; hl = Start of switch
 ;
-; returns c=0 if device not found
+; returns c=255 if device found
 ; uses: all
 swindir:ld	d,0	; Switches must not exceed 256 bytes
-	ld	e,b
+	ld	e,b	; Multiply c by 4
+	ld	b,d
 	sla	e
 	sla	e
 	add	hl,de
 	ld	a,(hl)	; Indirect
 	inc	hl
-	ld	e,(hl)
-	ld	d,a
+	ld	d,(hl)
+	ld	e,a
 	inc	hl
 	ld	a,(hl)
 	inc	hl
-	ld	l,(hl)
-	ld	h,a
+	ld	h,(hl)
+	ld	l,a
 	ld	a,d
-	cp	e
+	or	e
 	jr	nz,swindi1
-	pop	de	; Not found!
+	pop	hl	; Not found!
+	pop	de	
 	pop	bc
 	ld	c,0
-	ret
+	jp	(hl)	; Return through hl
 swindi1:ex	de,hl
-	push	de
+	add	hl,bc
+	ld	(callmj+1),hl
+	ex	de,hl
+	ld	(callarg),hl
+	pop	hl
+	pop	de
+	pop	bc
+	push	hl
+	ld	hl,(callarg)
+	call	callmj
+	ld	c,0xFF
+	ret
 	
-
-; Small hook to call the (HL) register
-callhl:
-	jp	(hl)
+	
+	
+; Variables
+; Small hook to jump to the memory jump register
+callmj: defb	0xC3
+	defw	0
+; Used to shuffle around the return address during indirection
+callarg:defw	0
