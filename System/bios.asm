@@ -155,13 +155,23 @@ swindi1:ex	de,hl
 	ld	hl,(callarg)
 	call	callmj
 	ld	c,0xFF
+nulldev:ret		; Just points to a return
+	
+; Claims the cache, executing the sync
+; command and setting the new owner
+; hl = owner writeback function
+chclaim:push	hl
+	ld	hl,(chowner)
+	call	callhl
+	pop	hl
+	ld	(chowner),hl
 	ret
 	
 	
-	
 ; Variables
-; Small hook to jump to the memory jump register
+; Small stub to jump to the memory jump register
 callmj: defb	0xC3
 	defw	0
 ; Used to shuffle around the return address during indirection
 callarg:defw	0
+chowner:defw	nulldev		; Current owner of the cache

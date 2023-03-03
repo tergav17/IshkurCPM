@@ -46,7 +46,6 @@ tm_init:call	resgrb
 	out	(tm_latc),a
 	ld	a,0x82
 	out	(tm_latc),a
-
 	
 	; Set TMS pattern generator block to 0
 	in	a,(tm_latc)
@@ -236,13 +235,13 @@ tm_wri0:ld	a,c
 ; Scroll all 3 frame buffers down
 ;
 ; uses: af, bc, de, hl
-tm_dsco:ld	hl,tmsdev	; Claim cache
-	ld	(cache_o),hl
-	ld	hl,0x0800+40
+tm_dsco:ld	hl,nulldev	; Claim cache
+	call	chclaim
+	ld	hl,0x0800+40	; Frame buffer 1
 	call	tm_dsc0
-	ld	hl,0x0C00+40
+	ld	hl,0x0C00+40	; Frame buffer 2
 	call	tm_dsc0
-	ld	hl,0x1000+40
+	ld	hl,0x1000+40	; Frame buffer 3
 
 	; Shift a buffer down
 tm_dsc0:push	hl

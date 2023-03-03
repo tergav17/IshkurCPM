@@ -22,7 +22,6 @@ mem	equ	56		; CP/M image starts at mem*1024
 ;   General cache address
 ;
 cache	equ	0xFC00		; Start of 1k cache memory
-cache_o:defw	0		; Current owner of the cache
 
 ;
 ;**************************************************************
