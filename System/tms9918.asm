@@ -273,10 +273,10 @@ tm_getc:in	a,(tm_keys)
 	ret	m
 	in	a,(tm_keyd)
 	push	af
-	cp	0xE4
-	;jr	z,tm_scri
-	cp	0xE5
-	;jr	z,tm_sclf
+	cp	93
+	jr	z,tm_scri
+	cp	91
+	jr	z,tm_sclf
 	and	0xF0
 	cp	0x90
 	jr	z,tm_get0
@@ -287,6 +287,8 @@ tm_get0:pop	af
 	ret
 	
 ; Scroll left / scroll right
+;
+; uses: af, bc, de, hl
 tm_scri:ld	a,(tm_scro)
 	or	a
 	cp	40
@@ -294,7 +296,8 @@ tm_scri:ld	a,(tm_scro)
 	inc	a
 tm_scr0:ld	(tm_scro),a
 	call	tm_usco
-tm_scr1:ld	a,0xFF
+tm_scr1:pop	af
+	ld	a,0xFF
 	ret
 tm_sclf:ld	a,(tm_scro)
 	or	a
@@ -350,6 +353,7 @@ tm_cha0:jr	z,tm_addh
 ; de = destination address
 ; hl = source location
 ;
+; b = 0 on return
 ; uses: af, bc, de, hl
 tm_vcpy:call	tm_addh
 	ld	b,40
@@ -378,10 +382,10 @@ tm_usc0:push	bc
 	call	tm_vcpy
 	pop	hl
 	pop	de
-	ld	b,80
+	ld	c,80
 	add	hl,bc
 	ex	de,hl
-	ld	b,40
+	ld	c,40
 	add	hl,bc
 	ex	de,hl
 	pop	bc
