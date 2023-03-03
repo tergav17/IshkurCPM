@@ -273,6 +273,10 @@ tm_getc:in	a,(tm_keys)
 	ret	m
 	in	a,(tm_keyd)
 	push	af
+	cp	0xE4
+	;jr	z,tm_scri
+	cp	0xE5
+	;jr	z,tm_sclf
 	and	0xF0
 	cp	0x90
 	jr	z,tm_get0
@@ -281,6 +285,22 @@ tm_getc:in	a,(tm_keys)
 tm_get0:pop	af
 	ld	a,0xFF
 	ret
+	
+; Scroll left / scroll right
+tm_scri:ld	a,(tm_scro)
+	or	a
+	cp	40
+	jr	z,tm_scr1
+	inc	a
+tm_scr0:ld	(tm_scro),a
+	call	tm_usco
+tm_scr1:ld	a,0xFF
+	ret
+tm_sclf:ld	a,(tm_scro)
+	or	a
+	jr	z,tm_scr1
+	dec	a
+	jr	tm_scr0
 
 ; Puts a character on the screen
 ; c = X position
@@ -341,6 +361,33 @@ tm_vcpy:call	tm_addh
 	ld	hl,tm_cbuf
 	otir
 	ret
+	
+; Updates the frame buffer based on the scroll position
+;
+; uses: af, bc, de, hl
+tm_usco:ld	hl,0x0C00
+	ld	de,0x4800
+	ld	a,(tm_scro)
+	ld	b,0
+	ld	c,a
+	add	hl,bc
+	ld	b,24
+tm_usc0:push	bc
+	push	de
+	push	hl
+	call	tm_vcpy
+	pop	hl
+	pop	de
+	ld	b,80
+	add	hl,bc
+	ex	de,hl
+	ld	b,40
+	add	hl,bc
+	ex	de,hl
+	pop	bc
+	djnz	tm_usc0
+	ret
+	
 
 ; Clears out screen buffer and offscreen buffer
 ; Also includes clear limited function
@@ -348,7 +395,7 @@ tm_vcpy:call	tm_addh
 ; uses: af, bc, de
 tm_cls:	ld	bc,0x4800
 	ld	de,0x0C00
-tm_cll:	call	tm_addr
+	call	tm_addr
 tm_cls0:out	(c),0
 	dec	de
 	ld	a,d
