@@ -24,6 +24,11 @@ tmsdev:	jp	tm_init
 	jp	tm_read
 	jp	tm_writ
 	
+tm_test:call	tm_read
+	ld	c,a
+	call	tm_writ
+	jr	tm_test
+	
 ; TMS9918 init
 ; Load font record, set up terminal
 tm_init:call	resgrb
@@ -96,27 +101,14 @@ tm_stat:ld	a,(tm_outc)
 ;
 ; Returns ASCII key in A
 ; uses: af, bc, de, hl
-tm_read:ld	a,(tm_curx)	; Read the character at cursor
-	cp	40
-	jr	c,tm_rea0
-	sub	40
-	ld	hl,0x1000
-	jr	tm_rea1
-tm_rea0:ld	hl,0x0800
-tm_rea1:ld	c,a
-	ld	b,0
-	add	hl,bc
-	ld	c,40
+tm_read:ld	a,(tm_curx)
+	ld	c,a
 	ld	a,(tm_cury)
-tm_rea2:or	a
-	jr	z,tm_rea3
-	add	hl,bc
-	dec	a
-	jr	tm_rea2
-tm_rea3:ld	b,h
-	ld	c,l
-	call	tm_addr
-	in	a,(tm_data)
+	ld	d,a
+	ld	hl,0x0C00
+	ld	a,80
+	call	tm_chat
+	in	a,(tm_data)	; Key is in A
 	ld	d,a
 	ld	c,a
 	ld	b,1
@@ -163,7 +155,10 @@ tm_rea6:push	bc
 	pop	de
 	pop	bc
 	ret
-	
+
+; Stalls out for a little bit
+;
+; uses: none
 tm_stal:push	bc
 	ld	b,255
 tm_sta1:push	bc
@@ -177,53 +172,62 @@ tm_sta1:push	bc
 ; c = Character to write
 ;
 ; uses: af, bc, de, hl
-tm_writ:ld	a,0x1F
-	cp	c
-	jp	nc,tm_wri0
-	ld	e,c
+tm_writ:ld	e,c
 	ld	a,(tm_curx)
 	ld	c,a
 	ld	a,(tm_cury)
 	ld	d,a
+	call	tm_wri0
+	ld	a,b
+	ld	(tm_cury),a
+	ld	a,c
+	ld	(tm_curx),a
+	ret
+	
+; Write helper routine
+; c = X position
+; d = Y position
+; e = Character
+;
+; Returns b,c as next position
+tm_wri0:ld	b,d
+	ld	a,0x1F
+	cp	e
+	jp	nc,tm_wri1
+	push	bc
 	call	tm_putc		; Write character
+	pop	bc
 	
 	; Increment character
-	ld	a,(tm_curx)
-	inc	a
-	ld	(tm_curx),a
-	cp	80
+	inc	c
+	ld	a,80
+	cp	c
 	ret	nz
 	xor	a
-	ld	(tm_curx),a
-tm_lf:	ld	a,(tm_cury)
-	inc	a
-	ld	(tm_cury),a
-	cp	24
+	ld	c,a
+tm_lf:  inc	b
+	ld	a,24
+	cp	b
 	ret	nz
+	push	bc
 	call	tm_dsco
-	ld	a,23
-	ld	(tm_cury),a
+	pop	bc
+	dec	b
 	ret
 tm_cr:	xor	a
-	ld	(tm_curx),a
+	ld	c,a
 	ret
-tm_bs:	ld	a,(tm_curx)
-	dec	a
-	ld	(tm_curx),a
+tm_bs:	dec	c
 	ret	p
-	ld	a,79
-	ld	(tm_curx),a
-	ld	a,(tm_cury)
-	dec	a
-	ld	(tm_cury),a
+	ld	c,79
+	dec	b
 	ret	p
 	xor	a
-	ld	(tm_curx),a
-	ld	(tm_cury),a
+	ld	b,a
+	ld	c,a
 	ret
-	
-	ret
-tm_wri0:ld	a,c
+
+tm_wri1:ld	a,e
 	cp	0x0D	; '\r'
 	jr	z,tm_cr
 	cp	0x0A	; '\n'
@@ -232,45 +236,29 @@ tm_wri0:ld	a,c
 	jr	z,tm_bs
 	ret
 	
-; Scroll all 3 frame buffers down
+; Scroll both frame buffers down one
 ;
 ; uses: af, bc, de, hl
-tm_dsco:ld	hl,nulldev	; Claim cache
-	call	chclaim
-	ld	hl,0x0800+40	; Frame buffer 1
+tm_dsco:ld	hl,0x0800+40
+	ld	de,0x4800
+	ld	b,24
 	call	tm_dsc0
-	ld	hl,0x0C00+40	; Frame buffer 2
-	call	tm_dsc0
-	ld	hl,0x1000+40	; Frame buffer 3
-
-	; Shift a buffer down
-tm_dsc0:push	hl
-	call	tm_addh
-	ld	b,4
-	ld	hl,cache
-tm_dsc1:push	bc
-	ld	b,230
-	ld	c,tm_data
-	inir
-	pop	bc
-	djnz	tm_dsc1
-	xor	a
-	ld	b,40
-tm_dsc2:ld	(hl),a
-	inc	hl
-	djnz	tm_dsc2
+	ld	hl,0x0C00+80
+	ld	de,0x4C00
+	ld	b,48
+tm_dsc0:push	bc
+	push	de
+	push	hl
+	call	tm_vcpy
 	pop	hl
-	ld	de,0x4000-40
-	add	hl,de
-	call	tm_addh
-	ld	hl,cache
-	ld	b,4
-tm_dsc3:push	bc
-	ld	b,240
-	ld	c,tm_data
-	otir
+	pop	de
+	ld	bc,40
+	add	hl,bc
+	ex	de,hl
+	add	hl,bc
+	ex	de,hl
 	pop	bc
-	djnz	tm_dsc3
+	djnz	tm_dsc0
 	ret
 	
 
@@ -300,60 +288,67 @@ tm_get0:pop	af
 ; e = Character to put
 ;
 ; uses: af, bc, de, hl
-tm_putc:ld	b,0
-	ld	a,c
-	cp	40
-	ld	hl,0x4800	; Place in buffer 0x0800
-	call	c,tm_put0	; 0-39 frame
-	ld	a,c
-	cp	20
-	ret	c
-	sub	20
-	cp	40
-	ld	hl,0x4C00	; Place in buffer 0x0800
-	call	c,tm_put0	; 20-59 frame
-	ld	a,c
-	cp	40
-	ret	c
-	sub	40
-	ld	c,a
-	ld	hl,0x5000	; Place in buffer 0x1000
-	jr	tm_put2
-
-tm_put0:push	bc		
+tm_putc:ld	hl,0x4C00
+	ld	a,80
+	push	bc
 	push	de
-	ld	c,a
-	call	tm_put2
+	call	tm_chat	; Place it in the 80 col buffer
+	out	(c),e
 	pop	de
 	pop	bc
+	ld	a,(tm_scro)
+	ld	b,a
+	ld	a,c
+	sub	b	; If character is less than scroll...
+	ret	m
+	cp	40	; If desired position is 40 or more
+	ret	nc
+	ld	hl,0x4800
+	ld	a,40
+	call	tm_chat	; Place it in the 40 col screen buffer
+	out	(c),e
 	ret
 
-tm_put2:push	hl
-tm_put3:xor	a
+; Sets the TMS address to a character at x,y
+; a = Line width
+; c = X position
+; d = Y position
+;
+; uses: af, bc, d, hl
+tm_chat:ld	b,0
+	add	hl,bc
+	ld	c,a
+	xor	a
 	cp	d
-	jr	z,tm_put4
+tm_cha0:jr	z,tm_addh
+	add	hl,bc
 	dec	d
-	ld	hl,40
-	add	hl,bc
-	ld	b,h
-	ld	c,l
-	jr	tm_put3
-tm_put4:pop	hl
-	add	hl,bc
-	ld	b,h
-	ld	c,l
-	call	tm_addr
-	ld	a,e
-	out	(tm_data),a
+	jr	tm_cha0
+
+; Copies VRAM from one location to another
+; Transfers occur in blocks of 40 bytes
+; de = destination address
+; hl = source location
+;
+; uses: af, bc, de, hl
+tm_vcpy:call	tm_addh
+	ld	b,40
+	ld	hl,tm_cbuf
+	inir
+	ex	de,hl
+	call	tm_addh
+	ld	b,40
+	ld	hl,tm_cbuf
+	otir
 	ret
 
-; Clears out all 3 screen buffers
+; Clears out screen buffer and offscreen buffer
+; Also includes clear limited function
 ;
 ; uses: af, bc, de
 tm_cls:	ld	bc,0x4800
-	call	tm_addr
-	ld	c,tm_data
 	ld	de,0x0C00
+tm_cll:	call	tm_addr
 tm_cls0:out	(c),0
 	dec	de
 	ld	a,d
@@ -372,10 +367,14 @@ tm_addr:in	a,(tm_latc)
 	out	(tm_latc),a
 	ld	a,b
 	out	(tm_latc),a
+	ld	c,tm_data
 	ret
 	
 ; Variables
 tm_curx:defb	0	; Cursor X
 tm_cury:defb	0	; Cursor Y
 tm_outc:defb	0	; Output character
-tm_escs:defb	0	; Escape state
+tm_scro:defb	0	; Scroll width
+
+; 40 byte character buffer
+tm_cbuf:defw	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
