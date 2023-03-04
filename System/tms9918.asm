@@ -76,7 +76,7 @@ tm_ini0:ld	b,0
 	ld	(tm_curx),hl	; curx and cury
 	ld	(tm_outc),hl	; curc and escs
 	
-	ld	a,0xFF
+tm_cloc:ld	a,0xFF
 	ld	(tm_outc),a
 
 	ret
@@ -85,7 +85,7 @@ tm_ini0:ld	b,0
 ; Gets the status of the keyboard
 ;
 ; Returns a=0xFF if there is a key to read 
-; uses: af
+; uses: af, bc, de, hl
 tm_stat:ld	a,(tm_outc)
 	inc	a
 	ld	a,0xFF
@@ -108,20 +108,21 @@ tm_read:ld	a,(tm_curx)
 	ld	hl,0x0C00
 	ld	a,80
 	call	tm_chat
-	in	a,(tm_data)	; Key is in A
-	ld	d,a
-	ld	c,a
+	in	a,(tm_data)	; char is in A
+	ld	d,a		; char key
+	ld	e,a		; blinking char
 	ld	b,1
 	
-tm_rea4:call	tm_stat
+tm_rea4:push	de
+	call	tm_stat
+	pop	de
 	inc	a
 	jr	nz,tm_rea5
-	ld	c,d
+	ld	e,d
 	call	tm_rea6
 	ld	a,(tm_outc)
 	ld	b,a
-	ld	a,0xFF
-	ld	(tm_outc),a
+	call	tm_cloc
 	ld	a,b
 	
 	; Perform key mapping
@@ -137,23 +138,20 @@ tm_map0:cp	0x7F	; DEL -> BS
 tm_rea5:call	tm_stal
 	djnz	tm_rea4
 	ld	a,0x80
-	xor	c
-	ld	c,a
-	ld	b,190
+	xor	e
+	ld	e,a
 	call	tm_rea6
+	ld	b,190
 	jr	tm_rea4
 
 
-tm_rea6:push	bc
-	push	de
-	ld	e,c
+tm_rea6:push	de
 	ld	a,(tm_curx)
 	ld	c,a
 	ld	a,(tm_cury)
 	ld	d,a
-	call	tm_putc
+	call	tm_putf
 	pop	de
-	pop	bc
 	ret
 
 ; Stalls out for a little bit
@@ -266,17 +264,20 @@ tm_dsc0:push	bc
 ; Discard keyboard errors
 ; Returns key in A, or 0xFF if none
 ;
-; uses: af
+; uses: af, bc, de, hl
 tm_getc:in	a,(tm_keys)
 	and	2
 	dec	a
 	ret	m
+	
+	; Check for scrolling
 	in	a,(tm_keyd)
-	push	af
 	cp	93
 	jr	z,tm_scri
 	cp	91
 	jr	z,tm_sclf
+	
+	push	af
 	and	0xF0
 	cp	0x90
 	jr	z,tm_get0
@@ -293,16 +294,15 @@ tm_scri:ld	a,(tm_scro)
 	or	a
 	cp	40
 	jr	z,tm_scr1
-	inc	a
+	add	a,10
 tm_scr0:ld	(tm_scro),a
 	call	tm_usco
-tm_scr1:pop	af
-	ld	a,0xFF
+tm_scr1:ld	a,0xFF
 	ret
 tm_sclf:ld	a,(tm_scro)
 	or	a
 	jr	z,tm_scr1
-	dec	a
+	sub	10
 	jr	tm_scr0
 
 ; Puts a character on the screen
@@ -319,10 +319,11 @@ tm_putc:ld	hl,0x4C00
 	out	(c),e
 	pop	de
 	pop	bc
-	ld	a,(tm_scro)
+tm_putf:ld	a,(tm_scro)	; Place into frame buffer
 	ld	b,a
 	ld	a,c
 	sub	b	; If character is less than scroll...
+	ld	c,a
 	ret	m
 	cp	40	; If desired position is 40 or more
 	ret	nc
