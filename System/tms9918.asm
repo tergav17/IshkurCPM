@@ -23,12 +23,7 @@ tmsdev:	jp	tm_init
 	jp	tm_stat
 	jp	tm_read
 	jp	tm_writ
-	
-tm_test:call	tm_read
-	ld	c,a
-	call	tm_writ
-	jr	tm_test
-	
+
 ; TMS9918 init
 ; Load font record, set up terminal
 tm_init:call	resgrb
@@ -75,7 +70,11 @@ tm_ini0:ld	b,0
 	ld	hl,0
 	ld	(tm_curx),hl	; curx and cury
 	ld	(tm_outc),hl	; curc and escs
+	; Fall to tm_cloc
 	
+; Clear the output character
+;
+; uses: af
 tm_cloc:ld	a,0xFF
 	ld	(tm_outc),a
 
@@ -113,39 +112,30 @@ tm_read:ld	a,(tm_curx)
 	ld	e,a		; blinking char
 	ld	b,1
 	
-tm_rea4:push	de
+tm_rea0:push	de
 	call	tm_stat
 	pop	de
 	inc	a
-	jr	nz,tm_rea5
+	jr	nz,tm_rea1
 	ld	e,d
-	call	tm_rea6
+	call	tm_rea2
 	ld	a,(tm_outc)
 	ld	b,a
 	call	tm_cloc
 	ld	a,b
-	
-	; Perform key mapping
-	or	a
-	jp	p,tm_map0
-	xor	a,0
-	ret
-tm_map0:cp	0x7F	; DEL -> BS
-	jr	nz,$+4
-	ld	a,8
 	ret
 	
-tm_rea5:call	tm_stal
-	djnz	tm_rea4
+tm_rea1:call	tm_stal
+	djnz	tm_rea0
 	ld	a,0x80
 	xor	e
 	ld	e,a
-	call	tm_rea6
+	call	tm_rea2
 	ld	b,190
-	jr	tm_rea4
+	jr	tm_rea0
 
 
-tm_rea6:push	de
+tm_rea2:push	de
 	ld	a,(tm_curx)
 	ld	c,a
 	ld	a,(tm_cury)
@@ -272,19 +262,28 @@ tm_getc:in	a,(tm_keys)
 	
 	; Check for scrolling
 	in	a,(tm_keyd)
-	cp	93
+	cp	0xE4
 	jr	z,tm_scri
-	cp	91
+	cp	0xE5
 	jr	z,tm_sclf
 	
-	push	af
-	and	0xF0
-	cp	0x90
-	jr	z,tm_get0
-	pop	af
+	call	tm_map
+	ld	a,c
 	ret
-tm_get0:pop	af
-	ld	a,0xFF
+	
+; Maps keyboard input to ASCII
+; a = Key to map
+;
+; Returns mapped key in c
+; uses: af, c
+tm_map:	ld	c,0x08	; DEL -> BS
+	cp	0x7F
+	ret	z
+	
+	ld	c,a	; Filter non-ASCII
+	and	0x80	
+	ret	z
+	ld	c,0xFF
 	ret
 	
 ; Scroll left / scroll right

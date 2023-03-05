@@ -40,7 +40,7 @@ wboot0:	ld	hl,bdevsw
 	ld	bc,8
 	ldir
 	
-	jp	tm_test
+	jp	cbase
 
 
 ; This is not a true function, but a block of code to be copied
