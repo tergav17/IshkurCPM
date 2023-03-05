@@ -1185,8 +1185,8 @@ unkwn9:	call	resetdr		;inproper format.
 unkwn0:	ld	bc,badload	;read error or won't fit.
 	call	pline
 	jp	getback
-badload:defb	'bad load',0
-comfile:defb	'com'		;command file extension.
+badload:defb	'Bad load',0
+comfile:defb	'COM'		;command file extension.
 ;
 ;   get here to return to command level. we will reset the
 ; previous active drive and then either return to command
