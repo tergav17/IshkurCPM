@@ -19,10 +19,29 @@ tm_keyd	equ	0x90	; Keyboard data register
 tm_keys	equ	0x91	; Keyboard status register
 
 ; Driver jump table
-tmsdev:	jp	tm_init
-	jp	tm_stat
-	jp	tm_read
+tmsdev:	or	a
+	jr	z,tm_init
+	dec	a
+	jr	z,tm_stat
+	dec	a
+	jp	z,tm_read
 	jp	tm_writ
+
+
+; Gets the status of the keyboard
+;
+; Returns a=0xFF if there is a key to read 
+; uses: af, bc, de, hl
+tm_stat:ld	a,(tm_outc)
+	inc	a
+	ld	a,0xFF
+	ret	nz
+	call	tm_getc
+	ld	(tm_outc),a
+	inc	a
+	ret	z
+	ld	a,0xFF
+	ret
 
 ; TMS9918 init
 ; Load font record, set up terminal
@@ -78,22 +97,6 @@ tm_ini0:ld	b,0
 tm_cloc:ld	a,0xFF
 	ld	(tm_outc),a
 
-	ret
-
-
-; Gets the status of the keyboard
-;
-; Returns a=0xFF if there is a key to read 
-; uses: af, bc, de, hl
-tm_stat:ld	a,(tm_outc)
-	inc	a
-	ld	a,0xFF
-	ret	nz
-	call	tm_getc
-	ld	(tm_outc),a
-	inc	a
-	ret	z
-	ld	a,0xFF
 	ret
 
 ; Waits for the user to press a key, and returns it

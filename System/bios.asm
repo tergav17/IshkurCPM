@@ -14,14 +14,20 @@ boot:	jp	wboot
 ; Sends init signal to device bus, loads CCP, and inits CP/M
 wboot:	di
 	ld	sp,cbase
+	
+	; Write back cache
+	ld	hl,nulldev
+	call	chclaim
 
 	; Send init signals to all devices
-	ld	bc,0
-wboot0:	ld	hl,bdevsw
-	push	bc
-	push	bc
-	push	de
+	ld	b,0
+wboot0:	push	bc
+	ld	hl,bdevsw
+	ld	a,b
 	call	swindir
+	xor	a
+	inc	d
+	call	z,callmj
 	pop	bc
 	inc	b
 	ld	a,20
@@ -46,132 +52,185 @@ wboot0:	ld	hl,bdevsw
 ; This is not a true function, but a block of code to be copied
 ; to CP/M lower memory
 cpmlow:	jp	wboot	; should be wboot, but we want to halt
-	defb	0,0
+	nop
+	nop
 	jp	fbase
 
 
 ; Console status
+;
+; Returns a=0xFF if there is a character
+; uses: all
 ; Defaults to device 0 right now
-const:	ld	hl,cdevsw
-	ld	a,(hl)
-	inc	hl
-	ld	h,(hl)
-	ld	l,a
-	or	h
-	ret	z
-	ld	de,3
-	add	hl,de
-callhl:	jp	(hl)
+const:	xor	a
+	call	cdindir
+	inc	d
+	ret	nz
+	inc	a
+	jp	callmj
 	
 ; Console read
+;
+; Returns character in a
+; uses: all
 ; Defaults to device 0 right now
-conin:	ld	hl,cdevsw
-	ld	a,(hl)
-	inc	hl
-	ld	h,(hl)
-	ld	l,a
-	or	h
-	ret	z
-	ld	de,6
-	add	hl,de
-	jp	(hl)
+conin:	xor	a
+	call	cdindir
+	inc	d
+	ret	nz
+	ld	a,2
+	jp	callmj
 	
 ; Console write
+; c = Character to print
+;
+; uses: all
 ; Defaults to device 0 right now
-conout:	ld	hl,cdevsw
-	ld	a,(hl)
-	inc	hl
-	ld	h,(hl)
-	ld	l,a
-	or	h
-	ret	z
-	ld	de,9
-	add	hl,de
-	jp	(hl)
+conout:	xor	a
+	call	cdindir
+	inc	d
+	ret	nz
+	ld	a,3
+	jp	callmj
 	
+; TODO: Implement
 list:	ret
+
+; TODO: Implement
 punch:	ret
+
+; TODO: Implement
 reader:	ld	a,0x1A
 	ret
-home:	ld	bc,0
+	
+; Move the current drive to track 0
+;
+; uses: all
+home:	ld	a,1
+	jp	callbd
+	
+; Selects a block device
+; c = Device to select
+; e = Disk logging status
+;
+; return hl=0 if device not valid
+; uses: all
+seldsk:	ld	a,c
+	ld	c,e
+	ld	hl,bdevsw
+	call	swindir
+	ld	(callbd+1),hl
+	ld	hl,0
+	inc	d
+	ret	nz
+	ld	hl,(callmj+1)
+	ld	(callbd+4),hl
+	ld	a,2
+	
+	
+; Small stub to jump to the currently selected block device
+; Also records hl as argument
+callbd:	defb	0x21
+	defw	0
+	defb	0xC3
+	defw	0
+
+; Sets the track of the selected block device
+; bc = Track, starts at 0
+;
+; uses: all
+settrk:	ld	a,3
+	jr	callbd
+	
+; Sets the sector of the selected block device
+; bc = Sector, starts at 0
+;
+; uses: all
+setsec:	ld	a,4
+	jr	callbd
+
+; Sets the DMA address of the selected block device
+; bc = DMA address
+;
+; uses: all
+setdma:	ld	h,b
+	ld	l,c
+	ld	(biodma),hl
 	ret
-seldsk:	ld	hl,0
-	ret
-settrk:	ret
-setsec:	ret
-setdma:	ret
-read:	ld	a,1
-	ret
-write:	ld	a,1
-	ret
+	
+; Reads the configured block from the selected block device
+;
+; uses: all
+read:	ld	a,5
+	jr	callbd
+
+; Writes the configured block to the selected block device
+; c = Deferred mode
+;
+; uses: all
+write:	ld	a,6
+	jr	callbd
+	
+; TOOD Implement
 prstat:	ld	a,0
 	ret
+	
+; Provides sector translation
+; Returns no translation for all devices
 sectrn:	ld	h,b
 	ld	l,c
 	ret
 	
+; Character device switch indirection
+; Sets hl to cdevsw and jumps to swindir
+cdindir:ld	hl,cdevsw
 	
 ; Switch indirect helper function
-; Registers BC and DE should be pushed to stack
-; HL will pass as argument field
-; b = Device #
-; c = Call Offset
+; a = Device
 ; hl = Start of switch
 ;
-; returns c=255 if device found
-; uses: all
-swindir:ld	d,0	; Switches must not exceed 256 bytes
-	ld	e,b	; Multiply c by 4
-	ld	b,d
-	sla	e
-	sla	e
+; returns d=255 if device found, hl as argument
+; uses: af, de, hl
+swindir:ld	de,4
+	or	a
+swindi0:jr	z,swindi1
 	add	hl,de
-	ld	a,(hl)	; Indirect
+	dec	a
+	jr	swindi0
+swindi1:ld	a,(hl)
+	ld	(callmj+1),a
 	inc	hl
-	ld	d,(hl)
-	ld	e,a
+	cp	(hl)
+	ret	z
+	ld	a,(hl)
+	ld	(callmj+2),a
 	inc	hl
 	ld	a,(hl)
 	inc	hl
 	ld	h,(hl)
 	ld	l,a
-	ld	a,d
-	or	e
-	jr	nz,swindi1
-	pop	hl	; Not found!
-	pop	de	
-	pop	bc
-	ld	c,0
-	jp	(hl)	; Return through hl
-swindi1:ex	de,hl
-	add	hl,bc
-	ld	(callmj+1),hl
-	ex	de,hl
-	ld	(callarg),hl
-	pop	hl
-	pop	de
-	pop	bc
-	push	hl
-	ld	hl,(callarg)
-	call	callmj
-	ld	c,0xFF
+	ld	d,255
 nulldev:ret		; Just points to a return
 	
 ; Claims the cache, executing the sync
 ; command and setting the new owner
 ; hl = owner writeback function
+;
+; uses: all
 chclaim:push	hl
 	ld	hl,(chowner)
 	call	callhl
 	pop	hl
 	ld	(chowner),hl
 	ret
-	
-	
-; Variables
+
 ; Small stub to jump to the memory jump register
 callmj: defb	0xC3
 	defw	0
-; Used to shuffle around the return address during indirection
-callarg:defw	0
-chowner:defw	nulldev		; Current owner of the cache
+; Similar to callmj, but with (hl) instead
+callhl:	jp	(hl)
+
+
+; Variables
+chowner:defw	nulldev	; Current owner of the cache
+biodma:	defw	0	; Block device DMA address
