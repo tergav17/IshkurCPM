@@ -7,6 +7,8 @@
 ;*      TMS9918A graphics chip. The 2kb font record is
 ;*      not resident is memory, and must be provided by
 ;*      a compatable block I/O device.
+;*
+;*      Device requires 44 bytes of bss space
 ;* 
 ;**************************************************************
 ;
@@ -86,9 +88,7 @@ tm_ini0:ld	b,0
 	
 	; Clear the terminal
 	call	tm_cls
-	ld	hl,0
-	ld	(tm_curx),hl	; curx and cury
-	ld	(tm_outc),hl	; curc and escs
+	
 	; Fall to tm_cloc
 	
 ; Clear the output character
@@ -425,10 +425,10 @@ tm_addr:in	a,(tm_latc)
 	ret
 	
 ; Variables
-tm_curx:defb	0	; Cursor X
-tm_cury:defb	0	; Cursor Y
-tm_outc:defb	0	; Output character
-tm_scro:defb	0	; Scroll width
+tm_curx:equ	tm_bss		; Cursor X
+tm_cury:equ	tm_bss+1	; Cursor Y
+tm_outc:equ	tm_bss+2	; Output character
+tm_scro:equ	tm_bss+3	; Scroll width
 
 ; 40 byte character buffer
-tm_cbuf:defw	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+tm_cbuf:equ	tm_bss+4

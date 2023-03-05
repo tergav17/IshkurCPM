@@ -16,12 +16,29 @@
 ;
 ;   Set memory base here. 
 ;
-mem	equ	56		; CP/M image starts at mem*1024
+mem	equ	55		; CP/M image starts at mem*1024
 
 ;
-;   General cache address
+;**************************************************************
+;*
+;*              D E V I C E   B S S   B A S E S
+;*
+;*        Many devices need a section of uninitialized
+;*        memory space to hold buffers. This will not
+;*        be included in the system image to reduce space
+;*        so their location must be defined here.
+;*       
+;*        This memory is usually found above the system image.
+;*        All memory that is in this area will be automatically
+;*        zeroed on a warm boot.
+;*
+;**************************************************************
 ;
-cache	equ	0xFC00		; Start of 1k cache memory
+
+dircbuf	equ	0xF800
+tm_bss	equ	0xF880
+nf_bss	equ	0xF8C0
+nf_cach equ	0xFC00
 
 ;
 ;**************************************************************
@@ -150,3 +167,6 @@ cdevsw:	defw	tmsdev,	0	; Console device
 ;
 #include "tms9918.asm"
 #include "nabu1797.asm"
+
+; Image top, no more code after this
+imgtop:

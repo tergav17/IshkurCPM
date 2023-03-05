@@ -29,6 +29,40 @@ nf_rdsk	equ	2	; Defines which drives contains system
 ;**************************************************************
 ;
 
+; Disk A DPH
+nf_dpha:
+	defw	0,0,0,0
+	defw	dircbuf
+	defw	nf_dpb
+	defw	0
+	defw	nf_asva
+
+; Disk B DPH
+nf_dphb:
+	defw	0,0,0,0
+	defw	dircbuf
+	defw	nf_dpb
+	defw	0
+	defw	nf_asvb
+
+; Osborne 1 format
+nf_dpb:
+	defw	20	; # sectors per track
+	defb	3	; BSH
+	defb	7	; BLM
+	defb	0	; EXM
+	defw	189	; DSM
+	defw	63	; DRM
+	defb	0xC0	; AL0
+	defb	0	; AL1
+	defw	0	; Size of directory check vector
+	defw	3	; Number of reserved tracks at the beginning of disk
+
+
+; Driver entry point
+; a = Command #
+;
+; uses: all
 nfddev:	or	a
 	jr	z,nf_init
 	dec	a
@@ -45,7 +79,6 @@ nfddev:	or	a
 	
 ; Initialize device
 ; Sets the current track to 0
-nf_home:
 nf_init:xor	a
 	ld	(nf_io),a
 
@@ -71,32 +104,50 @@ nf_ini2:ld	a,c
 	sla	l
 	ld	a,2
 	add	l
-	call	nf_dvsl
+	ld	(nf_curd),a
 	
 	; Force FDC interrupt
 	ld	a,0xD0
 	out	(c),a
+	
+	; Re-home drive
+	call	nf_home
+	
+	; De-select drive
+	
+	ret
+
+; Sends the drive to track 0, and syncs the drive
+;
+; uses : af, c
+nf_home:call	nf_wdef
+	call	nf_dvsc
+
+	ld	a,(nf_io)
+	ld	c,a
 	
 	; Restore to track 0
 	ld	a,0x09
 	out	(c),a 
 	call	nf_busy
 	
+	; Reset sync flag
+	xor	a
+	ld	(nf_sync),a
+	
 	; De-select drive
-	call	nf_udsl
-	ret
+	jp	nf_udsl
 	
 ; Selects the drive
 ; c = Logging status
 ; hl = Call argument
 ;
 ; uses; all
-nf_sel:	xor	a
+nf_sel:	ld	a,l
 	ld	b,2
-	cp 	l
+	or	a
 	jr	z,nf_sel0
-	inc	a
-	cp	l
+	dec	a
 	ld	b,4
 	jr	z,nf_sel0
 	ld	hl,0
@@ -105,40 +156,34 @@ nf_sel0:ld	a,(nf_curd)
 	cp	b		; Compare to current drive
 	ret	z
 
-	call	nf_free
+	call	nf_wdef		; Write back if needed
 	ld	a,0xFF
 	ld	(nf_sync),a	; Set sync flag
 	ld	a,b
 	ld	(nf_curd),a	; Set current drive
-	inc	hl
-	ret
-
-; Free the cache, if needed
-;
-; uses: af
-nf_free:ld	a,(nf_ocac)
-	or	a
+	
+	; TODO DPH
+	ld	hl,nf_dpha
+	ld	a,2
+	cp	b
 	ret	z
-	push	bc
-	push	de
-	ld	hl,nulldev
-	call	chclaim
-	pop	de
-	pop	bc
+	
+	ld	hl,nf_dphb
+	
 	ret
-
 ; Sets the track of the selected block device
 ; bc = Track, starts at 0
 ; hl = Call argument
 ;
 ; uses: all
-nf_strk:call	nf_dvsc
-	ld	d,c		; Track = d
+nf_strk:ld	d,c		; Track = d
 	ld	a,(nf_io)
 	ld	c,a
 	ld	a,(nf_sync)
 	or	a
 	jr	z,nf_str0	; Check if disk direct
+	
+	call	nf_dvsc
 	
 	; Restore to track 0
 	ld	a,0x09
@@ -156,10 +201,11 @@ nf_str0:ld	e,c
 	cp	d
 	jp	z,nf_udsl	; They match, do nothing
 
-	; Free the cache
-	call	nf_free
-	
+	; Write a deferred block
+	call	nf_wdef
+
 	; Seek to track
+	call	nf_dvsc
 	inc	c
 	inc	c
 	out	(c),d
@@ -171,12 +217,11 @@ nf_str0:ld	e,c
 	jp	nf_udsl
 
 ; Sets the sector of the selected block device
-; bc = Sector, starts at 1
+; bc = Sector, starts at 0
 ; hl = Call argument
 ;
 ; uses: all
-nf_ssec:dec	c
-	ld	a,c
+nf_ssec:ld	a,c
 	and	0x07
 	ld	(nf_subs),a
 	
@@ -194,8 +239,8 @@ nf_ssec:dec	c
 	cp	b
 	ret	z	; Return if the same
 	
-	; Set FDC sector, after freeing cache
-	call	nf_free
+	; Set FDC sector, after writing back if needed
+	call	nf_wdef
 	out	(c),b
 	ret
 	
@@ -203,36 +248,38 @@ nf_ssec:dec	c
 ; Read a sector and DMA
 ;
 ; uses: all
-nf_read:ld	a,(nf_ocac)
+nf_read:ld	a,(nf_inco)
 	or	a
 	jr	nz,nf_rea0
 	
 	; Read in to cache
-	ld	hl,nf_wdef
-	call	chclaim
+	call	nf_dvsc
 	ld	a,(nf_io)
 	ld	c,a
-	ld	hl,cache
+	ld	hl,nf_cach
 	call	nf_rphy
+	ld	b,a
+	call	nf_udsl
+	ld	a,b
 	
 	; Error checking
 	or	a
 	ld	a,1
 	ret	nz
-	ld	(nf_ocac),a
+	ld	(nf_inco),a
 	
 	; DMA subsector
 nf_rea0:ld	hl,(biodma)
 	ex	de,hl
 
 	ld	a,(nf_subs)
-	ld	hl,cache-128
+	ld	hl,nf_cach-128
 	ld	bc,128
 	inc	a
 nf_rea1:add	hl,bc
 	dec	a
 	jr	nz,nf_rea1
-nf_rea2:otir
+nf_rea2:ldir
 	ret
 
 
@@ -240,16 +287,27 @@ nf_writ:ld	a,1
 	ret
 
 
-; Handles the releasing of the cache 
-nf_wdef:xor	a
-	ld	(nf_ocac),a
-
-	; Check if cache is dirty
+; Checks to see if the cache needs to be written back
+; after a deferred write.
+;
+; uses, af
+nf_wdef	; Check if cache is dirty
 	ld	a,(nf_dirt)
 	or	a
 	ret	z
 
+	push	bc
+	push	de
+	push	hl
 	; TODO: Do write here
+	push	hl
+	pop	de
+	pop	bc
+	
+	; Cache is no longer dirty
+	xor	a
+	ld	(nf_dirt),a
+	ld	(nf_inco),a
 	
 	ret
 	
@@ -350,8 +408,7 @@ nf_dvsl:push	bc
 	ld	a,(nf_io)
 	add	a,0x0F
 	ld	c,a
-	ld	a,b
-	out	(c),a
+	out	(c),b
 	ld	b,0xFF
 	call	nf_stal
 	pop	bc
@@ -377,11 +434,15 @@ nf_stal:push	bc
 
 
 ; Variables
-nf_io:	defb	0	; FDC address
-nf_r2ks:defb	0	; Temp storaged used in nf_r2k
+nf_io:	equ	nf_bss	; FDC address
+nf_r2ks:equ	nf_bss+1; Temp storaged used in nf_r2k
 
-nf_curd:defb	0	; Currently selected disk
-nf_subs:defb	0	; Current subsector
-nf_sync:defb	0	; Set if disk needs to be rehomed
-nf_ocac:defb	0	; Set if the driver owner the cache
-nf_dirt:defb	0	; Set if cache is dirty
+nf_curd:equ	nf_bss+2; Currently selected disk
+nf_subs:equ	nf_bss+3; Current subsector
+nf_sync:equ	nf_bss+4; Set if disk needs to be rehomed
+nf_inco:equ	nf_bss+5; Set if sector is in core already
+nf_dirt:equ	nf_bss+6; Set if cache is dirty
+
+; Misc CP/M buffer
+nf_asva:equ	nf_bss+7
+nf_asvb:equ	nf_bss+32

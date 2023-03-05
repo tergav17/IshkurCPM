@@ -26,4 +26,4 @@ for %%f in (..\..\Directory\*) do (
 REM Resize the file
 REM If only I had to `dd` command...
 cd ..\..\Output
-fsutil file seteof ishkur.img 204800 >NUL
+python ..\Build\e5pad.py ishkur.img 204800

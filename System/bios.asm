@@ -15,9 +15,13 @@ boot:	jp	wboot
 wboot:	di
 	ld	sp,cbase
 	
-	; Write back cache
-	ld	hl,nulldev
-	call	chclaim
+	; Zero out BSS
+	xor	a
+	ld	hl,imgtop
+	ld	(hl),a
+	ld	de,imgtop+1
+	ld	bc,0xFFFF-imgtop
+	ldir
 
 	; Send init signals to all devices
 	ld	b,0
@@ -34,11 +38,11 @@ wboot0:	push	bc
 	cp	b
 	jr	nz,wboot0
 
-	; Load the CCP
-	call	resccp
-	
 	; Call config init
 	call	cfinit
+
+	; Load the CCP
+	call	resccp
 	
 	; Set up lower memory
 	ld	hl,cpmlow
@@ -46,6 +50,7 @@ wboot0:	push	bc
 	ld	bc,8
 	ldir
 	
+	; Start the CCP
 	jp	cbase
 
 
@@ -211,26 +216,12 @@ swindi1:ld	a,(hl)
 	ld	l,a
 	ld	d,255
 nulldev:ret		; Just points to a return
-	
-; Claims the cache, executing the sync
-; command and setting the new owner
-; hl = owner writeback function
-;
-; uses: all
-chclaim:push	hl
-	ld	hl,(chowner)
-	call	callhl
-	pop	hl
-	ld	(chowner),hl
-	ret
 
 ; Small stub to jump to the memory jump register
 callmj: defb	0xC3
 	defw	0
-; Similar to callmj, but with (hl) instead
-callhl:	jp	(hl)
+
 
 
 ; Variables
-chowner:defw	nulldev	; Current owner of the cache
 biodma:	defw	0	; Block device DMA address

@@ -7,7 +7,7 @@
 ;
 
 nsec	equ	5		; # of BDOS+BIOS sectors
-mem	equ	56		; CP/M image starts at mem*1024
+mem	equ	55		; CP/M image starts at mem*1024
 				; Should be same as cpm22.asm
 
 	; NABU bootstrap loads in at 0xC000
