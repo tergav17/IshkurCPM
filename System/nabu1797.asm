@@ -224,11 +224,12 @@ nf_str0:ld	e,c
 nf_ssec:ld	a,c
 	and	0x07
 	ld	(nf_subs),a
+	ld	a,c
 	
 	; Compute physical sector
-	rra
-	rra
-	rra
+	srl	a
+	srl	a
+	srl	a
 	inc	a
 	ld	b,a	; b = Physical sector
 	ld	a,(nf_io)
@@ -291,7 +292,10 @@ nf_writ:ld	a,1
 ; after a deferred write.
 ;
 ; uses, af
-nf_wdef	; Check if cache is dirty
+nf_wdef	xor	a
+	ld	(nf_inco),a
+	
+	; Check if cache is dirty
 	ld	a,(nf_dirt)
 	or	a
 	ret	z
@@ -305,9 +309,8 @@ nf_wdef	; Check if cache is dirty
 	pop	bc
 	
 	; Cache is no longer dirty
-	xor	a
 	ld	(nf_dirt),a
-	ld	(nf_inco),a
+	
 	
 	ret
 	
