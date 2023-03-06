@@ -19,7 +19,7 @@ REM This loop is needed because winblows sucks
 for %%f in (..\..\Directory\*) do (
 	copy %%f %%~nf%%~xf >NUL
 	echo Writing %%~nf%%~xf to image
-	cpmcp -f osborne1 -t ..\..\Output\ishkur.img %%~nf%%~xf 0:
+	cpmcp -f osborne1 ..\..\Output\ishkur.img %%~nf%%~xf 0:
 	del %%~nf%%~xf
 )
 

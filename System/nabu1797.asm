@@ -47,11 +47,11 @@ nf_dphb:
 
 ; Osborne 1 format
 nf_dpb:
-	defw	20	; # sectors per track
+	defw	40	; # sectors per track
 	defb	3	; BSH
 	defb	7	; BLM
 	defb	0	; EXM
-	defw	189	; DSM
+	defw	184	; DSM
 	defw	63	; DRM
 	defb	0xC0	; AL0
 	defb	0	; AL1
