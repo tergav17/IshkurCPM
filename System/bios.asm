@@ -6,6 +6,36 @@
 ;**************************************************************
 ;
 
+;
+;**************************************************************
+;*
+;*          B I O S   J U M P   T A B L E
+;*
+;*    This isn't actually used by the BDOS, but
+;*    some applications (*cough* MBASIC) use it
+;*    to directly address BIOS calls to get around
+;*    the BDOS. 
+;*
+;**************************************************************
+;
+	jp	boot
+wbootin:jp	wboot	; Indirection to wboot, used by MBASIC
+	jp	const
+	jp	conin
+	jp	conout
+	jp	list
+	jp	punch
+	jp	reader
+	jp	home
+	jp	seldsk
+	jp	settrk
+	jp	setsec
+	jp	setdma
+	jp	read
+	jp	write
+	jp	prstat
+	jp	sectrn
+
 ; Cold boot routine
 ; Not much special happens here, so it jumps directly to wboot
 boot:	jp	wboot
@@ -56,7 +86,7 @@ wboot0:	push	bc
 
 ; This is not a true function, but a block of code to be copied
 ; to CP/M lower memory
-cpmlow:	jp	wboot	; should be wboot, but we want to halt
+cpmlow:	jp	wbootin	; call jump table version instead
 	nop
 	nop
 	jp	fbase
