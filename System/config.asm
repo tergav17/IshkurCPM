@@ -60,9 +60,9 @@ cfinit:	ld	a,0x01		; Bank out ROM
 	ld	(0x39),hl
 	
 	ld	a,0x0E		; Enable clock
-	out	(0x41),a
+	;out	(0x41),a
 	ld	a,0x10
-	out	(0x40),a
+	;out	(0x40),a
 	
 	
 	im	1		; Start interrupts
