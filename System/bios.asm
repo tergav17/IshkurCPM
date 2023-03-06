@@ -89,7 +89,7 @@ wboot0:	push	bc
 cpmlow:	jp	wbootin	; call jump table version instead
 	nop
 	nop
-	jp	fbase
+	jp	fbase-4
 
 
 ; Console status

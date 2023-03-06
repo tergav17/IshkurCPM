@@ -1,1 +1,0 @@
-These lising are here to compare OBASIC.COM from a working emulation to the MAME emulation
