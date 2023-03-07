@@ -18,6 +18,8 @@
 ;
 mem	equ	55		; CP/M image starts at mem*1024
 
+inbulen	equ	0xDC07	; Address in inbuff length byte
+
 ;
 ;**************************************************************
 ;*

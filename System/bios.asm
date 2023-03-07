@@ -36,14 +36,23 @@ wbootin:jp	wboot	; Indirection to wboot, used by MBASIC
 	jp	prstat
 	jp	sectrn
 
-; Cold boot routine
+; Cold boot entry
 ; Not much special happens here, so it jumps directly to wboot
-boot:	jp	wboot
+boot:	ld	sp,cbase
+	call	wbootr
+	ld	a,4
+	ld	(inbulen),a
+	jp	cbase
+
+; 
+wboot:	ld	sp,cbase
+	call	wbootr
+	jp	cbase
 
 ; Warm boot routine
 ; Sends init signal to device bus, loads CCP, and inits CP/M
-wboot:	di
-	ld	sp,cbase
+; Does not actually jump to CP/M just yet
+wbootr:	di
 	
 	; Zero out BSS
 	xor	a
@@ -80,8 +89,8 @@ wboot0:	push	bc
 	ld	bc,8
 	ldir
 	
-	; Start the CCP
-	jp	cbase
+	; Return
+	ret
 
 
 ; This is not a true function, but a block of code to be copied

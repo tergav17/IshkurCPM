@@ -10,6 +10,12 @@ move cpm22.lst ..\Output\Listings >NUL
 move boot.bin bin >NUL
 move boot.lst ..\Output\Listings >NUL
 
+REM Build Ishkur-specific applications
+cd ..\Applications
+..\Build\zasm init.asm -u -w -b init.com
+move init.com ..\Directory >NUL
+move init.lst ..\Output\Listings >NUL
+
 REM Assemble the disk image
 cd ..\Build\cpmtools
 .\mkfs.cpm -f osborne1 -b ..\..\System\bin\boot.bin -b ..\..\System\bin\font.bin -b ..\..\System\bin\cpm22.bin ishkur.img
