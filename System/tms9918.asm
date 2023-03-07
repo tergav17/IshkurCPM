@@ -8,7 +8,7 @@
 ;*      not resident is memory, and must be provided by
 ;*      a compatable block I/O device.
 ;*
-;*      Device requires 44 bytes of bss space
+;*      Device requires 44 bytes of bss space (tm_bss)
 ;* 
 ;**************************************************************
 ;

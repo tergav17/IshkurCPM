@@ -14,6 +14,9 @@
 ;*      Track 0 Sector 2-3:	Graphical Resource Block
 ;*	Track 0 Sector 4-5:	CCP
 ;*	Track 1 Sector 1-5:	BDOS + BIOS Image
+;*
+;*	Device requires 90 bytes of bss space (nf_bss)
+;*	Device requires 1024 byte buffer space (nf_cach)
 ;* 
 ;**************************************************************
 ;
@@ -32,18 +35,18 @@ nf_rdsk	equ	2	; Defines which drives contains system
 ; Disk A DPH
 nf_dpha:
 	defw	0,0,0,0
-	defw	dircbuf
-	defw	nf_dpb
-	defw	0
-	defw	nf_asva
+	defw	dircbuf	; DIRBUF
+	defw	nf_dpb	; DPB
+	defw	nf_csva	; CSV
+	defw	nf_asva	; ALV
 
 ; Disk B DPH
 nf_dphb:
 	defw	0,0,0,0
-	defw	dircbuf
-	defw	nf_dpb
-	defw	0
-	defw	nf_asvb
+	defw	dircbuf	; DIRBUF
+	defw	nf_dpb	; DPB
+	defw	nf_csvb	; CSV
+	defw	nf_asvb	; ALV
 
 ; Osborne 1 format
 nf_dpb:
@@ -55,7 +58,7 @@ nf_dpb:
 	defw	63	; DRM
 	defb	0xC0	; AL0
 	defb	0	; AL1
-	defw	0	; Size of directory check vector
+	defw	16	; Size of directory check vector
 	defw	3	; Number of reserved tracks at the beginning of disk
 
 
@@ -156,21 +159,42 @@ nf_sel0:ld	a,(nf_curd)
 	cp	b		; Compare to current drive
 	ret	z
 
+	; Move control of drive buffers
 	call	nf_wdef		; Write back if needed
 	ld	a,0xFF
 	ld	(nf_sync),a	; Set sync flag
 	ld	a,b
 	ld	(nf_curd),a	; Set current drive
+	ld	e,a
 	
-	; TODO DPH
+	; Check to make sure there is a disk
+	ld	d,255
+	call	nf_dvsc
+	ld	a,(nf_io)
+	ld	c,a
+	ld	a,0xD0
+	out	(c),a		; Force FDC interrupt
+nf_sel1:call	nf_stal
+	in	a,(c)
+	and	0x02
+	jr	nz,nf_sel2
+	dec	d
+	jr	nz,nf_sel1
+	
+	; No disk!
+	ld	hl,0
+	jp	nf_udsl
+	
+	
+	; Output DPH
+nf_sel2:call	nf_udsl
 	ld	hl,nf_dpha
 	ld	a,2
-	cp	b
+	cp	e
 	ret	z
-	
 	ld	hl,nf_dphb
-	
 	ret
+
 ; Sets the track of the selected block device
 ; bc = Track, starts at 0
 ; hl = Call argument
@@ -245,13 +269,12 @@ nf_ssec:ld	a,c
 	out	(c),b
 	ret
 	
-	
-; Read a sector and DMA
+; Ensure sector is in core, and set up for DMA transfer
 ;
 ; uses: all
-nf_read:ld	a,(nf_inco)
+nf_rdwr:ld	a,(nf_inco)
 	or	a
-	jr	nz,nf_rea0
+	jr	nz,nf_rdw0
 	
 	; Read in to cache
 	call	nf_dvsc
@@ -270,47 +293,100 @@ nf_read:ld	a,(nf_inco)
 	ld	(nf_inco),a
 	
 	; DMA subsector
-nf_rea0:ld	hl,(biodma)
+nf_rdw0:ld	hl,(biodma)
 	ex	de,hl
 
 	ld	a,(nf_subs)
 	ld	hl,nf_cach-128
 	ld	bc,128
 	inc	a
-nf_rea1:add	hl,bc
+nf_rdw1:add	hl,bc
 	dec	a
-	jr	nz,nf_rea1
-nf_rea2:ldir
+	jr	nz,nf_rdw1
+	ret
+
+; Reads a sector and DMA transfers it to memory
+nf_read:call	nf_rdwr
+	or	a
+	ret	nz
+	ldir
 	ret
 
 
-nf_writ:ld	a,1
-	ret
+; Write a sector from DMA, and defer it if possible
+nf_writ:push	bc
+	call	nf_rdwr
+	or	a
+	pop	bc
+	ret	nz
+	ld	a,1
+	ld	(nf_dirt),a
+	ld	a,c
+	ld	bc,128
+	ex	de,hl
+	ldir
+	cp	1
+	ld	a,0
+	ret	nz
+	
+	; Drop down to defer read
 
 
 ; Checks to see if the cache needs to be written back
 ; after a deferred write.
 ;
 ; uses, af
-nf_wdef	xor	a
-	ld	(nf_inco),a
-	
-	; Check if cache is dirty
-	ld	a,(nf_dirt)
+nf_wdef:ld	a,(nf_dirt)
 	or	a
-	ret	z
+	jr	z,nf_wde4
 
 	push	bc
 	push	de
 	push	hl
-	; TODO: Do write here
-	push	hl
+	
+	; Write physical sector
+	call	nf_dvsc
+	ld	a,(nf_io)
+	ld	c,a
+	add	a,3
+	ld	d,a
+	ld	e,c
+	ld	a,0xA8		; Write command
+	out	(c),a
+	ld	hl,nf_cach
+nf_wde1:in	a,(c)
+	rra	
+	jr	nc,nf_wde2
+	rra
+	jr	nc,nf_wde1
+	ld	c,d
+	outi 
+	ld	c,e
+	jr	nf_wde1
+nf_wde2:in	a,(c)
+	
+	; Deselect drive
+	ld	b,a
+	call	nf_udsl
+	ld	a,b
+	
+	pop	hl
 	pop	de
 	pop	bc
 	
-	; Cache is no longer dirty
-	ld	(nf_dirt),a
+	; Error checking
+	and	0xFC
+	jr	z,nf_wde3
 	
+	ld	a,1
+	ret
+	
+	; Cache is no longer dirty
+nf_wde3:ld	(nf_dirt),a
+	
+	; Data no longer in core
+nf_wde4:xor	a
+	ld	(nf_inco),a
 	
 	ret
 	
@@ -449,3 +525,5 @@ nf_dirt:equ	nf_bss+6; Set if cache is dirty
 ; Misc CP/M buffer
 nf_asva:equ	nf_bss+7
 nf_asvb:equ	nf_bss+32
+nf_csva:equ	nf_bss+57
+nf_csvb:equ	nf_bss+73
