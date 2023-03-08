@@ -37,9 +37,9 @@ inbulen	equ	0xDC07	; Address in inbuff length byte
 ;**************************************************************
 ;
 
-dircbuf	equ	0xF800
-tm_bss	equ	0xF880
-nf_bss	equ	0xF8C0
+dircbuf	equ	0xFA00	; 128 bytes
+tm_bss	equ	0xFA80	; 48 bytes
+nf_bss	equ	0xFAC0	; 90 bytes
 nf_cach equ	0xFC00
 
 ;

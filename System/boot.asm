@@ -6,7 +6,7 @@
 ;**************************************************************
 ;
 
-nsec	equ	5		; # of BDOS+BIOS sectors
+nsec	equ	6		; # of BDOS+BIOS sectors
 mem	equ	55		; CP/M image starts at mem*1024
 				; Should be same as cpm22.asm
 

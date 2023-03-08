@@ -8,7 +8,7 @@
 ;*      not resident is memory, and must be provided by
 ;*      a compatable block I/O device.
 ;*
-;*      Device requires 44 bytes of bss space (tm_bss)
+;*      Device requires 48 bytes of bss space (tm_bss)
 ;* 
 ;**************************************************************
 ;
@@ -182,9 +182,12 @@ tm_writ:ld	e,c
 ;
 ; Returns b,c as next position
 tm_wri0:ld	b,d		; c = X, b = Y
+	ld	a,(tm_escs)
+	or	a		; Process escape code
+	jp	z,tm_esc
 	ld	a,0x1F
 	cp	e
-	jp	nc,tm_wri1
+	jp	nc,tm_wri1	; Process control code
 	push	bc
 	call	tm_putc		; Write character
 	pop	bc
@@ -243,7 +246,41 @@ tm_wri1:ld	a,e
 	jr	z,tm_cshm
 	cp	0x1E	; Home cursor
 	jr	z,tm_home
+	cp	0x1B	; Escape
+	ret	nz
+	ld	a,1
+	ld	(tm_escs),a
 	ret
+	
+tm_esc:	dec	a
+	jr	z,tm_esc0
+	dec	a
+	jr	z,tm_esc1
+	dec	a
+	jr	z,tm_esc2
+tm_escd:xor	a	; Escape done
+tm_escr:ld	(tm_escs),a
+	ret
+tm_esc0:ld	a,0x3D	; '='
+	cp	e
+	jr	nz,tm_escd
+tm_esci:ld	a,(tm_escs)
+	inc	a
+	jr	tm_escr
+tm_esc1:ld	a,e
+	ld	e,0x20
+	sub	e
+	cp	24
+	jr	nz,tm_escd
+	ld	b,a
+	jr	tm_esci
+tm_esc2:ld	a,e
+	ld	e,0x20
+	sub	e
+	cp	80
+	jr	nz,tm_escd
+	ld	c,a
+	jr	tm_escd
 	
 ; Scroll both frame buffers down one
 ;
@@ -447,6 +484,7 @@ tm_curx:equ	tm_bss		; Cursor X
 tm_cury:equ	tm_bss+1	; Cursor Y
 tm_outc:equ	tm_bss+2	; Output character
 tm_scro:equ	tm_bss+3	; Scroll width
+tm_escs:equ	tm_bss+4	; Escape state
 
 ; 40 byte character buffer
-tm_cbuf:equ	tm_bss+4
+tm_cbuf:equ	tm_bss+5
