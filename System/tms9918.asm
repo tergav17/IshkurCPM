@@ -368,28 +368,37 @@ tm_getc:in	a,(tm_keys)
 ;
 ; Returns mapped key in c
 ; uses: af, c
-tm_map:	ld	c,0x08	
-	cp	0xE1	; '<-' -> BS
-	ret	z
+tm_map:	ld	c,a
 	
-	ld	c,0x0C	
-	cp	0xE0	; '->' -> Right
-	ret	z
+	; Mapping function
+	ld	hl,tm_mapt
+tm_map0:ld	a,(hl)
+	or	a
+	jr	z,tm_map2
+	cp	c
+	inc	hl
+	ld	a,(hl)
+	inc	hl
+	jr	nz,tm_map0
+	ld	c,a
+	ret
 	
-	ld	c,0x0B
-	cp	0xE2	; '/\' -> Up
-	ret	z
 	
-	ld	c,0x0A
-	cp	0xE3	; '\/' -> Linefeed
-	ret	z
-	
-	
-	ld	c,a	; Filter non-ASCII
+	; Filter non-ASCII
+tm_map2:ld	a,c
 	and	0x80	
 	ret	z
 	ld	c,0xFF
 	ret
+	
+; Map table
+tm_mapt:defb	0x7F,0x08	; DEL -> BS
+	defb	0xE1,0x08	; '<-' -> BS
+	defb	0xEA,0x7F	; 'TV' -> DEL
+	defb	0xE0,0x0C	; '->' -> Right
+	defb	0xE2,0x0B	; '/\' -> Up
+	defb	0xE3,0x0A	; '\/' -> Linefeed 
+	defb	0
 	
 ; Scroll left / scroll right
 ;
