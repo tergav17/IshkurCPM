@@ -181,7 +181,7 @@ tm_writ:ld	e,c
 ; e = Character
 ;
 ; Returns b,c as next position
-tm_wri0:ld	b,d
+tm_wri0:ld	b,d		; c = X, b = Y
 	ld	a,0x1F
 	cp	e
 	jp	nc,tm_wri1
@@ -190,7 +190,7 @@ tm_wri0:ld	b,d
 	pop	bc
 	
 	; Increment character
-	inc	c
+tm_ri	inc	c
 	ld	a,80
 	cp	c
 	ret	nz
@@ -217,14 +217,32 @@ tm_bs:	dec	c
 	ld	b,a
 	ld	c,a
 	ret
+tm_up:	xor	a
+	cp	b
+	ret	z
+	dec	b
+	ret
+tm_cshm:call	tm_cls
+tm_home:xor	a
+	ld	b,a
+	ld	c,a
+	ret
 
 tm_wri1:ld	a,e
-	cp	0x0D	; '\r'
-	jr	z,tm_cr
-	cp	0x0A	; '\n'
-	jr	z,tm_lf
-	cp	0x08	; '\b'
+	cp	0x08	; '\b' (Cursor left)
 	jr	z,tm_bs
+	cp	0x12	; Cursor right
+	jr	z,tm_ri
+	cp	0x0A	; '\n' (Cursor down)
+	jr	z,tm_lf
+	cp	0x0B	; Cursor up
+	jr	z,tm_up
+	cp	0x0D	; '\r' 
+	jr	z,tm_cr
+	cp	0x1A	; Clear screen, home cursor
+	jr	z,tm_cshm
+	cp	0x1E	; Home cursor
+	jr	z,tm_home
 	ret
 	
 ; Scroll both frame buffers down one
