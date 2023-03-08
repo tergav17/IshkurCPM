@@ -67,8 +67,12 @@ drsel:	ld	a,2
 	out	(c),a
 	call	fdbusy
 	
+	; Set current sector to 1
+nextt:	ld	a,1
+	ld	(cursec),a
+	
 	; Step in 1 track
-	; This should be the start of the BDOS
+	; This should be BDOS load code
 	ld	a,0x59
 	out	(c),a
 	call	fdbusy
@@ -102,14 +106,18 @@ dwait:	in	a,(c)
 	ld	c,b
 	jr	dwait
 	
-	; Move on to the next sector
-nexts:	ld	a,(cursec)
-	cp	nsec
 	
 	; If all sectors are in, jump to image
-	
+nexts:	ld	a,(nsecle)
+	dec	a
 	jp	z,9+1024*(mem+2)
+	ld	(nsecle),a
+	
+	; Move on to the next sector
+	ld	a,(cursec)
 	inc	a
+	cp	6
+	jr	z,nextt
 	ld	(cursec),a
 	jr	reads
 	
@@ -132,3 +140,4 @@ fdbusy:	in	a,(c)
 ; Variables
 fdaddr:	defb	0	; FDC address
 cursec:	defb	1	; Current sector
+nsecle:	defb	nsec	; Stores the number of sectors left
