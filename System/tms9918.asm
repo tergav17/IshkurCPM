@@ -162,6 +162,7 @@ tm_sta1:push	bc
 ; Writes a character to the screen
 ; c = Character to write
 ;
+; Returns c,b as next position 
 ; uses: af, bc, de, hl
 tm_writ:ld	e,c
 	ld	a,(tm_curx)
@@ -180,11 +181,11 @@ tm_writ:ld	e,c
 ; d = Y position
 ; e = Character
 ;
-; Returns b,c as next position
+; Returns c,b as next position
 tm_wri0:ld	b,d		; c = X, b = Y
 	ld	a,(tm_escs)
 	or	a		; Process escape code
-	jp	z,tm_esc
+	jp	nz,tm_esc
 	ld	a,0x1F
 	cp	e
 	jp	nc,tm_wri1	; Process control code
@@ -199,7 +200,7 @@ tm_ri	inc	c
 	ret	nz
 	xor	a
 	ld	c,a
-tm_lf:  inc	b
+tm_lf:  inc	b	; Line feed
 	ld	a,24
 	cp	b
 	ret	nz
@@ -208,10 +209,10 @@ tm_lf:  inc	b
 	pop	bc
 	dec	b
 	ret
-tm_cr:	xor	a
+tm_cr:	xor	a	; Carriage return
 	ld	c,a
 	ret
-tm_bs:	dec	c
+tm_bs:	dec	c	; Backspace 
 	ret	p
 	ld	c,79
 	dec	b
@@ -220,7 +221,7 @@ tm_bs:	dec	c
 	ld	b,a
 	ld	c,a
 	ret
-tm_up:	xor	a
+tm_up:	xor	a	; Move up
 	cp	b
 	ret	z
 	dec	b
@@ -242,6 +243,10 @@ tm_wri1:ld	a,e
 	jr	z,tm_up
 	cp	0x0D	; '\r' 
 	jr	z,tm_cr
+	cp	0x17	; Clear end of screen
+	jr	z,tm_cles
+	cp	0x18	; Clear end of line
+	jr	z,tm_clea
 	cp	0x1A	; Clear screen, home cursor
 	jr	z,tm_cshm
 	cp	0x1E	; Home cursor
@@ -252,6 +257,7 @@ tm_wri1:ld	a,e
 	ld	(tm_escs),a
 	ret
 	
+	; Handle escape sequence
 tm_esc:	dec	a
 	jr	z,tm_esc0
 	dec	a
@@ -271,16 +277,40 @@ tm_esc1:ld	a,e
 	ld	e,0x20
 	sub	e
 	cp	24
-	jr	nz,tm_escd
+	jr	nc,tm_escd
 	ld	b,a
 	jr	tm_esci
 tm_esc2:ld	a,e
 	ld	e,0x20
 	sub	e
 	cp	80
-	jr	nz,tm_escd
+	jr	nc,tm_escd
 	ld	c,a
 	jr	tm_escd
+	
+	; Clear segment
+	; B = ending line
+tm_cles:ld	b,23
+tm_clea:inc	b
+	ld	e,0
+tm_cle0:push	bc
+	push	de
+	call	tm_putc
+	pop	de
+	pop	bc
+	inc	c
+	ld	a,80
+	cp	c
+	jr	nz,tm_cle0
+	inc	d
+	xor	a
+	ld	c,a
+	ld	a,d
+	cp	b
+	jr	nz,tm_cle0
+	pop	de	; Do not update character
+	ret
+	
 	
 ; Scroll both frame buffers down one
 ;

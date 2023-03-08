@@ -67,6 +67,9 @@ drsel:	ld	a,2
 	out	(c),a
 	call	fdbusy
 	
+	; Set memory load address
+	ld	hl,1024*(mem+2)
+	
 	; Set current sector to 1
 nextt:	ld	a,1
 	ld	(cursec),a
@@ -79,7 +82,6 @@ nextt:	ld	a,1
 	
 	; Time to read in a sector
 	; Set the sector register
-	ld	hl,1024*(mem+2)
 reads:	ld	a,(cursec)
 	inc	c
 	inc	c
