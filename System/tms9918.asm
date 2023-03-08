@@ -293,11 +293,15 @@ tm_esc2:ld	a,e
 tm_cles:ld	b,23
 tm_clea:inc	b
 	ld	e,0
-tm_cle0:push	bc
+	push	bc
 	push	de
-	call	tm_putc
+	ld	a,80
+	ld	hl,0x4C00
+	call	tm_chat
 	pop	de
 	pop	bc
+tm_cle0:xor	a
+	out	(tm_data),a
 	inc	c
 	ld	a,80
 	cp	c
@@ -309,7 +313,7 @@ tm_cle0:push	bc
 	cp	b
 	jr	nz,tm_cle0
 	pop	de	; Do not update character
-	ret
+	jp	tm_usco
 	
 	
 ; Scroll both frame buffers down one
@@ -364,9 +368,22 @@ tm_getc:in	a,(tm_keys)
 ;
 ; Returns mapped key in c
 ; uses: af, c
-tm_map:	ld	c,0x08	; DEL -> BS
-	cp	0x7F
+tm_map:	ld	c,0x08	
+	cp	0xE1	; '<-' -> BS
 	ret	z
+	
+	ld	c,0x0C	
+	cp	0xE0	; '->' -> Right
+	ret	z
+	
+	ld	c,0x0B
+	cp	0xE2	; '/\' -> Up
+	ret	z
+	
+	ld	c,0x0A
+	cp	0xE3	; '\/' -> Linefeed
+	ret	z
+	
 	
 	ld	c,a	; Filter non-ASCII
 	and	0x80	
@@ -424,6 +441,7 @@ tm_putf:ld	a,(tm_scro)	; Place into frame buffer
 ; a = Line width
 ; c = X position
 ; d = Y position
+; hl = Buffer address
 ;
 ; uses: af, bc, d, hl
 tm_chat:ld	b,0
