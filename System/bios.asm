@@ -37,14 +37,25 @@ wbootin:jp	wboot	; Indirection to wboot, used by MBASIC
 	jp	sectrn
 
 ; Cold boot entry
-; Not much special happens here, so it jumps directly to wboot
+; Sets up some lower CP/M memory areas, and tells the INIT
+; program to run on CP/M startup.
 boot:	ld	sp,cbase
+
 	call	wbootr
 	ld	a,4
 	ld	(inbulen),a
+
+	; Set up lower memory
+	ld	hl,cpmlow
+	ld	de,0
+	ld	bc,8
+	ldir
+
 	jp	cbase
 
-; 
+
+; Warm boot entry
+; Mainly just calls wbootr
 wboot:	ld	sp,cbase
 	call	wbootr
 	jp	cbase
@@ -82,23 +93,17 @@ wboot0:	push	bc
 
 	; Load the CCP
 	call	resccp
-	
-	; Set up lower memory
-	ld	hl,cpmlow
-	ld	de,0
-	ld	bc,8
-	ldir
-	
+
 	; Return
 	ret
 
 
 ; This is not a true function, but a block of code to be copied
 ; to CP/M lower memory
-cpmlow:	jp	wbootin	; call jump table version instead
-	nop
-	nop
-	jp	fbase-4
+cpmlow:	jp	wbootin	; Call jump table version instead
+	defb	0	; Default IOBYTE
+	defb	0	; Default drive
+	jp	fbase-4	; 4 bytes before BDOS entry 
 
 
 ; Console status
@@ -126,7 +131,7 @@ conin:	xor	a
 	jp	callmj
 	
 ; Console write
-; c = Character to print
+; c = Character to display
 ;
 ; uses: all
 ; Defaults to device 0 right now
@@ -137,15 +142,27 @@ conout:	xor	a
 	ld	a,3
 	jp	callmj
 	
-; TODO: Implement
+; Printer write
+; c = Character to print
+;
+; uses: all
 list:	ret
 
-; TODO: Implement
+; Punch (or auxiliary) write
+; c = Character to punch
+;
 punch:	ret
 
-; TODO: Implement
-reader:	ld	a,0x1A
-	ret
+; Reader (or auxiliary) read
+;
+; Returns character in a, or a=0x1A
+reader:	ld	a,1
+	call	cdindir
+	inc	d
+	ld	a,0x1A
+	ret	nz
+	ld	a,2
+	jp	callmj
 	
 ; Move the current drive to track 0
 ;
@@ -174,6 +191,8 @@ seldsk:	ld	a,c
 	
 ; Small stub to jump to the currently selected block device
 ; Also records hl as argument
+;
+; We love self-modfiying code!
 callbd:	defb	0x21
 	defw	0
 	defb	0xC3
@@ -215,8 +234,12 @@ read:	ld	a,5
 write:	ld	a,6
 	jr	callbd
 	
-; TOOD Implement
-prstat:	ld	a,0
+; "Printer" is always read for bytes
+; Maybe in the future we will implement this, but for now
+; this will do.
+;
+; Returns a=0xFF
+prstat:	ld	a,0xFF
 	ret
 	
 ; Provides sector translation
