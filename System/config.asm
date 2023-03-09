@@ -155,10 +155,10 @@ bdevsw:	defw	nfddev,	0	; 'A'
 ; A device of "0" will be read as a non-existant device
 ; The 'init' signal can be sent to the same devices many 
 ; times if it has multipe entires in this table.
-cdevsw:	defw	tmsdev,	0	; Console device
-	defw	0,	0	; Printer device
-	defw	0,	0	; Aux I/O device #1
-	defw	0,	0	; Aux I/O device #2
+cdevsw:	defw	0,	0	; TTY device
+	defw	tmsdev,	0	; Console device
+	defw	0,	0	; Aux I/O device #1 (LPT)
+	defw	0,	0	; Aux I/O device #2 (GEN)
 
 ;
 ;**************************************************************

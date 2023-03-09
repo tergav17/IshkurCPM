@@ -42,22 +42,30 @@ wbootin:jp	wboot	; Indirection to wboot, used by MBASIC
 boot:	ld	sp,cbase
 
 	call	wbootr
+	
+	; Enable INIT to run
 	ld	a,4
 	ld	(inbulen),a
 
-	; Set up lower memory
-	ld	hl,cpmlow
-	ld	de,0
-	ld	bc,8
-	ldir
-
+	; Jump to CP/M
 	jp	cbase
 
 
 ; Warm boot entry
-; Mainly just calls wbootr
+; Mainly just calls wbootr and manages IOBYTE
 wboot:	ld	sp,cbase
+
+	; Save IOBYTE
+	ld	a,(iobyte)
+	push	af
+
+	; Warm boot
 	call	wbootr
+	
+	; Restore IOBYTE
+	pop	af
+	ld	(iobyte),a
+	
 	jp	cbase
 
 ; Warm boot routine
@@ -94,6 +102,13 @@ wboot0:	push	bc
 	; Load the CCP
 	call	resccp
 
+	
+	; Set up lower memory
+	ld	hl,cpmlow
+	ld	de,0
+	ld	bc,8
+	ldir
+
 	; Return
 	ret
 
@@ -101,7 +116,7 @@ wboot0:	push	bc
 ; This is not a true function, but a block of code to be copied
 ; to CP/M lower memory
 cpmlow:	jp	wbootin	; Call jump table version instead
-	defb	0	; Default IOBYTE
+	defb	0x81	; Default IOBYTE
 	defb	0	; Default drive
 	jp	fbase-4	; 4 bytes before BDOS entry 
 
@@ -111,7 +126,7 @@ cpmlow:	jp	wbootin	; Call jump table version instead
 ; Returns a=0xFF if there is a character
 ; uses: all
 ; Defaults to device 0 right now
-const:	xor	a
+const:	ld	b,0
 	call	cdindir
 	inc	d
 	ret	nz
@@ -123,7 +138,7 @@ const:	xor	a
 ; Returns character in a
 ; uses: all
 ; Defaults to device 0 right now
-conin:	xor	a
+conin:	ld	b,0
 	call	cdindir
 	inc	d
 	ret	nz
@@ -135,7 +150,7 @@ conin:	xor	a
 ;
 ; uses: all
 ; Defaults to device 0 right now
-conout:	xor	a
+conout:	ld	b,0
 	call	cdindir
 	inc	d
 	ret	nz
@@ -249,9 +264,17 @@ sectrn:	ld	h,b
 	ret
 	
 ; Character device switch indirection
+; Obtains device by doing IOBYTE indirection
 ; Sets hl to cdevsw and jumps to swindir
-cdindir:ld	hl,cdevsw
-	
+cdindir:inc	b
+	ld	a,(iobyte)
+cdindi0:dec	b
+	jr	z,cdindi1
+	rra
+	jr	cdindi0
+cdindi1:and	0x03
+	ld	hl,cdevsw
+
 ; Switch indirect helper function
 ; a = Device
 ; hl = Start of switch
