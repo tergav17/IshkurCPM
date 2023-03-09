@@ -151,7 +151,7 @@ conin:	ld	b,0
 ; uses: all
 ; Defaults to device 0 right now
 conout:	ld	b,0
-	call	cdindir
+chrout:	call	cdindir
 	inc	d
 	ret	nz
 	ld	a,3
@@ -161,17 +161,19 @@ conout:	ld	b,0
 ; c = Character to print
 ;
 ; uses: all
-list:	ret
+list:	ld	b,6
+	jr	chrout
 
 ; Punch (or auxiliary) write
 ; c = Character to punch
 ;
-punch:	ret
+punch:	ld	b,4
+	jr	chrout
 
 ; Reader (or auxiliary) read
 ;
 ; Returns character in a, or a=0x1A
-reader:	ld	a,1
+reader:	ld	b,2
 	call	cdindir
 	inc	d
 	ld	a,0x1A
