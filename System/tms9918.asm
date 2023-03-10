@@ -29,6 +29,34 @@ tmsdev:	or	a
 	jp	z,tm_read
 	jp	tm_writ
 
+; A slower version of the OTIR instruction
+; b = Number of cycles
+; c = Output port
+; hl = Memory pointer
+;
+; uses: bc, hl
+tm_otir:push	af
+tm_oti0:ld	a,(hl)
+	out	(c),a
+	inc	hl
+	djnz	tm_oti0
+	pop	af
+	ret
+	
+; A slower version of the INIR instruction
+; b = Number of cycles
+; c = Output port
+; hl = Memory pointer
+;
+; uses: bc, hl
+tm_inir:push	af
+tm_inr0:in	a,(c)
+	ld	(hl),a
+	inc	hl
+	djnz	tm_inr0
+	pop	af
+	ret
+
 
 ; Gets the status of the keyboard
 ;
@@ -82,7 +110,7 @@ tm_init:call	resgrb
 	ld	c,tm_data
 	ld	a,8	; Transfer 8*256 = 2048
 tm_ini0:ld	b,0
-	otir
+	call	tm_otir
 	dec	a
 	jr	nz,tm_ini0
 	
@@ -477,12 +505,12 @@ tm_cha0:jr	z,tm_addh
 tm_vcpy:call	tm_addh
 	ld	b,40
 	ld	hl,tm_cbuf
-	inir
+	call	tm_inir
 	ex	de,hl
 	call	tm_addh
 	ld	b,40
 	ld	hl,tm_cbuf
-	otir
+	call	tm_otir
 	ret
 	
 ; Updates the frame buffer based on the scroll position
