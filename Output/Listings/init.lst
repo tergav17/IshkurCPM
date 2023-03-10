@@ -1,6 +1,6 @@
               	; --------------------------------------
               	; zasm: assemble "init.asm"
-              	; date: 2023-03-09 14:53:57
+              	; date: 2023-03-09 17:16:43
               	; --------------------------------------
 
 
@@ -13,109 +13,182 @@
               	;*      starts up. It will display a hello banner and
               	;*      load in user settings
               	;*
+              	;*      It can also be used to configure on-boot settings
+              	;*      by running INIT after the system has booted
+              	;*
+              	;*	This version of INIT is for the NABU computer with
+              	;*      TMS9918 console.
+              	;*
               	;**************************************************************
               	;
               	
+              	; Equates
 0005:         	bdos	equ	0x0005
+0080:         	cmdlen	equ	0x0080
+0081:         	cmdarg	equ	0x0081
               	
+              	; Program start
 0100:         		org	0x0100
               		
+              		; Check to see if we are running for the first time
+0100: 3A8000  		ld	a,(cmdlen)
+0103: FE02    		cp	2
+0105: C21901  		jp	nz,config
+0108: 3A8200  		ld	a,(cmdarg+1)
+010B: FEFF    		cp	255
+010D: C21901  		jp	nz,config
+              		
               		; Print banner
-0100: 0E09    		ld	c,0x09
-0102: 110901  		ld	de,splash
-0105: CD0500  		call	bdos
-0108: C9      		ret
+0110: 0E09    		ld	c,0x09
+0112: 113201  		ld	de,splash
+0115: CD0500  		call	bdos
+0118: C9      		ret
               			
-0109:         	splash:
-0109: 205F5F5F		defb	' _____  _____ _    _ _  ___    _ _____   ',0x0A,0x0D
-010D: 5F5F2020	
-0111: 5F5F5F5F	
-0115: 5F205F20	
-0119: 2020205F	
-011D: 205F2020	
-0121: 5F5F5F20	
-0125: 2020205F	
-0129: 205F5F5F	
-012D: 5F5F2020	
-0131: 200A0D  	
-0134: 7C5F2020		defb	'|_   _|/ ____| |  | | |/ / |  | |  __ \  ',0x0A,0x0D
-0138: 205F7C2F	
-013C: 205F5F5F	
-0140: 5F7C207C	
-0144: 20207C20	
-0148: 7C207C2F	
-014C: 202F207C	
-0150: 20207C20	
-0154: 7C20205F	
-0158: 5F205C20	
-015C: 200A0D  	
-015F: 20207C20		defb	'  | | | (___ | |__| | | /| |  | | |__) | ',0x0A,0x0D
-0163: 7C207C20	
-0167: 285F5F5F	
-016B: 207C207C	
-016F: 5F5F7C20	
-0173: 7C207C20	
-0177: 2F7C207C	
-017B: 20207C20	
-017F: 7C207C5F	
-0183: 5F29207C	
-0187: 200A0D  	
-018A: 20207C20		defb	'  | |  \___ \|  __  |  < | |  | |  _  /  ',0x0A,0x0D
-018E: 7C20205C	
-0192: 5F5F5F20	
-0196: 5C7C2020	
-019A: 5F5F2020	
-019E: 7C20203C	
-01A2: 207C207C	
-01A6: 20207C20	
-01AA: 7C20205F	
-01AE: 20202F20	
-01B2: 200A0D  	
-01B5: 205F7C20		defb	' _| |_ ____) | |  | | . \| |__| | | \ \  ',0x0A,0x0D
-01B9: 7C5F205F	
-01BD: 5F5F5F29	
-01C1: 207C207C	
-01C5: 20207C20	
-01C9: 7C202E20	
-01CD: 5C7C207C	
-01D1: 5F5F7C20	
-01D5: 7C207C20	
-01D9: 5C205C20	
-01DD: 200A0D  	
-01E0: 7C5F5F5F		defb	'|_____|_____/|_|  |_|_|\_\\____/|_|  \_\ ',0x0A,0x0D
-01E4: 5F5F7C5F	
-01E8: 5F5F5F5F	
-01EC: 2F7C5F7C	
-01F0: 20207C5F	
-01F4: 7C5F7C5C	
-01F8: 5F5C5C5F	
-01FC: 5F5F5F2F	
-0200: 7C5F7C20	
-0204: 205C5F5C	
-0208: 200A0D  	
-020B: 0A0D4350		defb	0x0A,0x0D,'CP/M Version 2.2, Revision ALPHA',0x0A,0x0D
-020F: 2F4D2056	
-0213: 65727369	
-0217: 6F6E2032	
-021B: 2E322C20	
-021F: 52657669	
-0223: 73696F6E	
-0227: 20414C50	
-022B: 48410A0D	
-022F: 0A0D24  		defb	0x0A,0x0D,'$'
+              		; Do user configuration
+0119: 0E09    	config:	ld	c,0x09
+011B: 115B02  		ld	de,cfgmsg
+011E: CD0500  		call	bdos
+              		
+              		; Get user option
+0121: 0E0A    		ld	c,0x0A
+0123: 11AC02  		ld	de,inpbuf
+0126: CD0500  		call	bdos
+0129: 3AAE02  		ld	a,(inpbuf+2)
+              		
+              		; Look for exit condition
+012C: FE39    		cp	'9'
+012E: C8      		ret	z
+              		
+012F: 18E8    		jr	config
+0131: C9      		ret
+              		
+0132:         	splash:
+0132: 205F5F5F		defb	' _____  _____ _    _ _  ___    _ _____   ',0x0A,0x0D
+0136: 5F5F2020	
+013A: 5F5F5F5F	
+013E: 5F205F20	
+0142: 2020205F	
+0146: 205F2020	
+014A: 5F5F5F20	
+014E: 2020205F	
+0152: 205F5F5F	
+0156: 5F5F2020	
+015A: 200A0D  	
+015D: 7C5F2020		defb	'|_   _|/ ____| |  | | |/ / |  | |  __ \  ',0x0A,0x0D
+0161: 205F7C2F	
+0165: 205F5F5F	
+0169: 5F7C207C	
+016D: 20207C20	
+0171: 7C207C2F	
+0175: 202F207C	
+0179: 20207C20	
+017D: 7C20205F	
+0181: 5F205C20	
+0185: 200A0D  	
+0188: 20207C20		defb	'  | | | (___ | |__| | | /| |  | | |__) | ',0x0A,0x0D
+018C: 7C207C20	
+0190: 285F5F5F	
+0194: 207C207C	
+0198: 5F5F7C20	
+019C: 7C207C20	
+01A0: 2F7C207C	
+01A4: 20207C20	
+01A8: 7C207C5F	
+01AC: 5F29207C	
+01B0: 200A0D  	
+01B3: 20207C20		defb	'  | |  \___ \|  __  |  < | |  | |  _  /  ',0x0A,0x0D
+01B7: 7C20205C	
+01BB: 5F5F5F20	
+01BF: 5C7C2020	
+01C3: 5F5F2020	
+01C7: 7C20203C	
+01CB: 207C207C	
+01CF: 20207C20	
+01D3: 7C20205F	
+01D7: 20202F20	
+01DB: 200A0D  	
+01DE: 205F7C20		defb	' _| |_ ____) | |  | | . \| |__| | | \ \  ',0x0A,0x0D
+01E2: 7C5F205F	
+01E6: 5F5F5F29	
+01EA: 207C207C	
+01EE: 20207C20	
+01F2: 7C202E20	
+01F6: 5C7C207C	
+01FA: 5F5F7C20	
+01FE: 7C207C20	
+0202: 5C205C20	
+0206: 200A0D  	
+0209: 7C5F5F5F		defb	'|_____|_____/|_|  |_|_|\_\\____/|_|  \_\ ',0x0A,0x0D
+020D: 5F5F7C5F	
+0211: 5F5F5F5F	
+0215: 2F7C5F7C	
+0219: 20207C5F	
+021D: 7C5F7C5C	
+0221: 5F5C5C5F	
+0225: 5F5F5F2F	
+0229: 7C5F7C20	
+022D: 205C5F5C	
+0231: 200A0D  	
+0234: 0A0D4350		defb	0x0A,0x0D,'CP/M Version 2.2, Revision ALPHA',0x0A,0x0D
+0238: 2F4D2056	
+023C: 65727369	
+0240: 6F6E2032	
+0244: 2E322C20	
+0248: 52657669	
+024C: 73696F6E	
+0250: 20414C50	
+0254: 48410A0D	
+0258: 0A0D24  		defb	0x0A,0x0D,'$'
+              	
+025B:         	cfgmsg:
+025B: 0A0D4953		defb	0x0A,0x0D,'ISHKUR CP/M Configuration',0x0A,0x0A,0x0D
+025F: 484B5552	
+0263: 2043502F	
+0267: 4D20436F	
+026B: 6E666967	
+026F: 75726174	
+0273: 696F6E0A	
+0277: 0A0D    	
+              		
+0279: 20202020		defb	'    1: Change TMS9918 Text Color',0x0A,0x0D
+027D: 313A2043	
+0281: 68616E67	
+0285: 6520544D	
+0289: 53393931	
+028D: 38205465	
+0291: 78742043	
+0295: 6F6C6F72	
+0299: 0A0D    	
+029B: 20202020		defb	'    9: Exit',0x0A,0x0A,0x0D
+029F: 393A2045	
+02A3: 7869740A	
+02A7: 0A0D    	
+02A9: 3E2024  		defb	'> $'
+              		
+              	; Input buffer
+02AC: 02000000	inpbuf:	defb	0x02, 0x00, 0x00, 0x00
+              		
+              	; Top of program, use it to store stuff
+02B0:         	heap:
 
 
 ; +++ segments +++
 
-#CODE          = $0100 =   256,  size = $0132 =   306
+#CODE          = $0100 =   256,  size = $01B0 =   432
 
 ; +++ global symbols +++
 
-_end    = $0232 =   562          init.asm:15 (unused)
-_size   = $0132 =   306          init.asm:15 (unused)
-bdos    = $0005 =     5          init.asm:13
-splash  = $0109 =   265          init.asm:23
+_end    = $02B0 =   688          init.asm:25 (unused)
+_size   = $01B0 =   432          init.asm:25 (unused)
+bdos    = $0005 =     5          init.asm:20
+cfgmsg  = $025B =   603          init.asm:69
+cmdarg  = $0081 =   129          init.asm:22
+cmdlen  = $0080 =   128          init.asm:21
+config  = $0119 =   281          init.asm:42
+heap    = $02B0 =   688          init.asm:80 (unused)
+inpbuf  = $02AC =   684          init.asm:77
+splash  = $0132 =   306          init.asm:59
 
 
-total time: 0.0031 sec.
+total time: 0.0028 sec.
 no errors

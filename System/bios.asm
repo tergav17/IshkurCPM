@@ -44,7 +44,7 @@ boot:	ld	sp,cbase
 	call	wbootr
 	
 	; Enable INIT to run
-	ld	a,4
+	ld	a,6
 	ld	(inbulen),a
 
 	; Jump to CP/M

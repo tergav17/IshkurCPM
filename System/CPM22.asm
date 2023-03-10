@@ -48,7 +48,8 @@ cbase:	jp	command		;execute command processor (ccp).
 ;
 inbuff:	defb	127		;length of input buffer.
 	defb	0		;current length of contents.
-	defb	'INIT X   '
+	defb	'INIT '
+	defb	255,0,0,0
 	defb	' 1979 (c) by Digital Research      '
 	defb	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 	defb	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
