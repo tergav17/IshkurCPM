@@ -156,7 +156,7 @@ bdevsw:	defw	nfddev,	0	; 'A'
 ; The 'init' signal can be sent to the same devices many 
 ; times if it has multipe entires in this table.
 cdevsw:	defw	0,	0	; TTY device
-	defw	tmsdev,	0	; Console device
+	defw	vdpdev,	0	; Console device
 	defw	0,	0	; Aux I/O device #1 (LPT)
 	defw	0,	0	; Aux I/O device #2 (GEN)
 
@@ -167,8 +167,8 @@ cdevsw:	defw	0,	0	; TTY device
 ;*
 ;**************************************************************
 ;
-#include "tms9918.asm"
-#include "nabu1797.asm"
+#include "dev/nabu_fdc.asm"
+#include "dev/nabu_vdp.asm"
 
 ; Image top, no more code after this
 imgtop:

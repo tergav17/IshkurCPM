@@ -8,6 +8,9 @@
 ;*      not resident is memory, and must be provided by
 ;*      a compatable block I/O device.
 ;*
+;*      This specific version uses the NABU keyboard as
+;*      an input to the emulated termina 
+;*
 ;*      Device requires 48 bytes of bss space (tm_bss)
 ;* 
 ;**************************************************************
@@ -21,7 +24,7 @@ tm_keyd	equ	0x90	; Keyboard data register
 tm_keys	equ	0x91	; Keyboard status register
 
 ; Driver jump table
-tmsdev:	or	a
+vdpdev:	or	a
 	jr	z,tm_init
 	dec	a
 	jr	z,tm_stat
