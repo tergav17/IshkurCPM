@@ -4,12 +4,19 @@ cd ..\System
 REM Assemble the CP/M system into a binary image
 REM Then move to outputs folder
 ..\Build\zasm cpm22.asm -u -w -b cpm22.bin
-..\Build\zasm boot\boot_fdc.asm -u -w -b boot_fdc.bin
 copy cpm22.bin ..\Output\CPM22.SYS >NUL
 move cpm22.bin bin >NUL
 move cpm22.lst ..\Output\Listings >NUL
+
+REM Assemble the boot programs
+..\Build\zasm boot\boot_fdc.asm -u -w -b boot_fdc.bin
 move boot_fdc.bin bin >NUL
 move boot\boot_fdc.lst ..\Output\Listings >NUL
+
+..\Build\zasm boot\boot_nhacp.asm -u -w -b boot_nhacp.bin
+copy boot_nhacp.bin ..\Output\NHACP_BOOT.nabu >NUL
+move boot_nhacp.bin bin >NUL
+move boot\boot_nhacp.lst ..\Output\Listings >NUL
 
 REM Build Ishkur-specific applications
 cd ..\Applications
