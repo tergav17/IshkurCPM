@@ -1,6 +1,6 @@
               	; --------------------------------------
               	; zasm: assemble "boot\boot_nhacp.asm"
-              	; date: 2023-03-11 20:39:01
+              	; date: 2023-03-12 17:14:26
               	; --------------------------------------
 
 
@@ -15,49 +15,173 @@
 0006:         	nsec	equ	6		; # of BDOS+BIOS sectors
 0037:         	mem	equ	55		; CP/M image starts at mem*1024
               					; Should be same as cpm22.asm
+              					
+0040:         	aydata	equ	0x40		; AY-3-8910 data port
+0041:         	aylatc	equ	0x41		; AY-3-8910 latch port
+0080:         	hcca	equ	0x80		; Modem data port
+00A0:         	tmdata	equ	0xA0		; TMS9918 data port
+00A1:         	tmlatc	equ	0xA1		; TMS9918 latch port
               	
-              		; NABU bootstrap loads in at 0xC000
-C000:         		org	0xC000
+8000:         	buffer	equ	0x8000		; General purpose memory buffer
+              	
+              		; NABU bootstrap loads in at 0x140D
+140D:         		org	0x140D
               		
               	; Boot start same as NABU bootstrap
               	; Not sure why the nops are here, but I am keeping them
-C000: 00      	base:	nop
-C001: 00      		nop
-C002: 00      		nop
-C003: F3      		di
-C004: 3100C0  		ld	sp,base
-C007: 1803    		jr	tmsini
+140D: 00      	base:	nop
+140E: 00      		nop
+140F: 00      		nop
+1410: F3      		di
+1411: 310D14  		ld	sp,base
+1414: 1803    		jr	tmsini
               	
               	; Panic!
               	; Just jump to the start of ROM at this point
-C009: C30000  	panic:	jp	0
+1416: C30000  	panic:	jp	0
               		
               		; Change TMS color mode to indicate successful boot
-C00C: DBA1    	tmsini:	in	a,(0xA1)
-C00E: 3EE1    		ld	a,0xE1
-C010: D3A1    		out	(0xA1),a
-C012: 3E87    		ld	a,0x87
-C014: D3A1    		out	(0xA1),a
-              	
-C016: 18FE    	loop:	jr	loop
+1419: DBA1    	tmsini:	in	a,(tmlatc)
+141B: 3EE1    		ld	a,0xE1
+141D: D3A1    		out	(tmlatc),a
+141F: 3E87    		ld	a,0x87
+1421: D3A1    		out	(tmlatc),a
               		
+              		; Set up the HCCA modem connection
+1423: 3E07    		ld	a,0x07
+1425: D341    		out	(aylatc),a	; AY register = 7
+1427: 3E40    		ld	a,0x40
+1429: D340    		out	(aydata),a	; Configure AY port I/O
+              		
+142B: 3E0E    		ld	a,0x0E
+142D: D341    		out	(aylatc),a	; AY register = 14
+142F: 3EC0    		ld	a,0xC0
+1431: D340    		out	(aydata),a	; Enable HCCA receive and send
+              		
+1433: 3E0F    		ld	a,0x0F
+1435: D341    		out	(aylatc),a	; AY register = 15
+              		
+              		; Move into NHACP protocol mode
+1437: 219414  		ld	hl,m_start
+143A: 0608    		ld	b,8
+143C: CD4714  		call	modsend
+              		
+              		; Get confirmation
+              		;call	hccarea
+              		;cp	0x80
+              		;jp	nz,panic
+143F: 210080  		ld	hl,buffer
+1442: CD4F14  		call	modrece
+              	
+1445: 18FE    	loop:	jr	loop
+              	
+              	; Sends a string to the HCCA modem
+              	; b = # of bytes to send
+              	; hl = pointer to address
+              	;
+              	; uses: af, b, hl
+1447: 7E      	modsend:ld	a,(hl)
+1448: CD7814  		call	hccawri
+144B: 23      		inc	hl
+144C: 10F9    		djnz	modsend
+144E: C9      		ret
+              		
+              	; Receives a message back from the HCCA
+              	; hl = pointer to address
+              	;
+              	; uses: af, b, hl
+144F: CD5E14  	modrece:call	hccarea
+1452: 47      		ld	b,a
+1453: CD5E14  		call	hccarea
+1456: CD5E14  	modrec0:call	hccarea
+1459: 77      		ld	(hl),a
+145A: 23      		inc	hl
+145B: 10F9    		djnz	modrec0
+145D: C9      		ret
+              	
+              	
+              	; Read from the HCCA port
+              	; Assumes AY is set to reg 15
+              	; Will panic on timeout
+              	;
+              	; Returns return in a
+              	; Uses: af
+145E: D5      	hccarea:push	de
+145F: 11FFFF  		ld	de,0xFFFF
+1462: DB40    	hccare0:in	a,(aydata)
+1464: CB47    		bit	0,a
+1466: 28FA    		jr	z,hccare0	; Await an interrupt
+1468: CB4F    		bit	1,a
+146A: 2808    		jr	z,hccare1
+146C: 1B      		dec	de
+146D: 7B      		ld	a,e
+146E: BA      		cp	d
+146F: 20F1    		jr	nz,hccare0
+1471: C31614  		jp	panic		; Timed out waiting
+1474: DB80    	hccare1:in	a,(hcca)
+1476: D1      		pop	de
+1477: C9      		ret
+              		
+              	; Write to the HCCA port
+              	; Assumes AY is set to reg 15
+              	; Will panic on timeout
+              	; a = Character to write
+              	;
+              	; Uses: none
+1478: D5      	hccawri:push	de
+1479: F5      		push	af
+147A: 11FFFF  		ld	de,0xFFFF
+147D: DB40    	hccawr0:in	a,(aydata)
+147F: CB47    		bit	0,a
+1481: 28FA    		jr	z,hccawr0	; Await an interrupt
+1483: CB4F    		bit	1,a
+1485: 2008    		jr	nz,hccawr1
+1487: 1B      		dec	de
+1488: 7B      		ld	a,e
+1489: BA      		cp	d
+148A: 20F1    		jr	nz,hccawr0
+148C: C31614  		jp	panic		; Timed out waiting
+148F: F1      	hccawr1:pop	af
+1490: D380    		out	(hcca),a
+1492: D1      		pop	de
+1493: C9      		ret
+              		
+              	; NHACP start message
+1494: 8F414350	m_start:defb	0x8F,'ACP',0x01,0x00,0x00,0x00
+1498: 01000000	
 
 
 ; +++ segments +++
 
-#CODE          = $C000 = 49152,  size = $0018 =    24
+#CODE          = $140D =  5133,  size = $008F =   143
 
 ; +++ global symbols +++
 
-_end    = $C018 = 49176          boot\boot_nhacp.asm:14 (unused)
-_size   = $0018 =    24          boot\boot_nhacp.asm:14 (unused)
-base    = $C000 = 49152          boot\boot_nhacp.asm:18
-loop    = $C016 = 49174          boot\boot_nhacp.asm:36
+_end    = $149C =  5276          boot\boot_nhacp.asm:22 (unused)
+_size   = $008F =   143          boot\boot_nhacp.asm:22 (unused)
+aydata  = $0040 =    64          boot\boot_nhacp.asm:13
+aylatc  = $0041 =    65          boot\boot_nhacp.asm:14
+base    = $140D =  5133          boot\boot_nhacp.asm:26
+buffer  = $8000 = 32768          boot\boot_nhacp.asm:19
+hcca    = $0080 =   128          boot\boot_nhacp.asm:15
+hccare0 = $1462 =  5218          boot\boot_nhacp.asm:105
+hccare1 = $1474 =  5236          boot\boot_nhacp.asm:115
+hccarea = $145E =  5214          boot\boot_nhacp.asm:103
+hccawr0 = $147D =  5245          boot\boot_nhacp.asm:128
+hccawr1 = $148F =  5263          boot\boot_nhacp.asm:138
+hccawri = $1478 =  5240          boot\boot_nhacp.asm:125
+loop    = $1445 =  5189          boot\boot_nhacp.asm:70
+m_start = $1494 =  5268          boot\boot_nhacp.asm:144
 mem     = $0037 =    55          boot\boot_nhacp.asm:10 (unused)
+modrec0 = $1456 =  5206          boot\boot_nhacp.asm:90
+modrece = $144F =  5199          boot\boot_nhacp.asm:87
+modsend = $1447 =  5191          boot\boot_nhacp.asm:77
 nsec    = $0006 =     6          boot\boot_nhacp.asm:9 (unused)
-panic   = $C009 = 49161          boot\boot_nhacp.asm:27 (unused)
-tmsini  = $C00C = 49164          boot\boot_nhacp.asm:30
+panic   = $1416 =  5142          boot\boot_nhacp.asm:35
+tmdata  = $00A0 =   160          boot\boot_nhacp.asm:16 (unused)
+tmlatc  = $00A1 =   161          boot\boot_nhacp.asm:17
+tmsini  = $1419 =  5145          boot\boot_nhacp.asm:38
 
 
-total time: 0.0015 sec.
+total time: 0.0018 sec.
 no errors

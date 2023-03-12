@@ -3,10 +3,18 @@ cd ..\System
 
 REM Assemble the CP/M system into a binary image
 REM Then move to outputs folder
+copy config\config_fdc.asm config.asm
 ..\Build\zasm cpm22.asm -u -w -b cpm22.bin
-copy cpm22.bin ..\Output\CPM22.SYS >NUL
-move cpm22.bin bin >NUL
-move cpm22.lst ..\Output\Listings >NUL
+move cpm22.bin bin\cpm22_fdc.bin >NUL
+move cpm22.lst ..\Output\Listings\cpm22_fdc.lst >NUL
+
+copy config\config_nhacp.asm config.asm >NUL
+..\Build\zasm cpm22.asm -u -w -b cpm22.bin
+move cpm22.bin ..\Output\NHACP_CPM22.SYS >NUL
+move cpm22.lst ..\Output\Listings\cpm22_nhacp.lst >NUL
+
+REM Delete temp config file
+del /Q config.asm >NUL
 
 REM Assemble the boot programs
 ..\Build\zasm boot\boot_fdc.asm -u -w -b boot_fdc.bin
@@ -26,7 +34,7 @@ move init.lst ..\Output\Listings >NUL
 
 REM Assemble the disk image
 cd ..\Build\cpmtools
-.\mkfs.cpm -f osborne1 -b ..\..\System\bin\boot_fdc.bin -b ..\..\System\bin\font.bin -b ..\..\System\bin\cpm22.bin ishkur_fdc_ssdd.img
+.\mkfs.cpm -f osborne1 -b ..\..\System\bin\boot_fdc.bin -b ..\..\System\res\licca_font.bin -b ..\..\System\bin\cpm22_fdc.bin ishkur_fdc_ssdd.img
 move ishkur_fdc_ssdd.img ..\..\Output >NUL
 
 REM This loop is needed because winblows sucks

@@ -1263,6 +1263,7 @@ fbase1:	ex	de,hl		;save the (de) parameters.
 	ld	(auto),a
 	ld	hl,goback	;set return address.
 	push	hl
+	call	syshook		; see if anyone wants to intercept the call
 	ld	a,c		;get function number.
 	cp	nfuncts		;valid function number?
 	ret	nc
@@ -3703,10 +3704,6 @@ filepos:defw	0		;files position within directory (0 to max entries -1).
 ; 16 possible drives.
 ;
 cksumtbl: defb	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-;
-;   extra space ?
-;
-	defb	0
 	
 #include "bios.asm"
 #include "config.asm"

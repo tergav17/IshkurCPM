@@ -39,8 +39,6 @@ inbulen	equ	0xDC07	; Address in inbuff length byte
 
 dircbuf	equ	0xFA00	; 128 bytes
 tm_bss	equ	0xFA80	; 48 bytes
-nf_bss	equ	0xFAC0	; 90 bytes
-nf_cach equ	0xFC00
 
 ;
 ;**************************************************************
@@ -63,7 +61,7 @@ cfinit:	ld	a,0x01		; Bank out ROM
 	
 	ld	a,0x0E		; Enable clock
 	;out	(0x41),a
-	ld	a,0x10
+	ld	a,0x00
 	;out	(0x40),a
 	
 	
@@ -86,6 +84,25 @@ cfinit:	ld	a,0x01		; Bank out ROM
 cfirq:	ei
 	reti
 
+;
+;**************************************************************
+;*
+;*              B D O S   C A L L   H O O K
+;*
+;*     This function is called everytime a BDOS call occurs.
+;*     It can be used by specialized drivers to either inject
+;*     new BDOS calls, or intercept existing ones.
+;*
+;*     Registers 'bc' and 'e' must be preserved if a call is
+;*     going to be forwarded to the system.
+;*       
+;*
+;**************************************************************
+;
+
+syshook:ret
+
+
 ;**************************************************************
 ;*
 ;*           B L O C K   D E V I C E   S W I T C H
@@ -105,19 +122,19 @@ cfirq:	ei
 	
 ; One of the block devices needs to have the responsibiliy
 ; of loading the CCP into memory. Define the jump vector here
-resccp:	jp	nf_ccp
+resccp:	ret
 
 ; Additionally, if Ishkur is using a graphical device, that
 ; device may temporarily need to access the Graphical Resource
 ; Block (GRB) to load in fonts and such. This is up to 2k in
 ; size, and goes in the location that the CCP resides
-resgrb:	jp	nf_grb
+resgrb:	ret
 
 ; A device of "0" will be read as a non-existant device
 ; The 'init' signal can be sent to the same devices many 
 ; times if it has multipe entires in this table.
-bdevsw:	defw	nfddev,	0	; 'A'
-	defw	nfddev,	1	; 'B'
+bdevsw:	defw	0,	0	; 'A'
+	defw	0,	0	; 'B'
 	defw	0,	0	; 'C'
 	defw	0,	0	; 'D'
 	defw	0,	0	; 'E'
@@ -167,7 +184,7 @@ cdevsw:	defw	0,	0	; TTY device
 ;*
 ;**************************************************************
 ;
-#include "dev/nabu_fdc.asm"
+
 #include "dev/nabu_vdp.asm"
 
 ; Image top, no more code after this
