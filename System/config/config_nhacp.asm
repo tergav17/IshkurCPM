@@ -100,7 +100,8 @@ cfirq:	ei
 ;**************************************************************
 ;
 
-syshook:ret
+syshook:call	nh_sysh
+	ret
 
 
 ;**************************************************************
@@ -186,6 +187,7 @@ cdevsw:	defw	0,	0	; TTY device
 ;
 
 #include "dev/nabu_vdp.asm"
+#include "dev/nabu_nhacp.asm"
 
 ; Image top, no more code after this
 imgtop:

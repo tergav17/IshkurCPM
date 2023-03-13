@@ -121,9 +121,7 @@ readse0:call	hccarea
 exec:	ld	hl,m_close
 	ld	b,2
 	call	modsend
-	;jp	z,9+1024*(mem+2)
-
-loop:	jr	loop
+	jp	z,9+1024*(mem+2)
 
 ; Sends a message to the HCCA modem
 ; b = # of bytes to send
