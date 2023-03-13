@@ -3,7 +3,7 @@ cd ..\System
 
 REM Assemble the CP/M system into a binary image
 REM Then move to outputs folder
-copy config\config_fdc.asm config.asm
+copy config\config_fdc.asm config.asm >NUL
 ..\Build\zasm cpm22.asm -u -w -b cpm22.bin
 move cpm22.bin bin\cpm22_fdc.bin >NUL
 move cpm22.lst ..\Output\Listings\cpm22_fdc.lst >NUL
