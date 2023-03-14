@@ -69,15 +69,26 @@ nh_hini:ld	a,0x07
 	ld	a,0x0F
 	out	(nh_atla),a	; AY register = 15
 	ret
+; Loads the CCP into the CCP space
+nh_ccp:	ld	hl,nh_p0
+	jr	nh_grb0
 	
 ; Loads the GRB into the CCP space
-nh_grb:	call	nh_hinit	; Go to HCCA mode
-	ld	hl,nh_p1
-	ld	de,nh_m0na
+nh_grb:	ld	hl,nh_p1
+nh_grb0:ld	de,nh_m0na
 	ld	bc,12
 	ldir			; Copy name to file open
-	call	nh_clos		; Close current file (if any)
+	call	nh_hini	; Go to HCCA mode
 	call	nh_open		; Open the file
+	ld	de,0
+	ld	hl,cbase
+nh_grb1:call	nh_getb
+	inc	e
+	ld	a,16
+	cp	e
+	jr	nz,nh_grb1
+	ret
+	
 
 ; Open the prepared file
 ; Closes the existing file too
@@ -88,26 +99,64 @@ nh_open:ld	hl,nh_m1
 	call	nh_send
 	ld	hl,nh_m0
 	ld	b,21
-	jp	nh_send
+	call	nh_send
+	ld	hl,nh_buff
+	call	nh_rece
+	ret
 	
-; Recives a general response from the NHACP server
+; Gets a block from the currently open file
+; and places it in (hl)
+; de = Block to read
+; hl = Destination for information
+;
+; Returns location directly after in hl
+; Carry flag set on error
+; uses: af, b, hl
+nh_getb:ex	de,hl
+	ld	(nh_m2bn),hl
+	ex	de,hl
+	ld	hl,nh_m2
+	ld	b,10
+	call	nh_send
+	ret	c
+	call	nh_hcrd
+	call	nh_hcre
+	ret	c
+	cp	0x84
+	scf
+	ret	nz
+	call	nh_hcrd
+	ld	b,128
+nh_get0:call	nh_hcrd
+	ret	c
+	ld	(hl),a
+	inc	hl
+	djnz	nh_get0
+	or	a
+	ret
+	
+	
+; Receives a general response from the NHACP server
 ; hl = Destination of message
 ;
 ; Carry flag set on error
 ; uses: af, b, hl
 nh_rece:call	nh_hcre
 	ret	c	; Existing error
-	or	a
 	scf
 	ret	m	; Message to big!
 	ld	b,a
 	call	nh_hcre
 	ret	c	; Existing error
-	or	a
 	scf
 	ret	nz	; Message too big!
 nh_rec0:call	nh_hcre
 	ret	c	; Error!
+	ld	(hl),a
+	inc	hl
+	djnz	nh_rec0
+	or	a
+	ret
 	
 ; Write a number of bytes to the HCCA port
 ; b = Bytes to write
@@ -128,6 +177,7 @@ nh_send:ld	a,(hl)
 ; Returns return in a
 ; Carry flag set on error
 ; Uses: af
+nh_hcrd:call	nh_hcre
 nh_hcre:push	de
 	ld	de,0xFFFF
 nh_hcr0:in	a,(nh_ayda)
@@ -234,7 +284,7 @@ nh_p1:	defb	'0/FONT.GRB',0,0
 
 ; Message prototype to open a file
 ; Total length: 21 bytes
-nh_m0:	defw	0x13		; Message length
+nh_m0:	defw	19		; Message length
 	defb	0x01		; Cmd: STORAGE-OPEN
 	defb	nh_fild		; Default file descriptor
 nh_m0fl:defw	0x00		; Read/Write flags
@@ -244,9 +294,17 @@ nh_m0na:defb	'0/XXXXXXXXXXXX'; File name field
 	
 ; Message prototype to close a file
 ; Total length: 4 bytes
-nh_m1:	defw	0x02		; Message length
-	defb	0x05		; Cmd: FILE_CLOSE
+nh_m1:	defw	2		; Message length
+	defb	0x05		; Cmd: FILE-CLOSE
 	defb	nh_fild		; Default file descriptor
 	
+; Message prototype to read a block
+; Total length: 10 bytes
+nh_m2:	defw	8		; Message length
+	defb	0x07		; Cmd: STORAGE-GET-BLOCK
+	defb	nh_fild		; Default file descritor
+nh_m2bn:defw	0x00,0x00	; Block number
+	defw	128		; Block length
+
 ; Variables
 nh_buff	equ	nh_bss

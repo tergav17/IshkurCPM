@@ -1,6 +1,6 @@
               	; --------------------------------------
               	; zasm: assemble "boot\boot_nhacp.asm"
-              	; date: 2023-03-13 13:57:50
+              	; date: 2023-03-14 02:35:56
               	; --------------------------------------
 
 
@@ -63,47 +63,47 @@
 1435: D341    		out	(aylatc),a	; AY register = 15
               		
               		; Move into NHACP protocol mode
-1437: 210515  		ld	hl,m_start
+1437: 210615  		ld	hl,m_start
 143A: 0608    		ld	b,8
-143C: CDB214  		call	modsen0
+143C: CDB314  		call	modsen0
               		
               		; Get confirmation
-143F: CDBA14  		call	modrecb
+143F: CDBB14  		call	modrecb
 1442: 3A0080  		ld	a,(buffer)
 1445: FE80    		cp	0x80		; Correct confirmation?
 1447: C21614  		jp	nz,panic
               	
               		; Open the file
-144A: 210D15  		ld	hl,m_open
+144A: 210E15  		ld	hl,m_open
 144D: 0610    		ld	b,16
-144F: CDAA14  		call	modsend
+144F: CDAB14  		call	modsend
               		
               		; Get file descriptor
-1452: CDBA14  		call	modrecb
+1452: CDBB14  		call	modrecb
 1455: 3A0080  		ld	a,(buffer)
 1458: FE83    		cp	0x83		; File opened?
 145A: C21614  		jp	nz,panic
 145D: 3A0180  		ld	a,(buffer+1)
-1460: 321E15  		ld	(rfdesc),a
-1463: 322615  		ld	(cfdesc),a
+1460: 321F15  		ld	(rfdesc),a
+1463: 322715  		ld	(cfdesc),a
               		
 1466: 2100E4  		ld	hl,1024*(mem+2)	; Set base for loading data
 1469: EB      	readsec:ex	de,hl
-146A: 211D15  		ld	hl,m_read
+146A: 211E15  		ld	hl,m_read
 146D: 0609    		ld	b,9
-146F: CDAA14  		call	modsend
+146F: CDAB14  		call	modsend
               		
               		; Handle incoming data packet
-1472: CDCC14  		call	hccared
-1475: CDCF14  		call	hccarea
+1472: CDCD14  		call	hccared
+1475: CDD014  		call	hccarea
 1478: FE84    		cp	0x84
 147A: C21614  		jp	nz,panic
-147D: CDCC14  		call	hccared
+147D: CDCD14  		call	hccared
               		
               		; Move it into memory
 1480: EB      		ex	de,hl
 1481: 110004  		ld	de,0x400
-1484: CDCF14  	readse0:call	hccarea
+1484: CDD014  	readse0:call	hccarea
 1487: 77      		ld	(hl),a
 1488: 23      		inc	hl
 1489: 1B      		dec	de
@@ -112,53 +112,53 @@
 148C: 20F6    		jr	nz,readse0
               		
               		; See if we need to load another sector
-148E: 3A2715  		ld	a,(nsecle)
+148E: 3A2815  		ld	a,(nsecle)
 1491: 3D      		dec	a
 1492: 280C    		jr	z,exec
-1494: 322715  		ld	(nsecle),a
+1494: 322815  		ld	(nsecle),a
               		
               		; Increment address
-1497: 3A1F15  		ld	a,(rfaddr)
+1497: 3A2015  		ld	a,(rfaddr)
 149A: 3C      		inc	a
-149B: 321F15  		ld	(rfaddr),a
+149B: 322015  		ld	(rfaddr),a
 149E: 18C9    		jr	readsec
               		
               		; Execute BDOS
-14A0: 212515  	exec:	ld	hl,m_close
+14A0: 212615  	exec:	ld	hl,m_close
 14A3: 0602    		ld	b,2
-14A5: CDAA14  		call	modsend
-              		;jp	z,9+1024*(mem+2)
+14A5: CDAB14  		call	modsend
+14A8: CA09E4  		jp	z,9+1024*(mem+2)
               	
-14A8: 18FE    	loop:	jr	loop
+              	;loop:	jr	loop
               	
               	; Sends a message to the HCCA modem
               	; b = # of bytes to send
               	; hl = pointer to address
               	;
               	; uses: af, b, hl
-14AA: 78      	modsend:ld	a,b
-14AB: CDE914  		call	hccawri		; Send size of packet
-14AE: AF      		xor	a
-14AF: CDE914  		call	hccawri
-14B2: 7E      	modsen0:ld	a,(hl)
-14B3: CDE914  		call	hccawri
-14B6: 23      		inc	hl
-14B7: 10F9    		djnz	modsen0
-14B9: C9      		ret
+14AB: 78      	modsend:ld	a,b
+14AC: CDEA14  		call	hccawri		; Send size of packet
+14AF: AF      		xor	a
+14B0: CDEA14  		call	hccawri
+14B3: 7E      	modsen0:ld	a,(hl)
+14B4: CDEA14  		call	hccawri
+14B7: 23      		inc	hl
+14B8: 10F9    		djnz	modsen0
+14BA: C9      		ret
               		
               	; Receives a message back from the HCCA
               	; hl = pointer to address
               	;
               	; uses: af, b, hl
-14BA: 210080  	modrecb:ld	hl,buffer	; Read directly into buffer
-14BD: CDCF14  	modrece:call	hccarea
-14C0: 47      		ld	b,a
-14C1: CDCF14  		call	hccarea
-14C4: CDCF14  	modrec0:call	hccarea
-14C7: 77      		ld	(hl),a
-14C8: 23      		inc	hl
-14C9: 10F9    		djnz	modrec0
-14CB: C9      		ret
+14BB: 210080  	modrecb:ld	hl,buffer	; Read directly into buffer
+14BE: CDD014  	modrece:call	hccarea
+14C1: 47      		ld	b,a
+14C2: CDD014  		call	hccarea
+14C5: CDD014  	modrec0:call	hccarea
+14C8: 77      		ld	(hl),a
+14C9: 23      		inc	hl
+14CA: 10F9    		djnz	modrec0
+14CC: C9      		ret
               	
               	
               	; Read from the HCCA port
@@ -167,22 +167,22 @@
               	;
               	; Returns return in a
               	; Uses: af
-14CC: CDCF14  	hccared:call	hccarea		; Reads 2 bytes, discards 1
-14CF: D5      	hccarea:push	de
-14D0: 11FFFF  		ld	de,0xFFFF
-14D3: DB40    	hccare0:in	a,(aydata)
-14D5: CB47    		bit	0,a
-14D7: 28FA    		jr	z,hccare0	; Await an interrupt
-14D9: CB4F    		bit	1,a
-14DB: 2808    		jr	z,hccare1
-14DD: 1B      		dec	de
-14DE: 7B      		ld	a,e
-14DF: B2      		or	d
-14E0: 20F1    		jr	nz,hccare0
-14E2: C31614  		jp	panic		; Timed out waiting
-14E5: DB80    	hccare1:in	a,(hcca)
-14E7: D1      		pop	de
-14E8: C9      		ret
+14CD: CDD014  	hccared:call	hccarea		; Reads 2 bytes, discards 1
+14D0: D5      	hccarea:push	de
+14D1: 11FFFF  		ld	de,0xFFFF
+14D4: DB40    	hccare0:in	a,(aydata)
+14D6: CB47    		bit	0,a
+14D8: 28FA    		jr	z,hccare0	; Await an interrupt
+14DA: CB4F    		bit	1,a
+14DC: 2808    		jr	z,hccare1
+14DE: 1B      		dec	de
+14DF: 7B      		ld	a,e
+14E0: B2      		or	d
+14E1: 20F1    		jr	nz,hccare0
+14E3: C31614  		jp	panic		; Timed out waiting
+14E6: DB80    	hccare1:in	a,(hcca)
+14E8: D1      		pop	de
+14E9: C9      		ret
               		
               	; Write to the HCCA port
               	; Assumes AY is set to reg 15
@@ -190,94 +190,93 @@
               	; a = Character to write
               	;
               	; Uses: none
-14E9: D5      	hccawri:push	de
-14EA: F5      		push	af
-14EB: 11FFFF  		ld	de,0xFFFF
-14EE: DB40    	hccawr0:in	a,(aydata)
-14F0: CB47    		bit	0,a
-14F2: 28FA    		jr	z,hccawr0	; Await an interrupt
-14F4: CB4F    		bit	1,a
-14F6: 2008    		jr	nz,hccawr1
-14F8: 1B      		dec	de
-14F9: 7B      		ld	a,e
-14FA: B2      		or	d
-14FB: 20F1    		jr	nz,hccawr0
-14FD: C31614  		jp	panic		; Timed out waiting
-1500: F1      	hccawr1:pop	af
-1501: D380    		out	(hcca),a
-1503: D1      		pop	de
-1504: C9      		ret
+14EA: D5      	hccawri:push	de
+14EB: F5      		push	af
+14EC: 11FFFF  		ld	de,0xFFFF
+14EF: DB40    	hccawr0:in	a,(aydata)
+14F1: CB47    		bit	0,a
+14F3: 28FA    		jr	z,hccawr0	; Await an interrupt
+14F5: CB4F    		bit	1,a
+14F7: 2008    		jr	nz,hccawr1
+14F9: 1B      		dec	de
+14FA: 7B      		ld	a,e
+14FB: B2      		or	d
+14FC: 20F1    		jr	nz,hccawr0
+14FE: C31614  		jp	panic		; Timed out waiting
+1501: F1      	hccawr1:pop	af
+1502: D380    		out	(hcca),a
+1504: D1      		pop	de
+1505: C9      		ret
               		
               	; NHACP start message
               	; Enables CRC mode
-1505: 8F414350	m_start:defb	0x8F,'ACP',0x01,0x00,0x00,0x00
-1509: 01000000	
+1506: 8F414350	m_start:defb	0x8F,'ACP',0x01,0x00,0x00,0x00
+150A: 01000000	
               	
               	; NHACP open CP/M 2.2 image
-150D: 01FF0100	m_open:	defb	0x01,0xFF,0x01,0x00,0x0B,'0/CPM22.SYS'
-1511: 0B302F43	
-1515: 504D3232	
-1519: 2E535953	
+150E: 01FF0100	m_open:	defb	0x01,0xFF,0x01,0x00,0x0B,'0/CPM22.SYS'
+1512: 0B302F43	
+1516: 504D3232	
+151A: 2E535953	
               	
               	; NHACP read block from open file
-151D: 07      	m_read:	defb	0x07
-151E: 00      	rfdesc:	defb	0x00		; Read command file descriptor
-151F: 02      	rfaddr:	defb	0x02		; Read command start offset
-1520: 000000  		defb	0x00,0x00,0x00
-1523: 0004    		defb	0x00,0x04
+151E: 07      	m_read:	defb	0x07
+151F: 00      	rfdesc:	defb	0x00		; Read command file descriptor
+1520: 02      	rfaddr:	defb	0x02		; Read command start offset
+1521: 000000  		defb	0x00,0x00,0x00
+1524: 0004    		defb	0x00,0x04
               		
               	; NHACP close file
-1525: 05      	m_close:defb	0x05
-1526: 00      	cfdesc:	defb	0x00		; Close command file descriptor
+1526: 05      	m_close:defb	0x05
+1527: 00      	cfdesc:	defb	0x00		; Close command file descriptor
               	
               	; Variables
-1527: 06      	nsecle:	defb	nsec
+1528: 06      	nsecle:	defb	nsec
 
 
 ; +++ segments +++
 
-#CODE          = $140D =  5133,  size = $011B =   283
+#CODE          = $140D =  5133,  size = $011C =   284
 
 ; +++ global symbols +++
 
-_end    = $1528 =  5416          boot\boot_nhacp.asm:23 (unused)
-_size   = $011B =   283          boot\boot_nhacp.asm:23 (unused)
+_end    = $1529 =  5417          boot\boot_nhacp.asm:23 (unused)
+_size   = $011C =   284          boot\boot_nhacp.asm:23 (unused)
 aydata  = $0040 =    64          boot\boot_nhacp.asm:14
 aylatc  = $0041 =    65          boot\boot_nhacp.asm:15
 base    = $140D =  5133          boot\boot_nhacp.asm:27
 buffer  = $8000 = 32768          boot\boot_nhacp.asm:20
-cfdesc  = $1526 =  5414          boot\boot_nhacp.asm:221
+cfdesc  = $1527 =  5415          boot\boot_nhacp.asm:221
 exec    = $14A0 =  5280          boot\boot_nhacp.asm:121
 hcca    = $0080 =   128          boot\boot_nhacp.asm:16
-hccare0 = $14D3 =  5331          boot\boot_nhacp.asm:167
-hccare1 = $14E5 =  5349          boot\boot_nhacp.asm:177
-hccarea = $14CF =  5327          boot\boot_nhacp.asm:165
-hccared = $14CC =  5324          boot\boot_nhacp.asm:164
-hccawr0 = $14EE =  5358          boot\boot_nhacp.asm:190
-hccawr1 = $1500 =  5376          boot\boot_nhacp.asm:200
-hccawri = $14E9 =  5353          boot\boot_nhacp.asm:187
-loop    = $14A8 =  5288          boot\boot_nhacp.asm:126
-m_close = $1525 =  5413          boot\boot_nhacp.asm:220
-m_open  = $150D =  5389          boot\boot_nhacp.asm:210
-m_read  = $151D =  5405          boot\boot_nhacp.asm:213
-m_start = $1505 =  5381          boot\boot_nhacp.asm:207
+hccare0 = $14D4 =  5332          boot\boot_nhacp.asm:167
+hccare1 = $14E6 =  5350          boot\boot_nhacp.asm:177
+hccarea = $14D0 =  5328          boot\boot_nhacp.asm:165
+hccared = $14CD =  5325          boot\boot_nhacp.asm:164
+hccawr0 = $14EF =  5359          boot\boot_nhacp.asm:190
+hccawr1 = $1501 =  5377          boot\boot_nhacp.asm:200
+hccawri = $14EA =  5354          boot\boot_nhacp.asm:187
+m_close = $1526 =  5414          boot\boot_nhacp.asm:220
+m_open  = $150E =  5390          boot\boot_nhacp.asm:210
+m_read  = $151E =  5406          boot\boot_nhacp.asm:213
+m_start = $1506 =  5382          boot\boot_nhacp.asm:207
 mem     = $0037 =    55          boot\boot_nhacp.asm:11
-modrec0 = $14C4 =  5316          boot\boot_nhacp.asm:151
-modrecb = $14BA =  5306          boot\boot_nhacp.asm:147
-modrece = $14BD =  5309          boot\boot_nhacp.asm:148 (unused)
-modsen0 = $14B2 =  5298          boot\boot_nhacp.asm:137
-modsend = $14AA =  5290          boot\boot_nhacp.asm:133
+modrec0 = $14C5 =  5317          boot\boot_nhacp.asm:151
+modrecb = $14BB =  5307          boot\boot_nhacp.asm:147
+modrece = $14BE =  5310          boot\boot_nhacp.asm:148 (unused)
+modsen0 = $14B3 =  5299          boot\boot_nhacp.asm:137
+modsend = $14AB =  5291          boot\boot_nhacp.asm:133
 nsec    = $0006 =     6          boot\boot_nhacp.asm:9
-nsecle  = $1527 =  5415          boot\boot_nhacp.asm:224
+nsecle  = $1528 =  5416          boot\boot_nhacp.asm:224
 panic   = $1416 =  5142          boot\boot_nhacp.asm:36
 readse0 = $1484 =  5252          boot\boot_nhacp.asm:100
 readsec = $1469 =  5225          boot\boot_nhacp.asm:85
-rfaddr  = $151F =  5407          boot\boot_nhacp.asm:215
-rfdesc  = $151E =  5406          boot\boot_nhacp.asm:214
+rfaddr  = $1520 =  5408          boot\boot_nhacp.asm:215
+rfdesc  = $151F =  5407          boot\boot_nhacp.asm:214
 tmdata  = $00A0 =   160          boot\boot_nhacp.asm:17 (unused)
 tmlatc  = $00A1 =   161          boot\boot_nhacp.asm:18
 tmsini  = $1419 =  5145          boot\boot_nhacp.asm:39
 
 
-total time: 0.0022 sec.
+total time: 0.0021 sec.
 no errors
