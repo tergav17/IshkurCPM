@@ -39,6 +39,7 @@ inbulen	equ	0xDC07	; Address in inbuff length byte
 
 dircbuf	equ	0xFA00	; 128 bytes
 tm_bss	equ	0xFA80	; 48 bytes
+nh_bss	equ	0xFAB0	; 256 bytes
 
 ;
 ;**************************************************************
@@ -94,7 +95,8 @@ cfirq:	ei
 ;*     new BDOS calls, or intercept existing ones.
 ;*
 ;*     Registers 'bc' and 'e' must be preserved if a call is
-;*     going to be forwarded to the system.
+;*     going to be forwarded to the system. Register 'c' will
+;*     contain BDOS call number.
 ;*       
 ;*
 ;**************************************************************

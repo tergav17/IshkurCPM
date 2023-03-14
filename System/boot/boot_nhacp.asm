@@ -84,7 +84,7 @@ tmsini:	in	a,(tmlatc)
 	ld	hl,1024*(mem+2)	; Set base for loading data
 readsec:ex	de,hl
 	ld	hl,m_read
-	ld	b,8
+	ld	b,9
 	call	modsend
 	
 	; Handle incoming data packet
@@ -123,13 +123,15 @@ exec:	ld	hl,m_close
 	call	modsend
 	jp	z,9+1024*(mem+2)
 
+;loop:	jr	loop
+
 ; Sends a message to the HCCA modem
 ; b = # of bytes to send
 ; hl = pointer to address
 ;
 ; uses: af, b, hl
 modsend:ld	a,b
-	call	hccawri
+	call	hccawri		; Send size of packet
 	xor	a
 	call	hccawri
 modsen0:ld	a,(hl)
@@ -201,6 +203,7 @@ hccawr1:pop	af
 	ret
 	
 ; NHACP start message
+; Enables CRC mode
 m_start:defb	0x8F,'ACP',0x01,0x00,0x00,0x00
 
 ; NHACP open CP/M 2.2 image
