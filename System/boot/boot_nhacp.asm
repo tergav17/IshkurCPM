@@ -119,8 +119,21 @@ readse0:call	hccarea
 	
 	; Execute BDOS
 exec:	ld	hl,m_close
-	ld	b,2
+	ld	b,4
 	call	modsend
+	;ld	a,0x04
+	;call	hccawri
+	;ld	a,0x00
+	;call	hccawri
+	;ld	a,0x05
+	;call	hccawri
+	;ld	a,0x00
+	;call	hccawri
+	;ld	a,0x00
+	;call	hccawri
+	;ld	a,0x00
+	;call	hccawri
+
 	jp	z,9+1024*(mem+2)
 
 ;loop:	jr	loop
@@ -219,6 +232,7 @@ rfaddr:	defb	0x02		; Read command start offset
 ; NHACP close file
 m_close:defb	0x05
 cfdesc:	defb	0x00		; Close command file descriptor
+	defw	0x00		; Fucking magic
 
 ; Variables
 nsecle:	defb	nsec

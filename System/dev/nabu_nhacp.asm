@@ -78,7 +78,7 @@ nh_grb:	ld	hl,nh_p1
 nh_grb0:ld	de,nh_m0na
 	ld	bc,12
 	ldir			; Copy name to file open
-	call	nh_hini	; Go to HCCA mode
+	call	nh_hini		; Go to HCCA mode
 	call	nh_open		; Open the file
 	ld	de,0
 	ld	hl,cbase
@@ -95,7 +95,7 @@ nh_grb1:call	nh_getb
 ;
 ; uses: af, b, hl
 nh_open:ld	hl,nh_m1
-	ld	b,4
+	ld	b,6
 	call	nh_send
 	ld	hl,nh_m0
 	ld	b,21
@@ -103,6 +103,8 @@ nh_open:ld	hl,nh_m1
 	ld	hl,nh_buff
 	call	nh_rece
 	ret
+	
+loop:	jr	loop
 	
 ; Gets a block from the currently open file
 ; and places it in (hl)
@@ -115,9 +117,11 @@ nh_open:ld	hl,nh_m1
 nh_getb:ex	de,hl
 	ld	(nh_m2bn),hl
 	ex	de,hl
+	push	hl
 	ld	hl,nh_m2
 	ld	b,10
 	call	nh_send
+	pop	hl
 	ret	c
 	call	nh_hcrd
 	call	nh_hcre
@@ -127,7 +131,7 @@ nh_getb:ex	de,hl
 	ret	nz
 	call	nh_hcrd
 	ld	b,128
-nh_get0:call	nh_hcrd
+nh_get0:call	nh_hcre
 	ret	c
 	ld	(hl),a
 	inc	hl
@@ -165,6 +169,7 @@ nh_rec0:call	nh_hcre
 ; Carry flag set on error
 ; uses: af, b, hl
 nh_send:ld	a,(hl)
+	inc	hl
 	call	nh_hcwr
 	ret	c	; Error!
 	djnz	nh_send
@@ -293,10 +298,11 @@ nh_m0na:defb	'0/XXXXXXXXXXXX'; File name field
 	defb	0x00		; Padding
 	
 ; Message prototype to close a file
-; Total length: 4 bytes
-nh_m1:	defw	2		; Message length
+; Total length: 6 bytes
+nh_m1:	defw	4		; Message length
 	defb	0x05		; Cmd: FILE-CLOSE
 	defb	nh_fild		; Default file descriptor
+	defw	0x00		; Magic bytes
 	
 ; Message prototype to read a block
 ; Total length: 10 bytes
