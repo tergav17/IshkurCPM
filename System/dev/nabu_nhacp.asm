@@ -69,9 +69,64 @@ nh_init:ld	a,c
 ; CP/M system hook
 ; Used to intercept certain syscalls
 ;
-; uses: none if not hooked, all otherwise
+; uses: af if not hooked, all otherwise
 nh_sysh:ld	a,c
+	cp	15
+	ret	c		; No syscalls lower than 15
+	jr	z,nh_fopn
+	ret
 	
+; CP/M open syscall
+; de = Address of FCB
+;
+; uses: all
+nh_fopn:call	nh_ownr
+	ex	de,hl
+	inc	hl
+	ld	de,nh_m0na
+	call	nh_form
+	call	nh_open
+	ld	a,(nh_buff)
+	cp	0x83
+	ld	a,0
+	jp	z,nh_fop0
+	dec	a
+nh_fop0:ld	(status),a
+	jp	goback
+
+
+; Check if system owns device
+; Bail if it does not
+; If it does, get to logical NHACP device
+; de = Address of FCB
+;
+; uses: af, hl
+nh_ownr:push	bc
+	ld	a,(de)		; Get FSB device
+	call	nh_domk		; Create bitmask
+	ld	hl,(nh_mask)
+	ld	a,h
+	and	b
+	jr	nz,nh_own0
+	ld	a,l
+	and	c
+nh_own0:jr	z,nh_exit	; Exit if does not own	
+	ld	hl,bdevsw+2
+	ld	a,(de)		; Get FSB device
+	ld	bc,4
+	or	a
+nh_own1:jr	z,nh_own2
+	add	hl,bc
+	dec	a
+	jr	nh_own1
+nh_own2:ld	a,(hl)		; a = Logical NHACP device
+	pop	bc
+	ret
+
+; Exit, do not return to caller
+nh_exit:pop	bc
+	pop	af		; Throw away caller address
+	ret
 	
 ; Set a 16 bit mask based on a number from 0-15
 ; a = Bit to set
@@ -278,40 +333,43 @@ nh_ltou:and	0x7F
 	ret
 	
 ; Takes a FCB-style name and formats it to standard notation
+; a = Logical NHACP device
 ; de = Desintation for formatted name
 ; hl = Source FCB file name
 ;
-; Updates reopen flag
 ; uses: all
-nh_form:ld	c,0
+nh_form:add	a,0x30
+	cp	0x3A
+	jr	c,nh_for0
+	add	a,0x07
+nh_for0:ld	(de),a
+	inc	de
+	inc	de
+	ld	c,0
 	ld	b,8		; Look at all 8 possible name chars
-nh_for0:ld	a,(hl)
+nh_for1:ld	a,(hl)
 	call	nh_ltou
 	cp	0x21
-	jr	c,nh_for1
-	call	nh_for3
-	djnz	nh_for0
-nh_for1:ld	a,0x2E		; '.'
+	jr	c,nh_for2
 	ld	(de),a
+	inc	hl
+	inc	de
+	djnz	nh_for1
+nh_for2:ld	a,0x2E		; '.'
+	ld	(de),a
+	inc	de
 	ld	c,b
 	ld	b,0
 	add	hl,bc		; Fast forward to extenstion
 	ld	b,3		; Copy over extension
-nh_for2:ld	a,(hl)
+nh_for3:ld	a,(hl)
 	call	nh_ltou
-	call	nh_for3
-	djnz	nh_for2
-	xor	a		; Zero terminate
 	ld	(de),a
-	ret
-nh_for3:ex	de,hl
-	cp	(hl)		; Increment c if different
-	ex	de,hl
 	inc	hl
 	inc	de
-	ret	z
-	ld	a,1
-	ld	(nh_reop),a
+	djnz	nh_for3
+	xor	a		; Zero terminate
+	ld	(de),a
 	ret
 	
 ; Path to CP/M image
@@ -349,5 +407,4 @@ nh_m2bn:defw	0x00,0x00	; Block number
 
 ; Variables
 nh_buff	equ	nh_bss
-nh_reop	equ	nh_bss+128		; Reopen file?
 nh_mask	equ	nh_bss+129		; Ownership mask

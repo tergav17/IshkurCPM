@@ -1,6 +1,6 @@
               	; --------------------------------------
               	; zasm: assemble "cpm22.asm"
-              	; date: 2023-03-14 22:37:16
+              	; date: 2023-03-15 15:16:03
               	; --------------------------------------
 
 
@@ -3855,10 +3855,10 @@ F254: F3      	wbootr:	di
               		
               		; Zero out BSS
 F255: AF      		xor	a
-F256: 21DEF7  		ld	hl,imgtop
+F256: 2121F8  		ld	hl,imgtop
 F259: 77      		ld	(hl),a
-F25A: 11DFF7  		ld	de,imgtop+1
-F25D: 012108  		ld	bc,0xFFFF-imgtop
+F25A: 1122F8  		ld	de,imgtop+1
+F25D: 01DE07  		ld	bc,0xFFFF-imgtop
 F260: EDB0    		ldir
               	
               		; Send init signals to all devices
@@ -3974,7 +3974,7 @@ F2CD: C3E8F2  		jp	callbd
               	; return hl=0 if device not valid
               	; uses: all
 F2D0: 79      	seldsk:	ld	a,c
-F2D1: 4B      		ld	c,e
+F2D1: 43      		ld	b,e
 F2D2: 215FF3  		ld	hl,bdevsw
 F2D5: CD19F3  		call	swindir
 F2D8: 22E9F2  		ld	(callbd+1),hl
@@ -3984,7 +3984,7 @@ F2DF: C0      		ret	nz
 F2E0: 2A37F3  		ld	hl,(callmj+1)
 F2E3: 22ECF2  		ld	(callbd+4),hl
 F2E6: 3E02    		ld	a,2
-              		
+              		; Pass b = logging status, c = device #
               		
               	; Small stub to jump to the currently selected block device
               	; Also records hl as argument
@@ -4197,7 +4197,7 @@ F353: ED4D    		reti
               	;**************************************************************
               	;
               	
-F355: CD64F6  	syshook:call	nh_sysh
+F355: CD79F6  	syshook:call	nh_sysh
 F358: C9      		ret
               	
               	
@@ -4220,13 +4220,13 @@ F358: C9      		ret
               		
               	; One of the block devices needs to have the responsibiliy
               	; of loading the CCP into memory. Define the jump vector here
-F359: C3A1F6  	resccp:	jp	nh_ccp
+F359: C3E4F6  	resccp:	jp	nh_ccp
               	
               	; Additionally, if Ishkur is using a graphical device, that
               	; device may temporarily need to access the Graphical Resource
               	; Block (GRB) to load in fonts and such. This is up to 2k in
               	; size, and goes in the location that the CCP resides
-F35C: C3A6F6  	resgrb:	jp	nh_grb
+F35C: C3E9F6  	resgrb:	jp	nh_grb
               	
               	; A device of "0" will be read as a non-existant device
               	; The 'init' signal can be sent to the same devices many 
@@ -4911,98 +4911,160 @@ FA85:         	tm_cbuf:equ	tm_bss+5
               	; a = Command #
               	;
               	; uses: all
-F65D: FE02    	nhadev:	cp	2
-F65F: 2814    		jr	z,nh_sel
-F661: 3E01    		ld	a,1		; We don't care about other calls
-F663: C9      		ret
+F65D: B7      	nhadev:	or	a
+F65E: 2808    		jr	z,nh_init
+F660: FE02    		cp	2
+F662: CA7AF1  		jp	z,goback	; Cancel disk select	
+F665: 3E01    		ld	a,1		; We don't care about other calls
+F667: C9      		ret
+              		
+              	; Sets to mask to determine which syscalls
+              	; get intercepted
+              	; b = Disk logging status
+              	; c = Logical device #
+F668: 79      	nh_init:ld	a,c
+F669: CDC3F6  		call	nh_domk
+F66C: 2A31FB  		ld	hl,(nh_mask)
+F66F: 7C      		ld	a,h
+F670: B0      		or	b
+F671: 67      		ld	h,a
+F672: 7D      		ld	a,l
+F673: B1      		or	c
+F674: 6F      		ld	l,a
+F675: 2231FB  		ld	(nh_mask),hl
+F678: C9      		ret
+              		
+              		
               	; CP/M system hook
               	; Used to intercept certain syscalls
               	;
-              	; uses: none if not hooked, all otherwise
-F664: 79      	nh_sysh:ld	a,c
-F665: FE0D    		cp	13		; Reset disk
-F667: 2806    		jr	z,nh_sys0
-F669: FE0E    		cp	14		; Select disk
-F66B: 2802    		jr	z,nh_sys0
-F66D: C9      	nh_sysr:ret			; Self modifiying code
-              					; Intercept syscalls here
-F66E: C9      		ret		
+              	; uses: af if not hooked, all otherwise
+F679: 79      	nh_sysh:ld	a,c
+F67A: FE0F    		cp	15
+F67C: D8      		ret	c		; No syscalls lower than 15
+F67D: 2801    		jr	z,nh_fopn
+F67F: C9      		ret
+              		
+              	; CP/M open syscall
+              	; de = Address of FCB
+              	;
+              	; uses: all
+F680: CD9FF6  	nh_fopn:call	nh_ownr
+F683: EB      		ex	de,hl
+F684: 23      		inc	hl
+F685: 1102F8  		ld	de,nh_m0na
+F688: CDB1F7  		call	nh_form
+F68B: CD0AF7  		call	nh_open
+F68E: 3AB0FA  		ld	a,(nh_buff)
+F691: FE83    		cp	0x83
+F693: 3E00    		ld	a,0
+F695: CA99F6  		jp	z,nh_fop0
+F698: 3D      		dec	a
+F699: 324BE7  	nh_fop0:ld	(status),a
+F69C: C37AF1  		jp	goback
               	
-              		; Deselect the device
-F66F: 3EC9    	nh_sys0:ld	a,0xC9		; Return instruction
-F671: 326DF6  		ld	(nh_sysr),a
-F674: C9      		ret
+              	
+              	; Check if system owns device
+              	; Bail if it does not
+              	; If it does, get to logical NHACP device
+              	; de = Address of FCB
+              	;
+              	; uses: af, hl
+F69F: C5      	nh_ownr:push	bc
+F6A0: 1A      		ld	a,(de)		; Get FSB device
+F6A1: CDC3F6  		call	nh_domk		; Create bitmask
+F6A4: 2A31FB  		ld	hl,(nh_mask)
+F6A7: 7C      		ld	a,h
+F6A8: A0      		and	b
+F6A9: 2002    		jr	nz,nh_own0
+F6AB: 7D      		ld	a,l
+F6AC: A1      		and	c
+F6AD: 2811    	nh_own0:jr	z,nh_exit	; Exit if does not own	
+F6AF: 2161F3  		ld	hl,bdevsw+2
+F6B2: 1A      		ld	a,(de)		; Get FSB device
+F6B3: 010400  		ld	bc,4
+F6B6: B7      		or	a
+F6B7: 2804    	nh_own1:jr	z,nh_own2
+F6B9: 09      		add	hl,bc
+F6BA: 3D      		dec	a
+F6BB: 18FA    		jr	nh_own1
+F6BD: 7E      	nh_own2:ld	a,(hl)		; a = Logical NHACP device
+F6BE: C1      		pop	bc
+F6BF: C9      		ret
+              	
+              	; Exit, do not return to caller
+F6C0: C1      	nh_exit:pop	bc
+F6C1: F1      		pop	af		; Throw away caller address
+F6C2: C9      		ret
               		
-              	; Select the driver for use
-F675: AF      	nh_sel:	xor	a
-F676: 326DF6  		ld	(nh_sysr),a	; Activate interception
-F679: 3C      		inc	a
-F67A: 320000  		ld	(nh_reop),a	; File must be reopened
-F67D: 7D      		ld	a,l
-F67E: FE0A    		cp	10
-F680: 3002    		jr	nc,nh_sel0
-F682: D607    		sub	0x07
-F684: C637    	nh_sel0:add	a,0x37
-F686: 32BFF7  		ld	(nh_m0na),a	; Root directory
-F689: C37AF1  		jp	goback		; Return from BDOS call
-              		
-              		
-              		
+              	; Set a 16 bit mask based on a number from 0-15
+              	; a = Bit to set
+              	;
+              	; Returns bit mask in bc
+              	; Uses, af, bc
+F6C3: 010100  	nh_domk:ld	bc,1
+F6C6: B7      		or	a
+F6C7: C8      	nh_dom0:ret	z
+F6C8: CB21    		sla	c
+F6CA: CB10    		rl	b
+F6CC: 3D      		dec	a
+F6CD: 18F8    		jr	nh_dom0
+              	
               	; Set up the HCCA modem connection
               	; Configures the AY-3-8910 to monitor correct interrupts
               	; and leaves it in a state where the interrupt port is
               	; exposed
               	;
               	; uses: a
-F68C: 3E07    	nh_hini:ld	a,0x07
-F68E: D341    		out	(nh_atla),a	; AY register = 7
-F690: 3E40    		ld	a,0x40
-F692: D340    		out	(nh_ayda),a	; Configure AY port I/O
+F6CF: 3E07    	nh_hini:ld	a,0x07
+F6D1: D341    		out	(nh_atla),a	; AY register = 7
+F6D3: 3E40    		ld	a,0x40
+F6D5: D340    		out	(nh_ayda),a	; Configure AY port I/O
               		
-F694: 3E0E    		ld	a,0x0E
-F696: D341    		out	(nh_atla),a	; AY register = 14
-F698: 3EC0    		ld	a,0xC0
-F69A: D340    		out	(nh_ayda),a	; Enable HCCA receive and send
+F6D7: 3E0E    		ld	a,0x0E
+F6D9: D341    		out	(nh_atla),a	; AY register = 14
+F6DB: 3EC0    		ld	a,0xC0
+F6DD: D340    		out	(nh_ayda),a	; Enable HCCA receive and send
               		
-F69C: 3E0F    		ld	a,0x0F
-F69E: D341    		out	(nh_atla),a	; AY register = 15
-F6A0: C9      		ret
+F6DF: 3E0F    		ld	a,0x0F
+F6E1: D341    		out	(nh_atla),a	; AY register = 15
+F6E3: C9      		ret
               	; Loads the CCP into the CCP space
-F6A1: 21A0F7  	nh_ccp:	ld	hl,nh_p0
-F6A4: 1803    		jr	nh_grb0
+F6E4: 21E3F7  	nh_ccp:	ld	hl,nh_p0
+F6E7: 1803    		jr	nh_grb0
               		
               	; Loads the GRB into the CCP space
-F6A6: 21ACF7  	nh_grb:	ld	hl,nh_p1
-F6A9: 11BFF7  	nh_grb0:ld	de,nh_m0na
-F6AC: 010C00  		ld	bc,12
-F6AF: EDB0    		ldir			; Copy name to file open
-F6B1: CD8CF6  		call	nh_hini		; Go to HCCA mode
-F6B4: CDC7F6  		call	nh_open		; Open the file
-F6B7: 110000  		ld	de,0
-F6BA: 2100DC  		ld	hl,cbase
-F6BD: CDE0F6  	nh_grb1:call	nh_getb
-F6C0: 1C      		inc	e
-F6C1: 3E10    		ld	a,16
-F6C3: BB      		cp	e
-F6C4: 20F7    		jr	nz,nh_grb1
-F6C6: C9      		ret
+F6E9: 21EFF7  	nh_grb:	ld	hl,nh_p1
+F6EC: 1102F8  	nh_grb0:ld	de,nh_m0na
+F6EF: 010C00  		ld	bc,12
+F6F2: EDB0    		ldir			; Copy name to file open
+F6F4: CDCFF6  		call	nh_hini		; Go to HCCA mode
+F6F7: CD0AF7  		call	nh_open		; Open the file
+F6FA: 110000  		ld	de,0
+F6FD: 2100DC  		ld	hl,cbase
+F700: CD23F7  	nh_grb1:call	nh_getb
+F703: 1C      		inc	e
+F704: 3E10    		ld	a,16
+F706: BB      		cp	e
+F707: 20F7    		jr	nz,nh_grb1
+F709: C9      		ret
               		
               	
               	; Open the prepared file
               	; Closes the existing file too
               	;
               	; uses: af, b, hl
-F6C7: 21CEF7  	nh_open:ld	hl,nh_m1
-F6CA: 0606    		ld	b,6
-F6CC: CD21F7  		call	nh_send
-F6CF: 21B8F7  		ld	hl,nh_m0
-F6D2: 0615    		ld	b,21
-F6D4: CD21F7  		call	nh_send
-F6D7: 21B0FA  		ld	hl,nh_buff
-F6DA: CD0AF7  		call	nh_rece
-F6DD: C9      		ret
+F70A: 2111F8  	nh_open:ld	hl,nh_m1
+F70D: 0606    		ld	b,6
+F70F: CD64F7  		call	nh_send
+F712: 21FBF7  		ld	hl,nh_m0
+F715: 0615    		ld	b,21
+F717: CD64F7  		call	nh_send
+F71A: 21B0FA  		ld	hl,nh_buff
+F71D: CD4DF7  		call	nh_rece
+F720: C9      		ret
               		
-F6DE: 18FE    	loop:	jr	loop
+F721: 18FE    	loop:	jr	loop
               		
               	; Gets a block from the currently open file
               	; and places it in (hl)
@@ -5012,30 +5074,30 @@ F6DE: 18FE    	loop:	jr	loop
               	; Returns location directly after in hl
               	; Carry flag set on error
               	; uses: af, b, hl
-F6E0: EB      	nh_getb:ex	de,hl
-F6E1: 22D8F7  		ld	(nh_m2bn),hl
-F6E4: EB      		ex	de,hl
-F6E5: E5      		push	hl
-F6E6: 21D4F7  		ld	hl,nh_m2
-F6E9: 060A    		ld	b,10
-F6EB: CD21F7  		call	nh_send
-F6EE: E1      		pop	hl
-F6EF: D8      		ret	c
-F6F0: CD2AF7  		call	nh_hcrd
-F6F3: CD2DF7  		call	nh_hcre
-F6F6: D8      		ret	c
-F6F7: FE84    		cp	0x84
-F6F9: 37      		scf
-F6FA: C0      		ret	nz
-F6FB: CD2AF7  		call	nh_hcrd
-F6FE: 0680    		ld	b,128
-F700: CD2DF7  	nh_get0:call	nh_hcre
-F703: D8      		ret	c
-F704: 77      		ld	(hl),a
-F705: 23      		inc	hl
-F706: 10F8    		djnz	nh_get0
-F708: B7      		or	a
-F709: C9      		ret
+F723: EB      	nh_getb:ex	de,hl
+F724: 221BF8  		ld	(nh_m2bn),hl
+F727: EB      		ex	de,hl
+F728: E5      		push	hl
+F729: 2117F8  		ld	hl,nh_m2
+F72C: 060A    		ld	b,10
+F72E: CD64F7  		call	nh_send
+F731: E1      		pop	hl
+F732: D8      		ret	c
+F733: CD6DF7  		call	nh_hcrd
+F736: CD70F7  		call	nh_hcre
+F739: D8      		ret	c
+F73A: FE84    		cp	0x84
+F73C: 37      		scf
+F73D: C0      		ret	nz
+F73E: CD6DF7  		call	nh_hcrd
+F741: 0680    		ld	b,128
+F743: CD70F7  	nh_get0:call	nh_hcre
+F746: D8      		ret	c
+F747: 77      		ld	(hl),a
+F748: 23      		inc	hl
+F749: 10F8    		djnz	nh_get0
+F74B: B7      		or	a
+F74C: C9      		ret
               		
               		
               	; Receives a general response from the NHACP server
@@ -5043,22 +5105,22 @@ F709: C9      		ret
               	;
               	; Carry flag set on error
               	; uses: af, b, hl
-F70A: CD2DF7  	nh_rece:call	nh_hcre
-F70D: D8      		ret	c	; Existing error
-F70E: 37      		scf
-F70F: F8      		ret	m	; Message to big!
-F710: 47      		ld	b,a
-F711: CD2DF7  		call	nh_hcre
-F714: D8      		ret	c	; Existing error
-F715: 37      		scf
-F716: C0      		ret	nz	; Message too big!
-F717: CD2DF7  	nh_rec0:call	nh_hcre
-F71A: D8      		ret	c	; Error!
-F71B: 77      		ld	(hl),a
-F71C: 23      		inc	hl
-F71D: 10F8    		djnz	nh_rec0
-F71F: B7      		or	a
-F720: C9      		ret
+F74D: CD70F7  	nh_rece:call	nh_hcre
+F750: D8      		ret	c	; Existing error
+F751: 37      		scf
+F752: F8      		ret	m	; Message to big!
+F753: 47      		ld	b,a
+F754: CD70F7  		call	nh_hcre
+F757: D8      		ret	c	; Existing error
+F758: 37      		scf
+F759: C0      		ret	nz	; Message too big!
+F75A: CD70F7  	nh_rec0:call	nh_hcre
+F75D: D8      		ret	c	; Error!
+F75E: 77      		ld	(hl),a
+F75F: 23      		inc	hl
+F760: 10F8    		djnz	nh_rec0
+F762: B7      		or	a
+F763: C9      		ret
               		
               	; Write a number of bytes to the HCCA port
               	; b = Bytes to write
@@ -5066,12 +5128,12 @@ F720: C9      		ret
               	;
               	; Carry flag set on error
               	; uses: af, b, hl
-F721: 7E      	nh_send:ld	a,(hl)
-F722: 23      		inc	hl
-F723: CD47F7  		call	nh_hcwr
-F726: D8      		ret	c	; Error!
-F727: 10F8    		djnz	nh_send
-F729: C9      		ret
+F764: 7E      	nh_send:ld	a,(hl)
+F765: 23      		inc	hl
+F766: CD8AF7  		call	nh_hcwr
+F769: D8      		ret	c	; Error!
+F76A: 10F8    		djnz	nh_send
+F76C: C9      		ret
               		
               	; Read from the HCCA port
               	; Assumes AY is set to reg 15
@@ -5080,24 +5142,24 @@ F729: C9      		ret
               	; Returns return in a
               	; Carry flag set on error
               	; Uses: af
-F72A: CD2DF7  	nh_hcrd:call	nh_hcre
-F72D: D5      	nh_hcre:push	de
-F72E: 11FFFF  		ld	de,0xFFFF
-F731: DB40    	nh_hcr0:in	a,(nh_ayda)
-F733: CB47    		bit	0,a
-F735: 28FA    		jr	z,nh_hcr0	; Await an interrupt
-F737: CB4F    		bit	1,a
-F739: 2807    		jr	z,nh_hcr1
-F73B: 1B      		dec	de
-F73C: 7B      		ld	a,e
-F73D: B2      		or	d
-F73E: 20F1    		jr	nz,nh_hcr0
-F740: 37      		scf
-F741: C9      		ret			; Timed out waiting
-F742: DB80    	nh_hcr1:in	a,(nh_hcca)
-F744: D1      		pop	de
-F745: B7      		or	a
-F746: C9      		ret
+F76D: CD70F7  	nh_hcrd:call	nh_hcre
+F770: D5      	nh_hcre:push	de
+F771: 11FFFF  		ld	de,0xFFFF
+F774: DB40    	nh_hcr0:in	a,(nh_ayda)
+F776: CB47    		bit	0,a
+F778: 28FA    		jr	z,nh_hcr0	; Await an interrupt
+F77A: CB4F    		bit	1,a
+F77C: 2807    		jr	z,nh_hcr1
+F77E: 1B      		dec	de
+F77F: 7B      		ld	a,e
+F780: B2      		or	d
+F781: 20F1    		jr	nz,nh_hcr0
+F783: 37      		scf
+F784: C9      		ret			; Timed out waiting
+F785: DB80    	nh_hcr1:in	a,(nh_hcca)
+F787: D1      		pop	de
+F788: B7      		or	a
+F789: C9      		ret
               		
               	; Write to the HCCA port
               	; Assumes AY is set to reg 15
@@ -5106,121 +5168,124 @@ F746: C9      		ret
               	;
               	; Carry flag set on error
               	; Uses: none
-F747: D5      	nh_hcwr:push	de
-F748: F5      		push	af
-F749: 11FFFF  		ld	de,0xFFFF
-F74C: DB40    	nh_hcw0:in	a,(nh_ayda)
-F74E: CB47    		bit	0,a
-F750: 28FA    		jr	z,nh_hcw0	; Await an interrupt
-F752: CB4F    		bit	1,a
-F754: 2007    		jr	nz,nh_hcw1
-F756: 1B      		dec	de
-F757: 7B      		ld	a,e
-F758: B2      		or	d
-F759: 20F1    		jr	nz,nh_hcw0
-F75B: 37      		scf
-F75C: C9      		ret			; Timed out waiting
-F75D: F1      	nh_hcw1:pop	af
-F75E: D380    		out	(nh_hcca),a
-F760: D1      		pop	de
-F761: B7      		or	a
-F762: C9      		ret
+F78A: D5      	nh_hcwr:push	de
+F78B: F5      		push	af
+F78C: 11FFFF  		ld	de,0xFFFF
+F78F: DB40    	nh_hcw0:in	a,(nh_ayda)
+F791: CB47    		bit	0,a
+F793: 28FA    		jr	z,nh_hcw0	; Await an interrupt
+F795: CB4F    		bit	1,a
+F797: 2007    		jr	nz,nh_hcw1
+F799: 1B      		dec	de
+F79A: 7B      		ld	a,e
+F79B: B2      		or	d
+F79C: 20F1    		jr	nz,nh_hcw0
+F79E: 37      		scf
+F79F: C9      		ret			; Timed out waiting
+F7A0: F1      	nh_hcw1:pop	af
+F7A1: D380    		out	(nh_hcca),a
+F7A3: D1      		pop	de
+F7A4: B7      		or	a
+F7A5: C9      		ret
               		
               	; Converts lowercase to uppercase
               	; a = Character to convert
               	;
               	; Returns uppercase in A
               	; uses: af
-F763: E67F    	nh_ltou:and	0x7F
-F765: FE61    		cp	0x61		; 'a'
-F767: D8      		ret	c
-F768: FE7B    		cp	0x7B		; '{'
-F76A: D0      		ret	nc
-F76B: D620    		sub	0x20
-F76D: C9      		ret
+F7A6: E67F    	nh_ltou:and	0x7F
+F7A8: FE61    		cp	0x61		; 'a'
+F7AA: D8      		ret	c
+F7AB: FE7B    		cp	0x7B		; '{'
+F7AD: D0      		ret	nc
+F7AE: D620    		sub	0x20
+F7B0: C9      		ret
               		
               	; Takes a FCB-style name and formats it to standard notation
+              	; a = Logical NHACP device
               	; de = Desintation for formatted name
               	; hl = Source FCB file name
               	;
-              	; Updates reopen flag
               	; uses: all
-F76E: 0E00    	nh_form:ld	c,0
-F770: 0608    		ld	b,8		; Look at all 8 possible name chars
-F772: 7E      	nh_for0:ld	a,(hl)
-F773: CD63F7  		call	nh_ltou
-F776: FE21    		cp	0x21
-F778: 3805    		jr	c,nh_for1
-F77A: CD94F7  		call	nh_for3
-F77D: 10F3    		djnz	nh_for0
-F77F: 3E2E    	nh_for1:ld	a,0x2E		; '.'
-F781: 12      		ld	(de),a
-F782: 48      		ld	c,b
-F783: 0600    		ld	b,0
-F785: 09      		add	hl,bc		; Fast forward to extenstion
-F786: 0603    		ld	b,3		; Copy over extension
-F788: 7E      	nh_for2:ld	a,(hl)
-F789: CD63F7  		call	nh_ltou
-F78C: CD94F7  		call	nh_for3
-F78F: 10F7    		djnz	nh_for2
-F791: AF      		xor	a		; Zero terminate
-F792: 12      		ld	(de),a
-F793: C9      		ret
-F794: EB      	nh_for3:ex	de,hl
-F795: BE      		cp	(hl)		; Increment c if different
-F796: EB      		ex	de,hl
-F797: 23      		inc	hl
-F798: 13      		inc	de
-F799: C8      		ret	z
-F79A: 3E01    		ld	a,1
-F79C: 320000  		ld	(nh_reop),a
-F79F: C9      		ret
+F7B1: C630    	nh_form:add	a,0x30
+F7B3: FE3A    		cp	0x3A
+F7B5: 3802    		jr	c,nh_for0
+F7B7: C607    		add	a,0x07
+F7B9: 12      	nh_for0:ld	(de),a
+F7BA: 13      		inc	de
+F7BB: 13      		inc	de
+F7BC: 0E00    		ld	c,0
+F7BE: 0608    		ld	b,8		; Look at all 8 possible name chars
+F7C0: 7E      	nh_for1:ld	a,(hl)
+F7C1: CDA6F7  		call	nh_ltou
+F7C4: FE21    		cp	0x21
+F7C6: 3805    		jr	c,nh_for2
+F7C8: 12      		ld	(de),a
+F7C9: 23      		inc	hl
+F7CA: 13      		inc	de
+F7CB: 10F3    		djnz	nh_for1
+F7CD: 3E2E    	nh_for2:ld	a,0x2E		; '.'
+F7CF: 12      		ld	(de),a
+F7D0: 13      		inc	de
+F7D1: 48      		ld	c,b
+F7D2: 0600    		ld	b,0
+F7D4: 09      		add	hl,bc		; Fast forward to extenstion
+F7D5: 0603    		ld	b,3		; Copy over extension
+F7D7: 7E      	nh_for3:ld	a,(hl)
+F7D8: CDA6F7  		call	nh_ltou
+F7DB: 12      		ld	(de),a
+F7DC: 23      		inc	hl
+F7DD: 13      		inc	de
+F7DE: 10F7    		djnz	nh_for3
+F7E0: AF      		xor	a		; Zero terminate
+F7E1: 12      		ld	(de),a
+F7E2: C9      		ret
               		
               	; Path to CP/M image
               	; Total length: 12 bytes
-F7A0: 302F4350	nh_p0:	defb	'0/CPM22.SYS',0
-F7A4: 4D32322E	
-F7A8: 53595300	
+F7E3: 302F4350	nh_p0:	defb	'0/CPM22.SYS',0
+F7E7: 4D32322E	
+F7EB: 53595300	
               	
               	; Path to GRB image
               	; Total length: 12 bytes
-F7AC: 302F464F	nh_p1:	defb	'0/FONT.GRB',0,0
-F7B0: 4E542E47	
-F7B4: 52420000	
+F7EF: 302F464F	nh_p1:	defb	'0/FONT.GRB',0,0
+F7F3: 4E542E47	
+F7F7: 52420000	
               	
               	; Message prototype to open a file
               	; Total length: 21 bytes
-F7B8: 1300    	nh_m0:	defw	19		; Message length
-F7BA: 01      		defb	0x01		; Cmd: STORAGE-OPEN
-F7BB: 80      		defb	nh_fild		; Default file descriptor
-F7BC: 0000    	nh_m0fl:defw	0x00		; Read/Write flags
-F7BE: 0E      		defb	0x0E		; Message length
-F7BF: 302F5858	nh_m0na:defb	'0/XXXXXXXXXXXX'; File name field
-F7C3: 58585858	
-F7C7: 58...   	
-F7CD: 00      		defb	0x00		; Padding
+F7FB: 1300    	nh_m0:	defw	19		; Message length
+F7FD: 01      		defb	0x01		; Cmd: STORAGE-OPEN
+F7FE: 80      		defb	nh_fild		; Default file descriptor
+F7FF: 0000    	nh_m0fl:defw	0x00		; Read/Write flags
+F801: 0E      		defb	0x0E		; Message length
+F802: 302F5858	nh_m0na:defb	'0/XXXXXXXXXXXX'; File name field
+F806: 58585858	
+F80A: 58...   	
+F810: 00      		defb	0x00		; Padding
               		
               	; Message prototype to close a file
               	; Total length: 6 bytes
-F7CE: 0400    	nh_m1:	defw	4		; Message length
-F7D0: 05      		defb	0x05		; Cmd: FILE-CLOSE
-F7D1: 80      		defb	nh_fild		; Default file descriptor
-F7D2: 0000    		defw	0x00		; Magic bytes
+F811: 0400    	nh_m1:	defw	4		; Message length
+F813: 05      		defb	0x05		; Cmd: FILE-CLOSE
+F814: 80      		defb	nh_fild		; Default file descriptor
+F815: 0000    		defw	0x00		; Magic bytes
               		
               	; Message prototype to read a block
               	; Total length: 10 bytes
-F7D4: 0800    	nh_m2:	defw	8		; Message length
-F7D6: 07      		defb	0x07		; Cmd: STORAGE-GET-BLOCK
-F7D7: 80      		defb	nh_fild		; Default file descritor
-F7D8: 00000000	nh_m2bn:defw	0x00,0x00	; Block number
-F7DC: 8000    		defw	128		; Block length
+F817: 0800    	nh_m2:	defw	8		; Message length
+F819: 07      		defb	0x07		; Cmd: STORAGE-GET-BLOCK
+F81A: 80      		defb	nh_fild		; Default file descritor
+F81B: 00000000	nh_m2bn:defw	0x00,0x00	; Block number
+F81F: 8000    		defw	128		; Block length
               	
               	; Variables
 FAB0:         	nh_buff	equ	nh_bss
-0000:         	nh_reop	equ	0		; Reopen file?
+FB31:         	nh_mask	equ	nh_bss+129		; Ownership mask
               	
               	; Image top, no more code after this
-F7DE:         	imgtop:
+F821:         	imgtop:
               	;
               	;*
               	;******************   E N D   O F   C P / M   *****************
@@ -5230,12 +5295,12 @@ F7DE:         	imgtop:
 
 ; +++ segments +++
 
-#CODE          = $DC00 = 56320,  size = $1BDE =  7134
+#CODE          = $DC00 = 56320,  size = $1C21 =  7201
 
 ; +++ global symbols +++
 
-_end     = $F7DE = 63454          cpm22.asm:40 (unused)
-_size    = $1BDE =  7134          cpm22.asm:40 (unused)
+_end     = $F821 = 63521          cpm22.asm:40 (unused)
+_size    = $1C21 =  7201          cpm22.asm:40 (unused)
 active   = $E748 = 59208          cpm22.asm:1700
 adda2hl  = $E96A = 59754          cpm22.asm:2129
 addhl    = $DE59 = 56921          cpm22.asm:430
@@ -5496,7 +5561,7 @@ halt     = $DFCF = 57295          cpm22.asm:673
 hl2de    = $E042 = 57410          cpm22.asm:742
 home     = $F2CB = 62155          bios.asm:187
 homedrv  = $E7A7 = 59303          cpm22.asm:1775
-imgtop   = $F7DE = 63454          config.asm:195
+imgtop   = $F821 = 63521          config.asm:195
 inbuff   = $DC06 = 56326          cpm22.asm:49
 inbulen  = $DC07 = 56327          config.asm:21
 inpoint  = $DC88 = 56456          cpm22.asm:58
@@ -5512,7 +5577,7 @@ login    = $F1B5 = 61877          cpm22.asm:3653
 logindrv = $F027 = 61479          cpm22.asm:3375
 logoff   = $F159 = 61785          cpm22.asm:3585
 logsect  = $F1ED = 61933          cpm22.asm:3699
-loop     = $F6DE = 63198          nabu_nhacp.asm:136
+loop     = $F721 = 63265          nabu_nhacp.asm:198
 mem      = $0037 =    55          config.asm:19
 mode     = $F1DB = 61915          cpm22.asm:3686
 morefls  = $E985 = 59781          cpm22.asm:2162
@@ -5528,47 +5593,53 @@ nfuncts  = $0029 =    41          cpm22.asm:1285
 nh_atla  = $0041 =    65          nabu_nhacp.asm:36
 nh_ayda  = $0040 =    64          nabu_nhacp.asm:35
 nh_bss   = $FAB0 = 64176          config.asm:42
-nh_buff  = $FAB0 = 64176          nabu_nhacp.asm:344
-nh_ccp   = $F6A1 = 63137          nabu_nhacp.asm:102
+nh_buff  = $FAB0 = 64176          nabu_nhacp.asm:409
+nh_ccp   = $F6E4 = 63204          nabu_nhacp.asm:164
+nh_dom0  = $F6C7 = 63175          nabu_nhacp.asm:138
+nh_domk  = $F6C3 = 63171          nabu_nhacp.asm:136
+nh_exit  = $F6C0 = 63168          nabu_nhacp.asm:127
 nh_fild  = $0080 =   128          nabu_nhacp.asm:39
-nh_for0  = $F772 = 63346          nabu_nhacp.asm:281
-nh_for1  = $F77F = 63359          nabu_nhacp.asm:287
-nh_for2  = $F788 = 63368          nabu_nhacp.asm:293
-nh_for3  = $F794 = 63380          nabu_nhacp.asm:300
-nh_form  = $F76E = 63342          nabu_nhacp.asm:279 (unused)
-nh_get0  = $F700 = 63232          nabu_nhacp.asm:163
-nh_getb  = $F6E0 = 63200          nabu_nhacp.asm:146
-nh_grb   = $F6A6 = 63142          nabu_nhacp.asm:106
-nh_grb0  = $F6A9 = 63145          nabu_nhacp.asm:107
-nh_grb1  = $F6BD = 63165          nabu_nhacp.asm:114
+nh_fop0  = $F699 = 63129          nabu_nhacp.asm:94
+nh_fopn  = $F680 = 63104          nabu_nhacp.asm:83
+nh_for0  = $F7B9 = 63417          nabu_nhacp.asm:345
+nh_for1  = $F7C0 = 63424          nabu_nhacp.asm:350
+nh_for2  = $F7CD = 63437          nabu_nhacp.asm:358
+nh_for3  = $F7D7 = 63447          nabu_nhacp.asm:365
+nh_form  = $F7B1 = 63409          nabu_nhacp.asm:341
+nh_get0  = $F743 = 63299          nabu_nhacp.asm:225
+nh_getb  = $F723 = 63267          nabu_nhacp.asm:208
+nh_grb   = $F6E9 = 63209          nabu_nhacp.asm:168
+nh_grb0  = $F6EC = 63212          nabu_nhacp.asm:169
+nh_grb1  = $F700 = 63232          nabu_nhacp.asm:176
 nh_hcca  = $0080 =   128          nabu_nhacp.asm:37
-nh_hcr0  = $F731 = 63281          nabu_nhacp.asm:217
-nh_hcr1  = $F742 = 63298          nabu_nhacp.asm:228
-nh_hcrd  = $F72A = 63274          nabu_nhacp.asm:214
-nh_hcre  = $F72D = 63277          nabu_nhacp.asm:215
-nh_hcw0  = $F74C = 63308          nabu_nhacp.asm:243
-nh_hcw1  = $F75D = 63325          nabu_nhacp.asm:254
-nh_hcwr  = $F747 = 63303          nabu_nhacp.asm:240
-nh_hini  = $F68C = 63116          nabu_nhacp.asm:88
-nh_ltou  = $F763 = 63331          nabu_nhacp.asm:265
-nh_m0    = $F7B8 = 63416          nabu_nhacp.asm:320
-nh_m0fl  = $F7BC = 63420          nabu_nhacp.asm:323 (unused)
-nh_m0na  = $F7BF = 63423          nabu_nhacp.asm:325
-nh_m1    = $F7CE = 63438          nabu_nhacp.asm:330
-nh_m2    = $F7D4 = 63444          nabu_nhacp.asm:337
-nh_m2bn  = $F7D8 = 63448          nabu_nhacp.asm:340
-nh_open  = $F6C7 = 63175          nabu_nhacp.asm:126
-nh_p0    = $F7A0 = 63392          nabu_nhacp.asm:312
-nh_p1    = $F7AC = 63404          nabu_nhacp.asm:316
-nh_rec0  = $F717 = 63255          nabu_nhacp.asm:186
-nh_rece  = $F70A = 63242          nabu_nhacp.asm:177
-nh_reop  = $0000 =     0          nabu_nhacp.asm:345
-nh_sel   = $F675 = 63093          nabu_nhacp.asm:68
-nh_sel0  = $F684 = 63108          nabu_nhacp.asm:76
-nh_send  = $F721 = 63265          nabu_nhacp.asm:200
-nh_sys0  = $F66F = 63087          nabu_nhacp.asm:63
-nh_sysh  = $F664 = 63076          nabu_nhacp.asm:53
-nh_sysr  = $F66D = 63085          nabu_nhacp.asm:58
+nh_hcr0  = $F774 = 63348          nabu_nhacp.asm:279
+nh_hcr1  = $F785 = 63365          nabu_nhacp.asm:290
+nh_hcrd  = $F76D = 63341          nabu_nhacp.asm:276
+nh_hcre  = $F770 = 63344          nabu_nhacp.asm:277
+nh_hcw0  = $F78F = 63375          nabu_nhacp.asm:305
+nh_hcw1  = $F7A0 = 63392          nabu_nhacp.asm:316
+nh_hcwr  = $F78A = 63370          nabu_nhacp.asm:302
+nh_hini  = $F6CF = 63183          nabu_nhacp.asm:150
+nh_init  = $F668 = 63080          nabu_nhacp.asm:56
+nh_ltou  = $F7A6 = 63398          nabu_nhacp.asm:327
+nh_m0    = $F7FB = 63483          nabu_nhacp.asm:385
+nh_m0fl  = $F7FF = 63487          nabu_nhacp.asm:388 (unused)
+nh_m0na  = $F802 = 63490          nabu_nhacp.asm:390
+nh_m1    = $F811 = 63505          nabu_nhacp.asm:395
+nh_m2    = $F817 = 63511          nabu_nhacp.asm:402
+nh_m2bn  = $F81B = 63515          nabu_nhacp.asm:405
+nh_mask  = $FB31 = 64305          nabu_nhacp.asm:410
+nh_open  = $F70A = 63242          nabu_nhacp.asm:188
+nh_own0  = $F6AD = 63149          nabu_nhacp.asm:113
+nh_own1  = $F6B7 = 63159          nabu_nhacp.asm:118
+nh_own2  = $F6BD = 63165          nabu_nhacp.asm:122
+nh_ownr  = $F69F = 63135          nabu_nhacp.asm:104
+nh_p0    = $F7E3 = 63459          nabu_nhacp.asm:377
+nh_p1    = $F7EF = 63471          nabu_nhacp.asm:381
+nh_rec0  = $F75A = 63322          nabu_nhacp.asm:248
+nh_rece  = $F74D = 63309          nabu_nhacp.asm:239
+nh_send  = $F764 = 63332          nabu_nhacp.asm:262
+nh_sysh  = $F679 = 63097          nabu_nhacp.asm:73
 nhadev   = $F65D = 63069          nabu_nhacp.asm:45
 nofile   = $DFF0 = 57328          cpm22.asm:688
 nonblank = $DE4F = 56911          cpm22.asm:420
@@ -5877,5 +5948,5 @@ xlate    = $F1D6 = 61910          cpm22.asm:3680
 yesno    = $E152 = 57682          cpm22.asm:898
 
 
-total time: 0.0315 sec.
+total time: 0.0299 sec.
 no errors
