@@ -194,7 +194,7 @@ home:	ld	a,1
 ; return hl=0 if device not valid
 ; uses: all
 seldsk:	ld	a,c
-	ld	c,e
+	ld	b,e
 	ld	hl,bdevsw
 	call	swindir
 	ld	(callbd+1),hl
@@ -204,7 +204,7 @@ seldsk:	ld	a,c
 	ld	hl,(callmj+1)
 	ld	(callbd+4),hl
 	ld	a,2
-	
+	; Pass b = logging status, c = device #
 	
 ; Small stub to jump to the currently selected block device
 ; Also records hl as argument

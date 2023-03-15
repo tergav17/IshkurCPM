@@ -136,7 +136,7 @@ resgrb:	jp	nh_grb
 ; A device of "0" will be read as a non-existant device
 ; The 'init' signal can be sent to the same devices many 
 ; times if it has multipe entires in this table.
-bdevsw:	defw	0,	0	; 'A'
+bdevsw:	defw	nhadev,	0	; 'A'
 	defw	0,	0	; 'B'
 	defw	0,	0	; 'C'
 	defw	0,	0	; 'D'

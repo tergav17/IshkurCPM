@@ -42,14 +42,50 @@ nh_fild	equ	0x80		; Default file accress desc
 ; a = Command #
 ;
 ; uses: all
-nhadev:	ret
-
+nhadev:	or	a
+	jr	z,nh_init
+	cp	2
+	jp	z,goback	; Cancel disk select	
+	ld	a,1		; We don't care about other calls
+	ret
+	
+; Sets to mask to determine which syscalls
+; get intercepted
+; b = Disk logging status
+; c = Logical device #
+nh_init:ld	a,c
+	call	nh_domk
+	ld	hl,(nh_mask)
+	ld	a,h
+	or	b
+	ld	h,a
+	ld	a,l
+	or	c
+	ld	l,a
+	ld	(nh_mask),hl
+	ret
+	
+	
 ; CP/M system hook
 ; Used to intercept certain syscalls
 ;
 ; uses: none if not hooked, all otherwise
-nh_sysh:ret
+nh_sysh:ld	a,c
 	
+	
+; Set a 16 bit mask based on a number from 0-15
+; a = Bit to set
+;
+; Returns bit mask in bc
+; Uses, af, bc
+nh_domk:ld	bc,1
+	or	a
+nh_dom0:ret	z
+	sla	c
+	rl	b
+	dec	a
+	jr	nh_dom0
+
 ; Set up the HCCA modem connection
 ; Configures the AY-3-8910 to monitor correct interrupts
 ; and leaves it in a state where the interrupt port is
@@ -245,7 +281,7 @@ nh_ltou:and	0x7F
 ; de = Desintation for formatted name
 ; hl = Source FCB file name
 ;
-; returns flag z if result did not change
+; Updates reopen flag
 ; uses: all
 nh_form:ld	c,0
 	ld	b,8		; Look at all 8 possible name chars
@@ -267,8 +303,6 @@ nh_for2:ld	a,(hl)
 	djnz	nh_for2
 	xor	a		; Zero terminate
 	ld	(de),a
-	ld	a,c
-	or	a
 	ret
 nh_for3:ex	de,hl
 	cp	(hl)		; Increment c if different
@@ -276,7 +310,8 @@ nh_for3:ex	de,hl
 	inc	hl
 	inc	de
 	ret	z
-	inc	c
+	ld	a,1
+	ld	(nh_reop),a
 	ret
 	
 ; Path to CP/M image
@@ -314,3 +349,5 @@ nh_m2bn:defw	0x00,0x00	; Block number
 
 ; Variables
 nh_buff	equ	nh_bss
+nh_reop	equ	nh_bss+128		; Reopen file?
+nh_mask	equ	nh_bss+129		; Ownership mask
