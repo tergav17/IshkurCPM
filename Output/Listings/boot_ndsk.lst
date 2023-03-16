@@ -1,0 +1,284 @@
+              	; --------------------------------------
+              	; zasm: assemble "boot\boot_ndsk.asm"
+              	; date: 2023-03-16 02:44:57
+              	; --------------------------------------
+
+
+              	;
+              	;**************************************************************
+              	;*
+              	;*        I S H K U R   N D S K   B O O T S T R A P
+              	;*
+              	;**************************************************************
+              	;
+              	
+0006:         	nsec	equ	6		; # of BDOS+BIOS sectors 
+              					; (1024 bytes each)
+0037:         	mem	equ	55		; CP/M image starts at mem*1024
+              					; Should be same as cpm22.asm
+              					
+0040:         	aydata	equ	0x40		; AY-3-8910 data port
+0041:         	aylatc	equ	0x41		; AY-3-8910 latch port
+0080:         	hcca	equ	0x80		; Modem data port
+00A0:         	tmdata	equ	0xA0		; TMS9918 data port
+00A1:         	tmlatc	equ	0xA1		; TMS9918 latch port
+              	
+8000:         	buffer	equ	0x8000		; General purpose memory buffer
+              	
+              		; NABU bootstrap loads in at 0x140D
+140D:         		org	0x140D
+              		
+              	; Boot start same as NABU bootstrap
+              	; Not sure why the nops are here, but I am keeping them
+140D: 00      	base:	nop
+140E: 00      		nop
+140F: 00      		nop
+1410: F3      		di
+1411: 310D14  		ld	sp,base
+1414: 1803    		jr	tmsini
+              	
+              	; Panic!
+              	; Just jump to the start of ROM at this point
+1416: C30000  	panic:	jp	0
+              		
+              		; Change TMS color mode to indicate successful boot
+1419: DBA1    	tmsini:	in	a,(tmlatc)
+141B: 3EE1    		ld	a,0xE1
+141D: D3A1    		out	(tmlatc),a
+141F: 3E87    		ld	a,0x87
+1421: D3A1    		out	(tmlatc),a
+              		
+              		; Set up the HCCA modem connection
+1423: 3E07    		ld	a,0x07
+1425: D341    		out	(aylatc),a	; AY register = 7
+1427: 3E40    		ld	a,0x40
+1429: D340    		out	(aydata),a	; Configure AY port I/O
+              		
+142B: 3E0E    		ld	a,0x0E
+142D: D341    		out	(aylatc),a	; AY register = 14
+142F: 3EC0    		ld	a,0xC0
+1431: D340    		out	(aydata),a	; Enable HCCA receive and send
+              		
+1433: 3E0F    		ld	a,0x0F
+1435: D341    		out	(aylatc),a	; AY register = 15
+              		
+              		; Move into NHACP protocol mode
+1437: 210615  		ld	hl,m_start
+143A: 0608    		ld	b,8
+143C: CDB314  		call	modsen0
+              		
+              		; Get confirmation
+143F: CDBB14  		call	modrecb
+1442: 3A0080  		ld	a,(buffer)
+1445: FE80    		cp	0x80		; Correct confirmation?
+1447: C21614  		jp	nz,panic
+              	
+              		; Open the file
+144A: 210E15  		ld	hl,m_open
+144D: 060E    		ld	b,14
+144F: CDAB14  		call	modsend
+              		
+              		; Get file descriptor
+1452: CDBB14  		call	modrecb
+1455: 3A0080  		ld	a,(buffer)
+1458: FE83    		cp	0x83		; File opened?
+145A: C21614  		jp	nz,panic
+145D: 3A0180  		ld	a,(buffer+1)
+1460: 321D15  		ld	(rfdesc),a
+1463: 322515  		ld	(cfdesc),a
+              		
+1466: 2100E4  		ld	hl,1024*(mem+2)	; Set base for loading data
+1469: EB      	readsec:ex	de,hl
+146A: 211C15  		ld	hl,m_read
+146D: 0609    		ld	b,9
+146F: CDAB14  		call	modsend
+              		
+              		; Handle incoming data packet
+1472: CDCD14  		call	hccared
+1475: CDD014  		call	hccarea
+1478: FE84    		cp	0x84
+147A: C21614  		jp	nz,panic
+147D: CDCD14  		call	hccared
+              		
+              		; Move it into memory
+1480: EB      		ex	de,hl
+1481: 110004  		ld	de,0x400
+1484: CDD014  	readse0:call	hccarea
+1487: 77      		ld	(hl),a
+1488: 23      		inc	hl
+1489: 1B      		dec	de
+148A: 7A      		ld	a,d
+148B: B3      		or	e
+148C: 20F6    		jr	nz,readse0
+              		
+              		; See if we need to load another sector
+148E: 3A2815  		ld	a,(nsecle)
+1491: 3D      		dec	a
+1492: 280C    		jr	z,exec
+1494: 322815  		ld	(nsecle),a
+              		
+              		; Increment address
+1497: 3A1E15  		ld	a,(rfaddr)
+149A: 3C      		inc	a
+149B: 321E15  		ld	(rfaddr),a
+149E: 18C9    		jr	readsec
+              		
+              		; Execute BDOS
+14A0: 212415  	exec:	ld	hl,m_close
+14A3: 0604    		ld	b,4
+14A5: CDAB14  		call	modsend
+              	
+14A8: CA09E4  		jp	z,9+1024*(mem+2)
+              	
+              	;loop:	jr	loop
+              	
+              	; Sends a message to the HCCA modem
+              	; b = # of bytes to send
+              	; hl = pointer to address
+              	;
+              	; uses: af, b, hl
+14AB: 78      	modsend:ld	a,b
+14AC: CDEA14  		call	hccawri		; Send size of packet
+14AF: AF      		xor	a
+14B0: CDEA14  		call	hccawri
+14B3: 7E      	modsen0:ld	a,(hl)
+14B4: CDEA14  		call	hccawri
+14B7: 23      		inc	hl
+14B8: 10F9    		djnz	modsen0
+14BA: C9      		ret
+              		
+              	; Receives a message back from the HCCA
+              	; hl = pointer to address
+              	;
+              	; uses: af, b, hl
+14BB: 210080  	modrecb:ld	hl,buffer	; Read directly into buffer
+14BE: CDD014  	modrece:call	hccarea
+14C1: 47      		ld	b,a
+14C2: CDD014  		call	hccarea
+14C5: CDD014  	modrec0:call	hccarea
+14C8: 77      		ld	(hl),a
+14C9: 23      		inc	hl
+14CA: 10F9    		djnz	modrec0
+14CC: C9      		ret
+              	
+              	
+              	; Read from the HCCA port
+              	; Assumes AY is set to reg 15
+              	; Will panic on timeout
+              	;
+              	; Returns return in a
+              	; Uses: af
+14CD: CDD014  	hccared:call	hccarea		; Reads 2 bytes, discards 1
+14D0: D5      	hccarea:push	de
+14D1: 11FFFF  		ld	de,0xFFFF
+14D4: DB40    	hccare0:in	a,(aydata)
+14D6: CB47    		bit	0,a
+14D8: 28FA    		jr	z,hccare0	; Await an interrupt
+14DA: CB4F    		bit	1,a
+14DC: 2808    		jr	z,hccare1
+14DE: 1B      		dec	de
+14DF: 7B      		ld	a,e
+14E0: B2      		or	d
+14E1: 20F1    		jr	nz,hccare0
+14E3: C31614  		jp	panic		; Timed out waiting
+14E6: DB80    	hccare1:in	a,(hcca)
+14E8: D1      		pop	de
+14E9: C9      		ret
+              		
+              	; Write to the HCCA port
+              	; Assumes AY is set to reg 15
+              	; Will panic on timeout
+              	; a = Character to write
+              	;
+              	; Uses: none
+14EA: D5      	hccawri:push	de
+14EB: F5      		push	af
+14EC: 11FFFF  		ld	de,0xFFFF
+14EF: DB40    	hccawr0:in	a,(aydata)
+14F1: CB47    		bit	0,a
+14F3: 28FA    		jr	z,hccawr0	; Await an interrupt
+14F5: CB4F    		bit	1,a
+14F7: 2008    		jr	nz,hccawr1
+14F9: 1B      		dec	de
+14FA: 7B      		ld	a,e
+14FB: B2      		or	d
+14FC: 20F1    		jr	nz,hccawr0
+14FE: C31614  		jp	panic		; Timed out waiting
+1501: F1      	hccawr1:pop	af
+1502: D380    		out	(hcca),a
+1504: D1      		pop	de
+1505: C9      		ret
+              		
+              	; NHACP start message
+              	; Enables CRC mode
+1506: 8F414350	m_start:defb	0x8F,'ACP',0x01,0x00,0x00,0x00
+150A: 01000000	
+              	
+              	; NHACP open CP/M 2.2 image
+150E: 01FF0100	m_open:	defb	0x01,0xFF,0x01,0x00,0x09,'CPM22.SYS'
+1512: 0943504D	
+1516: 32322E53	
+151A: 5953    	
+              	
+              	; NHACP read block from open file
+151C: 07      	m_read:	defb	0x07
+151D: 00      	rfdesc:	defb	0x00		; Read command file descriptor
+151E: 02      	rfaddr:	defb	0x02		; Read command start offset
+151F: 000000  		defb	0x00,0x00,0x00
+1522: 0004    		defb	0x00,0x04
+              		
+              	; NHACP close file
+1524: 05      	m_close:defb	0x05
+1525: 00      	cfdesc:	defb	0x00		; Close command file descriptor
+1526: 0000    		defw	0x00		; Fucking magic
+              	
+              	; Variables
+1528: 06      	nsecle:	defb	nsec
+
+
+; +++ segments +++
+
+#CODE          = $140D =  5133,  size = $011C =   284
+
+; +++ global symbols +++
+
+_end    = $1529 =  5417          boot\boot_ndsk.asm:23 (unused)
+_size   = $011C =   284          boot\boot_ndsk.asm:23 (unused)
+aydata  = $0040 =    64          boot\boot_ndsk.asm:14
+aylatc  = $0041 =    65          boot\boot_ndsk.asm:15
+base    = $140D =  5133          boot\boot_ndsk.asm:27
+buffer  = $8000 = 32768          boot\boot_ndsk.asm:20
+cfdesc  = $1525 =  5413          boot\boot_ndsk.asm:222
+exec    = $14A0 =  5280          boot\boot_ndsk.asm:121
+hcca    = $0080 =   128          boot\boot_ndsk.asm:16
+hccare0 = $14D4 =  5332          boot\boot_ndsk.asm:168
+hccare1 = $14E6 =  5350          boot\boot_ndsk.asm:178
+hccarea = $14D0 =  5328          boot\boot_ndsk.asm:166
+hccared = $14CD =  5325          boot\boot_ndsk.asm:165
+hccawr0 = $14EF =  5359          boot\boot_ndsk.asm:191
+hccawr1 = $1501 =  5377          boot\boot_ndsk.asm:201
+hccawri = $14EA =  5354          boot\boot_ndsk.asm:188
+m_close = $1524 =  5412          boot\boot_ndsk.asm:221
+m_open  = $150E =  5390          boot\boot_ndsk.asm:211
+m_read  = $151C =  5404          boot\boot_ndsk.asm:214
+m_start = $1506 =  5382          boot\boot_ndsk.asm:208
+mem     = $0037 =    55          boot\boot_ndsk.asm:11
+modrec0 = $14C5 =  5317          boot\boot_ndsk.asm:152
+modrecb = $14BB =  5307          boot\boot_ndsk.asm:148
+modrece = $14BE =  5310          boot\boot_ndsk.asm:149 (unused)
+modsen0 = $14B3 =  5299          boot\boot_ndsk.asm:138
+modsend = $14AB =  5291          boot\boot_ndsk.asm:134
+nsec    = $0006 =     6          boot\boot_ndsk.asm:9
+nsecle  = $1528 =  5416          boot\boot_ndsk.asm:226
+panic   = $1416 =  5142          boot\boot_ndsk.asm:36
+readse0 = $1484 =  5252          boot\boot_ndsk.asm:100
+readsec = $1469 =  5225          boot\boot_ndsk.asm:85
+rfaddr  = $151E =  5406          boot\boot_ndsk.asm:216
+rfdesc  = $151D =  5405          boot\boot_ndsk.asm:215
+tmdata  = $00A0 =   160          boot\boot_ndsk.asm:17 (unused)
+tmlatc  = $00A1 =   161          boot\boot_ndsk.asm:18
+tmsini  = $1419 =  5145          boot\boot_ndsk.asm:39
+
+
+total time: 0.0025 sec.
+no errors
