@@ -45,7 +45,7 @@ tmsini:	in	a,(tmlatc)
 	; Set up the HCCA modem connection
 	ld	a,0x07
 	out	(aylatc),a	; AY register = 7
-	ld	a,0x40
+	ld	a,0x7F
 	out	(aydata),a	; Configure AY port I/O
 	
 	ld	a,0x0E

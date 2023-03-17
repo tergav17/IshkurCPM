@@ -186,7 +186,7 @@ nd_gbno:ld	hl,(nd_ctrk)
 ; uses: a
 nd_hini:ld	a,0x07
 	out	(nd_atla),a	; AY register = 7
-	ld	a,0x40
+	ld	a,0x7F
 	out	(nd_ayda),a	; Configure AY port I/O
 	
 	ld	a,0x0E
