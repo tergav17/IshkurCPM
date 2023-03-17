@@ -119,7 +119,7 @@ readse0:call	hccarea
 	
 	; Execute BDOS
 exec:	ld	hl,m_close
-	ld	b,4
+	ld	b,2
 	call	modsend
 
 	jp	z,9+1024*(mem+2)

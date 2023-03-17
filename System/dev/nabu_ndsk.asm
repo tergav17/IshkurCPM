@@ -138,7 +138,8 @@ nd_ssec:ld	a,c
 ; Reads a sector and DMA transfers it to memory
 ;
 ; uses: af
-nd_read:call	nd_gbno
+nd_read:call	nd_hini
+	call	nd_gbno
 	ld	hl,(biodma)
 	call	nd_getb
 	ld	a,1
@@ -149,7 +150,8 @@ nd_read:call	nd_gbno
 ; Write a sector from DMA
 ;
 ; uses: af
-nd_writ:call	nd_gbno
+nd_writ:call	nd_hini
+	call	nd_gbno
 	ld	hl,(biodma)
 	call	nd_putb
 	ld	a,1
@@ -221,7 +223,7 @@ nd_grb1:call	nd_getb
 ;
 ; uses: af, b, hl
 nd_open:ld	hl,nd_m1
-	ld	b,6
+	ld	b,4
 	call	nd_send
 	ld	hl,nd_m0
 	ld	b,21
@@ -284,7 +286,7 @@ nd_put0:ld	a,(hl)		; Send the block
 	call	nd_hcwr
 	ret	c
 	inc	hl
-	djnz	nd_get0
+	djnz	nd_put0
 	ld	hl,nd_buff
 	call	nd_rece
 	ld	a,(nd_buff)
@@ -359,6 +361,7 @@ nd_hcr1:in	a,(nd_hcca)
 ;
 ; Carry flag set on error
 ; Uses: f
+nd_hcwd:call	nd_hcwr
 nd_hcwr:push	de
 	push	af
 	ld	de,0xFFFF
@@ -404,8 +407,8 @@ nd_m0na:defb	'XXXXXXXXXXXXXX'; File name field
 	defb	0x00		; Padding
 	
 ; Message prototype to close a file
-; Total length: 6 bytes
-nd_m1:	defw	4		; Message length
+; Total length: 4 bytes
+nd_m1:	defw	2		; Message length
 	defb	0x05		; Cmd: FILE-CLOSE
 	defb	nd_fild		; Default file descriptor
 	defw	0x00		; Magic bytes
