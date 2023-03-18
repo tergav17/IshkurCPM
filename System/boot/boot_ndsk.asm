@@ -19,14 +19,36 @@ tmlatc	equ	0xA1		; TMS9918 latch port
 
 buffer	equ	0x8000		; General purpose memory buffer
 
-	; NABU bootstrap loads in at 0x140D
-	org	0x140D
-	
+scratch	equ	0x3000
+; NABU bootstrap loads in at 0xC000
+entry	equ	0xC000 ; Bootloader entry address
+
+
+
+	org	entry
+
+	nop
+	nop
+	nop
+start:
+	ld sp, scratch + 3             ; Set stack pointer
+	ld a, $C9                      ; A = $C9 (return opcode)
+	ld (scratch), a                ; Place return statement at address 3000
+	call scratch                   ; Call address 3000 (and return)
+	ld hl, (scratch + 1)           ; Load return address from stack, this will be the address immediately following the call 3000 statement
+	ld de, code_start-$ + 3        ; DE = address of bootloader relative to the call 0 return address
+	add hl, de                     ; HL = absolute address where bootloader is currently residing
+	ld de, entry                   ; DE = address to copy bootloader to.
+	ld bc, code_length             ; BC = length of bootloader
+	ldir                           ; Relocate ourselves to known address
+	ld hl, entry                   ; HL = entry point of bootloader
+	jp (hl)                        ; Jump to bootloader
+
+.PHASE entry
+code_start:  equ $$
+
 ; Boot start same as NABU bootstrap
-; Not sure why the nops are here, but I am keeping them
-base:	nop
-	nop
-	nop
+base:
 	di
 	ld	sp,base
 	jr	tmsini
@@ -224,3 +246,6 @@ cfdesc:	defb	0x00		; Close command file descriptor
 
 ; Variables
 nsecle:	defb	nsec
+
+code_length: equ $$-code_start
+.DEPHASE
