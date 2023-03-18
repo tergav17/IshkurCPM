@@ -20,7 +20,7 @@
 ;*
 ;*
 ;*
-;*     Device requires 256 bytes of bss space (nd_bss)
+;*     Device requires 384 bytes of bss space (nd_bss)
 ;* 
 ;**************************************************************
 ;
@@ -46,6 +46,13 @@ nd_dpha:defw	0,0,0,0
 	defw	nd_dpb	; DPB
 	defw	0	; CSV
 	defw	nd_asva	; ALV (129 bytes)
+	
+; Disk B DPH
+nd_dphb:defw	0,0,0,0
+	defw	dircbuf	; DIRBUF
+	defw	nd_dpb	; DPB
+	defw	0	; CSV
+	defw	nd_asvb	; ALV (129 bytes)
 	
 ; NSHD8 format
 nd_dpb:	defw	64	; # sectors per track
@@ -112,6 +119,9 @@ nd_sel:	push	hl
 	ld	a,l
 	or	a
 	ld	hl,nd_dpha
+	ret	z
+	dec	a
+	ld	hl,nd_dphb
 	ret	z
 	ld	hl,0
 	ret
@@ -254,7 +264,7 @@ nd_getb:ex	de,hl
 	ret	c
 	cp	0x84
 	scf
-	ret	nz
+	jr	nz,nh_get1
 	call	nd_hcrd
 	ld	b,128
 nd_get0:call	nd_hcre
@@ -263,6 +273,10 @@ nd_get0:call	nd_hcre
 	inc	hl
 	djnz	nd_get0
 	or	a
+	ret
+nh_get1:call	nd_hcrd	; Read the error message and exit
+	call	nd_hcre
+	scf
 	ret
 	
 ; Puts a block into the currently open file
@@ -434,3 +448,4 @@ nd_csec	equ	nd_bss		; Current sector (1b)
 nd_ctrk	equ	nd_bss+1	; Current track (2b)
 nd_buff	equ	nd_bss+6	; Buffer (64b)
 nd_asva	equ	nd_buff+70	; ASV #1 (129b)
+nd_asvb	equ	nd_buff+199	; ASV #1 (129b)
