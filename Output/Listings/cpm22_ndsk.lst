@@ -1,6 +1,6 @@
               	; --------------------------------------
               	; zasm: assemble "cpm22.asm"
-              	; date: 2023-03-18 00:43:03
+              	; date: 2023-03-18 15:43:21
               	; --------------------------------------
 
 
@@ -13,6 +13,8 @@
               	;*                by Clark A. Calkins
               	;*
               	;*      Modified to build as single image from source
+              	;*
+              	;*         Custom CCP prompt by NabuNetwork.com
               	;*
               	;**************************************************************
               	
@@ -134,7 +136,7 @@ DCC0: C30500  		jp	entry
               	; flag is set on a return of 0ffh.
               	;
 DCC3: CD0500  	entry1:	call	entry
-DCC6: 32EEE3  		ld	(rtncode),a	;save return code.
+DCC6: 32FBE3  		ld	(rtncode),a	;save return code.
 DCC9: 3C      		inc	a		;set zero if 0ffh returned.
 DCCA: C9      		ret	
               	;
@@ -146,8 +148,8 @@ DCCD: C3C3DC  		jp	entry1
               	;   routine to open file at (fcb).
               	;
 DCD0: AF      	openfcb:xor	a		;clear the record number byte at fcb+32
-DCD1: 32EDE3  		ld	(fcb+32),a
-DCD4: 11CDE3  		ld	de,fcb
+DCD1: 32FAE3  		ld	(fcb+32),a
+DCD4: 11DAE3  		ld	de,fcb
 DCD7: C3CBDC  		jp	open
               	;
               	;   routine to close a file. (de) points to fcb.
@@ -168,7 +170,7 @@ DCE6: C3C3DC  		jp	entry1
               	;
               	;   search for file at (fcb).
               	;
-DCE9: 11CDE3  	srchfcb:ld	de,fcb
+DCE9: 11DAE3  	srchfcb:ld	de,fcb
 DCEC: C3DFDC  		jp	srchfst
               	;
               	;   routine to delete a file pointed to by (de).
@@ -191,7 +193,7 @@ DCFB: C3F4DC  		jp	entry2
               	;
               	;   routine to read file at (fcb).
               	;
-DCFE: 11CDE3  	readfcb:ld	de,fcb
+DCFE: 11DAE3  	readfcb:ld	de,fcb
 DD01: C3F9DC  		jp	rdrec
               	;
               	;   routine to write the next record of a sequential file.
@@ -228,14 +230,14 @@ DD1D: 87      		add	a,a		;and shift into the upper 4 bits.
 DD1E: 87      		add	a,a
 DD1F: 87      		add	a,a
 DD20: 87      		add	a,a
-DD21: 21EFE3  		ld	hl,cdrive	;now add in the current drive number.
+DD21: 21FCE3  		ld	hl,cdrive	;now add in the current drive number.
 DD24: B6      		or	(hl)
 DD25: 320400  		ld	(tdrive),a	;and save.
 DD28: C9      		ret	
               	;
               	;   move currently active drive down to (tdrive).
               	;
-DD29: 3AEFE3  	movecd:	ld	a,(cdrive)
+DD29: 3AFCE3  	movecd:	ld	a,(cdrive)
 DD2C: 320400  		ld	(tdrive),a
 DD2F: C9      		ret	
               	;
@@ -253,7 +255,7 @@ DD38: C9      		ret
               	; user is in (batch) mode. if so, then read the input from file
               	; ($$$.sub). at the end, reset to console input.
               	;
-DD39: 3AABE3  	getinp:	ld	a,(batch)	;if =0, then use console input.
+DD39: 3AB8E3  	getinp:	ld	a,(batch)	;if =0, then use console input.
 DD3C: B7      		or	a
 DD3D: CA96DD  		jp	z,getinp1
               	;
@@ -261,17 +263,17 @@ DD3D: CA96DD  		jp	z,getinp1
               	; submit run. it must be on drive (a) and it will be deleted
               	; if and error occures (like eof).
               	;
-DD40: 3AEFE3  		ld	a,(cdrive)	;select drive 0 if need be.
+DD40: 3AFCE3  		ld	a,(cdrive)	;select drive 0 if need be.
 DD43: B7      		or	a
 DD44: 3E00    		ld	a,0		;always use drive a for submit.
 DD46: C4BDDC  		call	nz,dsksel	;select it if required.
-DD49: 11ACE3  		ld	de,batchfcb
+DD49: 11B9E3  		ld	de,batchfcb
 DD4C: CDCBDC  		call	open		;look for it.
 DD4F: CA96DD  		jp	z,getinp1	;if not there, use normal input.
-DD52: 3ABBE3  		ld	a,(batchfcb+15)	;get last record number+1.
+DD52: 3AC8E3  		ld	a,(batchfcb+15)	;get last record number+1.
 DD55: 3D      		dec	a
-DD56: 32CCE3  		ld	(batchfcb+32),a
-DD59: 11ACE3  		ld	de,batchfcb
+DD56: 32D9E3  		ld	(batchfcb+32),a
+DD59: 11B9E3  		ld	de,batchfcb
 DD5C: CDF9DC  		call	rdrec		;read last record.
 DD5F: C296DD  		jp	nz,getinp1	;quit on end of file.
               	;
@@ -280,15 +282,15 @@ DD5F: C296DD  		jp	nz,getinp1	;quit on end of file.
 DD62: 1107DC  		ld	de,inbuff+1
 DD65: 218000  		ld	hl,tbuff	;data was read into buffer here.
 DD68: 0680    		ld	b,128		;all 128 characters may be used.
-DD6A: CD42E0  		call	hl2de		;(hl) to (de), (b) bytes.
-DD6D: 21BAE3  		ld	hl,batchfcb+14
+DD6A: CD4FE0  		call	hl2de		;(hl) to (de), (b) bytes.
+DD6D: 21C7E3  		ld	hl,batchfcb+14
 DD70: 3600    		ld	(hl),0		;zero out the 's2' byte.
 DD72: 23      		inc	hl		;and decrement the record count.
 DD73: 35      		dec	(hl)
-DD74: 11ACE3  		ld	de,batchfcb	;close the batch file now.
+DD74: 11B9E3  		ld	de,batchfcb	;close the batch file now.
 DD77: CDDADC  		call	close
 DD7A: CA96DD  		jp	z,getinp1	;quit on an error.
-DD7D: 3AEFE3  		ld	a,(cdrive)	;re-select previous drive if need be.
+DD7D: 3AFCE3  		ld	a,(cdrive)	;re-select previous drive if need be.
 DD80: B7      		or	a
 DD81: C4BDDC  		call	nz,dsksel	;don't do needless selects.
               	;
@@ -362,16 +364,16 @@ DDDA: C30500  		jp	entry
               	;
               	;  delete the batch file created by submit.
               	;
-DDDD: 21ABE3  	delbatch: ld	hl,batch	;is batch active?
+DDDD: 21B8E3  	delbatch: ld	hl,batch	;is batch active?
 DDE0: 7E      		ld	a,(hl)
 DDE1: B7      		or	a
 DDE2: C8      		ret	z
 DDE3: 3600    		ld	(hl),0		;yes, de-activate it.
 DDE5: AF      		xor	a
 DDE6: CDBDDC  		call	dsksel		;select drive 0 for sure.
-DDE9: 11ACE3  		ld	de,batchfcb	;and delete this file.
+DDE9: 11B9E3  		ld	de,batchfcb	;and delete this file.
 DDEC: CDEFDC  		call	delete
-DDEF: 3AEFE3  		ld	a,(cdrive)	;reset current drive.
+DDEF: 3AFCE3  		ld	a,(cdrive)	;reset current drive.
 DDF2: C3BDDC  		jp	dsksel
               	;
               	;   check to two strings at (pattrn1) and (pattrn2). they must be
@@ -382,7 +384,7 @@ DDF8: 2100E4  		ld	hl,pattrn2	;ditto, but how could they be different?
 DDFB: 0606    		ld	b,6		;6 bytes each.
 DDFD: 1A      	verify1:ld	a,(de)
 DDFE: BE      		cp	(hl)
-DDFF: C2CFDF  		jp	nz,halt		;jump to halt routine.
+DDFF: C2DCDF  		jp	nz,halt		;jump to halt routine.
 DE02: 13      		inc	de
 DE03: 23      		inc	hl
 DE04: 05      		dec	b
@@ -460,12 +462,12 @@ DE5E: 3E00    	convfst:ld	a,0
               	; (a)=0 is an unambigeous name was specified. enter with (a) equal to
               	; the position within the fcb for the name (either 0 or 16).
               	;
-DE60: 21CDE3  	convert:ld	hl,fcb
+DE60: 21DAE3  	convert:ld	hl,fcb
 DE63: CD59DE  		call	addhl
 DE66: E5      		push	hl
 DE67: E5      		push	hl
 DE68: AF      		xor	a
-DE69: 32F0E3  		ld	(chgdrv),a	;initialize drive change flag.
+DE69: 32FDE3  		ld	(chgdrv),a	;initialize drive change flag.
 DE6C: 2A88DC  		ld	hl,(inpoint)	;set (hl) as pointer into input line.
 DE6F: EB      		ex	de,hl
 DE70: CD4FDE  		call	nonblank	;get next non-blank character.
@@ -483,11 +485,11 @@ DE82: 1A      		ld	a,(de)
 DE83: FE3A    		cp	':'
 DE85: CA90DE  		jp	z,convrt2
 DE88: 1B      		dec	de		;nope, move pointer back to the start of the line.
-DE89: 3AEFE3  	convrt1:ld	a,(cdrive)
+DE89: 3AFCE3  	convrt1:ld	a,(cdrive)
 DE8C: 77      		ld	(hl),a
 DE8D: C396DE  		jp	convrt3
 DE90: 78      	convrt2:ld	a,b
-DE91: 32F0E3  		ld	(chgdrv),a	;set change in drives flag.
+DE91: 32FDE3  		ld	(chgdrv),a	;set change in drives flag.
 DE94: 70      		ld	(hl),b
 DE95: 13      		inc	de
               	;
@@ -590,7 +592,7 @@ DF31: 0E00    		ld	c,0
 DF33: 79      	search1:ld	a,c
 DF34: FE06    		cp	numcmds		;this commands exists.
 DF36: D0      		ret	nc
-DF37: 11CEE3  		ld	de,fcb+1	;check this one.
+DF37: 11DBE3  		ld	de,fcb+1	;check this one.
 DF3A: 0604    		ld	b,4		;max command length.
 DF3C: 1A      	search2:ld	a,(de)
 DF3D: BE      		cp	(hl)
@@ -623,7 +625,7 @@ DF59: 3207DC  		ld	(inbuff+1),a	;second byte is actual length.
               	;*
               	;**************************************************************
               	;*
-DF5C: 31ABE3  	command:ld	sp,ccpstack	;setup stack area.
+DF5C: 31B8E3  	command:ld	sp,ccpstack	;setup stack area.
 DF5F: C5      		push	bc		;note that (c) should be equal to:
 DF60: 79      		ld	a,c		;(uuuudddd) where 'uuuu' is the user number
 DF61: 1F      		rra			;and 'dddd' is the drive number.
@@ -634,179 +636,186 @@ DF65: E60F    		and	0fh		;isolate the user number.
 DF67: 5F      		ld	e,a
 DF68: CD15DD  		call	getsetuc	;and set it.
 DF6B: CDB8DC  		call	resdsk		;reset the disk system.
-DF6E: 32ABE3  		ld	(batch),a	;clear batch mode flag.
+DF6E: 32B8E3  		ld	(batch),a	;clear batch mode flag.
 DF71: C1      		pop	bc
 DF72: 79      		ld	a,c
 DF73: E60F    		and	0fh		;isolate the drive number.
-DF75: 32EFE3  		ld	(cdrive),a	;and save.
+DF75: 32FCE3  		ld	(cdrive),a	;and save.
 DF78: CDBDDC  		call	dsksel		;...and select.
 DF7B: 3A07DC  		ld	a,(inbuff+1)
 DF7E: B7      		or	a		;anything in input buffer already?
-DF7F: C298DF  		jp	nz,cmmnd2	;yes, we just process it.
+DF7F: C2A5DF  		jp	nz,cmmnd2	;yes, we just process it.
               	;
               	;   entry point to get a command line from the console.
               	;
-DF82: 31ABE3  	cmmnd1:	ld	sp,ccpstack	;set stack straight.
+              	;   Big thanks to NabuNetwork.com for the modified prompt!
+              	;
+DF82: 31B8E3  	cmmnd1:	ld	sp,ccpstack	;set stack straight.
 DF85: CD98DC  		call	crlf		;start a new line on the screen.
 DF88: CDD0DD  		call	getdsk		;get current drive.
 DF8B: C641    		add	a,'A'
 DF8D: CD8CDC  		call	print		;print current drive.
-DF90: 3E3E    		ld	a,'>'
-DF92: CD8CDC  		call	print		;and add prompt.
-DF95: CD39DD  		call	getinp		;get line from user.
+DF90: 3E3A    		ld	a,':'
+DF92: CD8CDC  		call	print
+DF95: CD13DD  		call	getusr		;get current user.
+DF98: C630    		add	a,'0'
+DF9A: CD8CDC  		call	print		;print current user.
+DF9D: 3E3E    		ld	a,'>'
+DF9F: CD8CDC  		call	print		;and add prompt.
+DFA2: CD39DD  		call	getinp		;get line from user.
               	;
               	;   process command line here.
               	;
-DF98: 118000  	cmmnd2:	ld	de,tbuff
-DF9B: CDD8DD  		call	dmaset		;set standard dma address.
-DF9E: CDD0DD  		call	getdsk
-DFA1: 32EFE3  		ld	(cdrive),a	;set current drive.
-DFA4: CD5EDE  		call	convfst		;convert name typed in.
-DFA7: C409DE  		call	nz,synerr	;wild cards are not allowed.
-DFAA: 3AF0E3  		ld	a,(chgdrv)	;if a change in drives was indicated,
-DFAD: B7      		or	a		;then treat this as an unknown command
-DFAE: C2A5E2  		jp	nz,unknown	;which gets executed.
-DFB1: CD2EDF  		call	search		;else search command table for a match.
+DFA5: 118000  	cmmnd2:	ld	de,tbuff
+DFA8: CDD8DD  		call	dmaset		;set standard dma address.
+DFAB: CDD0DD  		call	getdsk
+DFAE: 32FCE3  		ld	(cdrive),a	;set current drive.
+DFB1: CD5EDE  		call	convfst		;convert name typed in.
+DFB4: C409DE  		call	nz,synerr	;wild cards are not allowed.
+DFB7: 3AFDE3  		ld	a,(chgdrv)	;if a change in drives was indicated,
+DFBA: B7      		or	a		;then treat this as an unknown command
+DFBB: C2B2E2  		jp	nz,unknown	;which gets executed.
+DFBE: CD2EDF  		call	search		;else search command table for a match.
               	;
               	;   note that an unknown command returns
               	; with (a) pointing to the last address
               	; in our table which is (unknown).
               	;
-DFB4: 21C1DF  		ld	hl,cmdadr	;now, look thru our address table for command (a).
-DFB7: 5F      		ld	e,a		;set (de) to command number.
-DFB8: 1600    		ld	d,0
-DFBA: 19      		add	hl,de
-DFBB: 19      		add	hl,de		;(hl)=(cmdadr)+2*(command number).
-DFBC: 7E      		ld	a,(hl)		;now pick out this address.
-DFBD: 23      		inc	hl
-DFBE: 66      		ld	h,(hl)
-DFBF: 6F      		ld	l,a
-DFC0: E9      		jp	(hl)		;now execute it.
+DFC1: 21CEDF  		ld	hl,cmdadr	;now, look thru our address table for command (a).
+DFC4: 5F      		ld	e,a		;set (de) to command number.
+DFC5: 1600    		ld	d,0
+DFC7: 19      		add	hl,de
+DFC8: 19      		add	hl,de		;(hl)=(cmdadr)+2*(command number).
+DFC9: 7E      		ld	a,(hl)		;now pick out this address.
+DFCA: 23      		inc	hl
+DFCB: 66      		ld	h,(hl)
+DFCC: 6F      		ld	l,a
+DFCD: E9      		jp	(hl)		;now execute it.
               	;
               	;   cp/m command address table.
               	;
-DFC1: 77E01FE1	cmdadr:	defw	direct,erase,type,save
-DFC5: 5DE1ADE1	
-DFC9: 10E28EE2		defw	rename,user,unknown
-DFCD: A5E2    	
+DFCE: 84E02CE1	cmdadr:	defw	direct,erase,type,save
+DFD2: 6AE1BAE1	
+DFD6: 1DE29BE2		defw	rename,user,unknown
+DFDA: B2E2    	
               	;
               	;   halt the system. reason for this is unknown at present.
               	;
-DFCF: 21F376  	halt:	ld	hl,76f3h	;'di hlt' instructions.
-DFD2: 2200DC  		ld	(cbase),hl
-DFD5: 2100DC  		ld	hl,cbase
-DFD8: E9      		jp	(hl)
+DFDC: 21F376  	halt:	ld	hl,76f3h	;'di hlt' instructions.
+DFDF: 2200DC  		ld	(cbase),hl
+DFE2: 2100DC  		ld	hl,cbase
+DFE5: E9      		jp	(hl)
               	;
               	;   read error while typeing a file.
               	;
-DFD9: 01DFDF  	rderror:ld	bc,rderr
-DFDC: C3A7DC  		jp	pline
-DFDF: 72656164	rderr:	defb	'read error',0
-DFE3: 20657272	
-DFE7: 6F7200  	
+DFE6: 01ECDF  	rderror:ld	bc,rderr
+DFE9: C3A7DC  		jp	pline
+DFEC: 72656164	rderr:	defb	'read error',0
+DFF0: 20657272	
+DFF4: 6F7200  	
               	;
               	;   required file was not located.
               	;
-DFEA: 01F0DF  	none:	ld	bc,nofile
-DFED: C3A7DC  		jp	pline
-DFF0: 6E6F2066	nofile:	defb	'no file',0
-DFF4: 696C6500	
+DFF7: 01FDDF  	none:	ld	bc,nofile
+DFFA: C3A7DC  		jp	pline
+DFFD: 6E6F2066	nofile:	defb	'no file',0
+E001: 696C6500	
               	;
               	;   decode a command of the form 'a>filename number{ filename}.
               	; note that a drive specifier is not allowed on the first file
               	; name. on return, the number is in register (a). any error
               	; causes 'filename?' to be printed and the command is aborted.
               	;
-DFF8: CD5EDE  	decode:	call	convfst		;convert filename.
-DFFB: 3AF0E3  		ld	a,(chgdrv)	;do not allow a drive to be specified.
-DFFE: B7      		or	a
-DFFF: C209DE  		jp	nz,synerr
-E002: 21CEE3  		ld	hl,fcb+1	;convert number now.
-E005: 010B00  		ld	bc,11		;(b)=sum register, (c)=max digit count.
-E008: 7E      	decode1:ld	a,(hl)
-E009: FE20    		cp	' '		;a space terminates the numeral.
-E00B: CA33E0  		jp	z,decode3
-E00E: 23      		inc	hl
-E00F: D630    		sub	'0'		;make binary from ascii.
-E011: FE0A    		cp	10		;legal digit?
-E013: D209DE  		jp	nc,synerr
-E016: 57      		ld	d,a		;yes, save it in (d).
-E017: 78      		ld	a,b		;compute (b)=(b)*10 and check for overflow.
-E018: E6E0    		and	0e0h
-E01A: C209DE  		jp	nz,synerr
-E01D: 78      		ld	a,b
-E01E: 07      		rlca	
-E01F: 07      		rlca	
-E020: 07      		rlca			;(a)=(b)*8
-E021: 80      		add	a,b		;.......*9
-E022: DA09DE  		jp	c,synerr
-E025: 80      		add	a,b		;.......*10
-E026: DA09DE  		jp	c,synerr
-E029: 82      		add	a,d		;add in new digit now.
-E02A: DA09DE  	decode2:jp	c,synerr
-E02D: 47      		ld	b,a		;and save result.
-E02E: 0D      		dec	c		;only look at 11 digits.
-E02F: C208E0  		jp	nz,decode1
-E032: C9      		ret	
-E033: 7E      	decode3:ld	a,(hl)		;spaces must follow (why?).
-E034: FE20    		cp	' '
-E036: C209DE  		jp	nz,synerr
-E039: 23      		inc	hl
-E03A: 0D      	decode4:dec	c
-E03B: C233E0  		jp	nz,decode3
-E03E: 78      		ld	a,b		;set (a)=the numeric value entered.
+E005: CD5EDE  	decode:	call	convfst		;convert filename.
+E008: 3AFDE3  		ld	a,(chgdrv)	;do not allow a drive to be specified.
+E00B: B7      		or	a
+E00C: C209DE  		jp	nz,synerr
+E00F: 21DBE3  		ld	hl,fcb+1	;convert number now.
+E012: 010B00  		ld	bc,11		;(b)=sum register, (c)=max digit count.
+E015: 7E      	decode1:ld	a,(hl)
+E016: FE20    		cp	' '		;a space terminates the numeral.
+E018: CA40E0  		jp	z,decode3
+E01B: 23      		inc	hl
+E01C: D630    		sub	'0'		;make binary from ascii.
+E01E: FE0A    		cp	10		;legal digit?
+E020: D209DE  		jp	nc,synerr
+E023: 57      		ld	d,a		;yes, save it in (d).
+E024: 78      		ld	a,b		;compute (b)=(b)*10 and check for overflow.
+E025: E6E0    		and	0e0h
+E027: C209DE  		jp	nz,synerr
+E02A: 78      		ld	a,b
+E02B: 07      		rlca	
+E02C: 07      		rlca	
+E02D: 07      		rlca			;(a)=(b)*8
+E02E: 80      		add	a,b		;.......*9
+E02F: DA09DE  		jp	c,synerr
+E032: 80      		add	a,b		;.......*10
+E033: DA09DE  		jp	c,synerr
+E036: 82      		add	a,d		;add in new digit now.
+E037: DA09DE  	decode2:jp	c,synerr
+E03A: 47      		ld	b,a		;and save result.
+E03B: 0D      		dec	c		;only look at 11 digits.
+E03C: C215E0  		jp	nz,decode1
 E03F: C9      		ret	
+E040: 7E      	decode3:ld	a,(hl)		;spaces must follow (why?).
+E041: FE20    		cp	' '
+E043: C209DE  		jp	nz,synerr
+E046: 23      		inc	hl
+E047: 0D      	decode4:dec	c
+E048: C240E0  		jp	nz,decode3
+E04B: 78      		ld	a,b		;set (a)=the numeric value entered.
+E04C: C9      		ret	
               	;
               	;   move 3 bytes from (hl) to (de). note that there is only
               	; one reference to this at (a2d5h).
               	;
-E040: 0603    	move3:	ld	b,3
+E04D: 0603    	move3:	ld	b,3
               	;
               	;   move (b) bytes from (hl) to (de).
               	;
-E042: 7E      	hl2de:	ld	a,(hl)
-E043: 12      		ld	(de),a
-E044: 23      		inc	hl
-E045: 13      		inc	de
-E046: 05      		dec	b
-E047: C242E0  		jp	nz,hl2de
-E04A: C9      		ret	
+E04F: 7E      	hl2de:	ld	a,(hl)
+E050: 12      		ld	(de),a
+E051: 23      		inc	hl
+E052: 13      		inc	de
+E053: 05      		dec	b
+E054: C24FE0  		jp	nz,hl2de
+E057: C9      		ret	
               	;
               	;   compute (hl)=(tbuff)+(a)+(c) and get the byte that's here.
               	;
-E04B: 218000  	extract:ld	hl,tbuff
-E04E: 81      		add	a,c
-E04F: CD59DE  		call	addhl
-E052: 7E      		ld	a,(hl)
-E053: C9      		ret	
+E058: 218000  	extract:ld	hl,tbuff
+E05B: 81      		add	a,c
+E05C: CD59DE  		call	addhl
+E05F: 7E      		ld	a,(hl)
+E060: C9      		ret	
               	;
               	;  check drive specified. if it means a change, then the new
               	; drive will be selected. in any case, the drive byte of the
               	; fcb will be set to null (means use current drive).
               	;
-E054: AF      	dselect:xor	a		;null out first byte of fcb.
-E055: 32CDE3  		ld	(fcb),a
-E058: 3AF0E3  		ld	a,(chgdrv)	;a drive change indicated?
-E05B: B7      		or	a
-E05C: C8      		ret	z
-E05D: 3D      		dec	a		;yes, is it the same as the current drive?
-E05E: 21EFE3  		ld	hl,cdrive
-E061: BE      		cp	(hl)
-E062: C8      		ret	z
-E063: C3BDDC  		jp	dsksel		;no. select it then.
+E061: AF      	dselect:xor	a		;null out first byte of fcb.
+E062: 32DAE3  		ld	(fcb),a
+E065: 3AFDE3  		ld	a,(chgdrv)	;a drive change indicated?
+E068: B7      		or	a
+E069: C8      		ret	z
+E06A: 3D      		dec	a		;yes, is it the same as the current drive?
+E06B: 21FCE3  		ld	hl,cdrive
+E06E: BE      		cp	(hl)
+E06F: C8      		ret	z
+E070: C3BDDC  		jp	dsksel		;no. select it then.
               	;
               	;   check the drive selection and reset it to the previous
               	; drive if it was changed for the preceeding command.
               	;
-E066: 3AF0E3  	resetdr:ld	a,(chgdrv)	;drive change indicated?
-E069: B7      		or	a
-E06A: C8      		ret	z
-E06B: 3D      		dec	a		;yes, was it a different drive?
-E06C: 21EFE3  		ld	hl,cdrive
-E06F: BE      		cp	(hl)
-E070: C8      		ret	z
-E071: 3AEFE3  		ld	a,(cdrive)	;yes, re-select our old drive.
-E074: C3BDDC  		jp	dsksel
+E073: 3AFDE3  	resetdr:ld	a,(chgdrv)	;drive change indicated?
+E076: B7      		or	a
+E077: C8      		ret	z
+E078: 3D      		dec	a		;yes, was it a different drive?
+E079: 21FCE3  		ld	hl,cdrive
+E07C: BE      		cp	(hl)
+E07D: C8      		ret	z
+E07E: 3AFCE3  		ld	a,(cdrive)	;yes, re-select our old drive.
+E081: C3BDDC  		jp	dsksel
               	;
               	;**************************************************************
               	;*
@@ -814,84 +823,84 @@ E074: C3BDDC  		jp	dsksel
               	;*
               	;**************************************************************
               	;
-E077: CD5EDE  	direct:	call	convfst		;convert file name.
-E07A: CD54E0  		call	dselect		;select indicated drive.
-E07D: 21CEE3  		ld	hl,fcb+1	;was any file indicated?
-E080: 7E      		ld	a,(hl)
-E081: FE20    		cp	' '
-E083: C28FE0  		jp	nz,direct2
-E086: 060B    		ld	b,11		;no. fill field with '?' - same as *.*.
-E088: 363F    	direct1:ld	(hl),'?'
-E08A: 23      		inc	hl
-E08B: 05      		dec	b
-E08C: C288E0  		jp	nz,direct1
-E08F: 1E00    	direct2:ld	e,0		;set initial cursor position.
-E091: D5      		push	de
-E092: CDE9DC  		call	srchfcb		;get first file name.
-E095: CCEADF  		call	z,none		;none found at all?
-E098: CA1BE1  	direct3:jp	z,direct9	;terminate if no more names.
-E09B: 3AEEE3  		ld	a,(rtncode)	;get file's position in segment (0-3).
-E09E: 0F      		rrca	
-E09F: 0F      		rrca	
-E0A0: 0F      		rrca	
-E0A1: E660    		and	60h		;(a)=position*32
-E0A3: 4F      		ld	c,a
-E0A4: 3E0A    		ld	a,10
-E0A6: CD4BE0  		call	extract		;extract the tenth entry in fcb.
-E0A9: 17      		rla			;check system file status bit.
-E0AA: DA0FE1  		jp	c,direct8	;we don't list them.
-E0AD: D1      		pop	de
-E0AE: 7B      		ld	a,e		;bump name count.
-E0AF: 1C      		inc	e
-E0B0: D5      		push	de
-E0B1: E603    		and	03h		;at end of line?
-E0B3: F5      		push	af
-E0B4: C2CCE0  		jp	nz,direct4
-E0B7: CD98DC  		call	crlf		;yes, end this line and start another.
-E0BA: C5      		push	bc
-E0BB: CDD0DD  		call	getdsk		;start line with ('a:').
-E0BE: C1      		pop	bc
-E0BF: C641    		add	a,'A'
-E0C1: CD92DC  		call	printb
-E0C4: 3E3A    		ld	a,':'
-E0C6: CD92DC  		call	printb
-E0C9: C3D4E0  		jp	direct5
-E0CC: CDA2DC  	direct4:call	space		;add seperator between file names.
-E0CF: 3E3A    		ld	a,':'
-E0D1: CD92DC  		call	printb
-E0D4: CDA2DC  	direct5:call	space
-E0D7: 0601    		ld	b,1		;'extract' each file name character at a time.
-E0D9: 78      	direct6:ld	a,b
-E0DA: CD4BE0  		call	extract
-E0DD: E67F    		and	7fh		;strip bit 7 (status bit).
-E0DF: FE20    		cp	' '		;are we at the end of the name?
-E0E1: C2F9E0  		jp	nz,drect65
-E0E4: F1      		pop	af		;yes, don't print spaces at the end of a line.
-E0E5: F5      		push	af
-E0E6: FE03    		cp	3
-E0E8: C2F7E0  		jp	nz,drect63
-E0EB: 3E09    		ld	a,9		;first check for no extension.
-E0ED: CD4BE0  		call	extract
-E0F0: E67F    		and	7fh
-E0F2: FE20    		cp	' '
-E0F4: CA0EE1  		jp	z,direct7	;don't print spaces.
-E0F7: 3E20    	drect63:ld	a,' '		;else print them.
-E0F9: CD92DC  	drect65:call	printb
-E0FC: 04      		inc	b		;bump to next character psoition.
-E0FD: 78      		ld	a,b
-E0FE: FE0C    		cp	12		;end of the name?
-E100: D20EE1  		jp	nc,direct7
-E103: FE09    		cp	9		;nope, starting extension?
-E105: C2D9E0  		jp	nz,direct6
-E108: CDA2DC  		call	space		;yes, add seperating space.
-E10B: C3D9E0  		jp	direct6
-E10E: F1      	direct7:pop	af		;get the next file name.
-E10F: CDC2DD  	direct8:call	chkcon		;first check console, quit on anything.
-E112: C21BE1  		jp	nz,direct9
-E115: CDE4DC  		call	srchnxt		;get next name.
-E118: C398E0  		jp	direct3		;and continue with our list.
-E11B: D1      	direct9:pop	de		;restore the stack and return to command level.
-E11C: C386E3  		jp	getback
+E084: CD5EDE  	direct:	call	convfst		;convert file name.
+E087: CD61E0  		call	dselect		;select indicated drive.
+E08A: 21DBE3  		ld	hl,fcb+1	;was any file indicated?
+E08D: 7E      		ld	a,(hl)
+E08E: FE20    		cp	' '
+E090: C29CE0  		jp	nz,direct2
+E093: 060B    		ld	b,11		;no. fill field with '?' - same as *.*.
+E095: 363F    	direct1:ld	(hl),'?'
+E097: 23      		inc	hl
+E098: 05      		dec	b
+E099: C295E0  		jp	nz,direct1
+E09C: 1E00    	direct2:ld	e,0		;set initial cursor position.
+E09E: D5      		push	de
+E09F: CDE9DC  		call	srchfcb		;get first file name.
+E0A2: CCF7DF  		call	z,none		;none found at all?
+E0A5: CA28E1  	direct3:jp	z,direct9	;terminate if no more names.
+E0A8: 3AFBE3  		ld	a,(rtncode)	;get file's position in segment (0-3).
+E0AB: 0F      		rrca	
+E0AC: 0F      		rrca	
+E0AD: 0F      		rrca	
+E0AE: E660    		and	60h		;(a)=position*32
+E0B0: 4F      		ld	c,a
+E0B1: 3E0A    		ld	a,10
+E0B3: CD58E0  		call	extract		;extract the tenth entry in fcb.
+E0B6: 17      		rla			;check system file status bit.
+E0B7: DA1CE1  		jp	c,direct8	;we don't list them.
+E0BA: D1      		pop	de
+E0BB: 7B      		ld	a,e		;bump name count.
+E0BC: 1C      		inc	e
+E0BD: D5      		push	de
+E0BE: E603    		and	03h		;at end of line?
+E0C0: F5      		push	af
+E0C1: C2D9E0  		jp	nz,direct4
+E0C4: CD98DC  		call	crlf		;yes, end this line and start another.
+E0C7: C5      		push	bc
+E0C8: CDD0DD  		call	getdsk		;start line with ('a:').
+E0CB: C1      		pop	bc
+E0CC: C641    		add	a,'A'
+E0CE: CD92DC  		call	printb
+E0D1: 3E3A    		ld	a,':'
+E0D3: CD92DC  		call	printb
+E0D6: C3E1E0  		jp	direct5
+E0D9: CDA2DC  	direct4:call	space		;add seperator between file names.
+E0DC: 3E3A    		ld	a,':'
+E0DE: CD92DC  		call	printb
+E0E1: CDA2DC  	direct5:call	space
+E0E4: 0601    		ld	b,1		;'extract' each file name character at a time.
+E0E6: 78      	direct6:ld	a,b
+E0E7: CD58E0  		call	extract
+E0EA: E67F    		and	7fh		;strip bit 7 (status bit).
+E0EC: FE20    		cp	' '		;are we at the end of the name?
+E0EE: C206E1  		jp	nz,drect65
+E0F1: F1      		pop	af		;yes, don't print spaces at the end of a line.
+E0F2: F5      		push	af
+E0F3: FE03    		cp	3
+E0F5: C204E1  		jp	nz,drect63
+E0F8: 3E09    		ld	a,9		;first check for no extension.
+E0FA: CD58E0  		call	extract
+E0FD: E67F    		and	7fh
+E0FF: FE20    		cp	' '
+E101: CA1BE1  		jp	z,direct7	;don't print spaces.
+E104: 3E20    	drect63:ld	a,' '		;else print them.
+E106: CD92DC  	drect65:call	printb
+E109: 04      		inc	b		;bump to next character psoition.
+E10A: 78      		ld	a,b
+E10B: FE0C    		cp	12		;end of the name?
+E10D: D21BE1  		jp	nc,direct7
+E110: FE09    		cp	9		;nope, starting extension?
+E112: C2E6E0  		jp	nz,direct6
+E115: CDA2DC  		call	space		;yes, add seperating space.
+E118: C3E6E0  		jp	direct6
+E11B: F1      	direct7:pop	af		;get the next file name.
+E11C: CDC2DD  	direct8:call	chkcon		;first check console, quit on anything.
+E11F: C228E1  		jp	nz,direct9
+E122: CDE4DC  		call	srchnxt		;get next name.
+E125: C3A5E0  		jp	direct3		;and continue with our list.
+E128: D1      	direct9:pop	de		;restore the stack and return to command level.
+E129: C393E3  		jp	getback
               	;
               	;**************************************************************
               	;*
@@ -899,30 +908,30 @@ E11C: C386E3  		jp	getback
               	;*
               	;**************************************************************
               	;
-E11F: CD5EDE  	erase:	call	convfst		;convert file name.
-E122: FE0B    		cp	11		;was '*.*' entered?
-E124: C242E1  		jp	nz,erase1
-E127: 0152E1  		ld	bc,yesno	;yes, ask for confirmation.
-E12A: CDA7DC  		call	pline
-E12D: CD39DD  		call	getinp
-E130: 2107DC  		ld	hl,inbuff+1
-E133: 35      		dec	(hl)		;must be exactly 'y'.
-E134: C282DF  		jp	nz,cmmnd1
-E137: 23      		inc	hl
-E138: 7E      		ld	a,(hl)
-E139: FE79    		cp	'y'
-E13B: C282DF  		jp	nz,cmmnd1
-E13E: 23      		inc	hl
-E13F: 2288DC  		ld	(inpoint),hl	;save input line pointer.
-E142: CD54E0  	erase1:	call	dselect		;select desired disk.
-E145: 11CDE3  		ld	de,fcb
-E148: CDEFDC  		call	delete		;delete the file.
-E14B: 3C      		inc	a
-E14C: CCEADF  		call	z,none		;not there?
-E14F: C386E3  		jp	getback		;return to command level now.
-E152: 616C6C20	yesno:	defb	'all (y/n)?',0
-E156: 28792F6E	
-E15A: 293F00  	
+E12C: CD5EDE  	erase:	call	convfst		;convert file name.
+E12F: FE0B    		cp	11		;was '*.*' entered?
+E131: C24FE1  		jp	nz,erase1
+E134: 015FE1  		ld	bc,yesno	;yes, ask for confirmation.
+E137: CDA7DC  		call	pline
+E13A: CD39DD  		call	getinp
+E13D: 2107DC  		ld	hl,inbuff+1
+E140: 35      		dec	(hl)		;must be exactly 'y'.
+E141: C282DF  		jp	nz,cmmnd1
+E144: 23      		inc	hl
+E145: 7E      		ld	a,(hl)
+E146: FE79    		cp	'y'
+E148: C282DF  		jp	nz,cmmnd1
+E14B: 23      		inc	hl
+E14C: 2288DC  		ld	(inpoint),hl	;save input line pointer.
+E14F: CD61E0  	erase1:	call	dselect		;select desired disk.
+E152: 11DAE3  		ld	de,fcb
+E155: CDEFDC  		call	delete		;delete the file.
+E158: 3C      		inc	a
+E159: CCF7DF  		call	z,none		;not there?
+E15C: C393E3  		jp	getback		;return to command level now.
+E15F: 616C6C20	yesno:	defb	'all (y/n)?',0
+E163: 28792F6E	
+E167: 293F00  	
               	;
               	;**************************************************************
               	;*
@@ -930,42 +939,42 @@ E15A: 293F00
               	;*
               	;**************************************************************
               	;
-E15D: CD5EDE  	type:	call	convfst		;convert file name.
-E160: C209DE  		jp	nz,synerr	;wild cards not allowed.
-E163: CD54E0  		call	dselect		;select indicated drive.
-E166: CDD0DC  		call	openfcb		;open the file.
-E169: CAA7E1  		jp	z,type5		;not there?
-E16C: CD98DC  		call	crlf		;ok, start a new line on the screen.
-E16F: 21F1E3  		ld	hl,nbytes	;initialize byte counter.
-E172: 36FF    		ld	(hl),0ffh	;set to read first sector.
-E174: 21F1E3  	type1:	ld	hl,nbytes
-E177: 7E      	type2:	ld	a,(hl)		;have we written the entire sector?
-E178: FE80    		cp	128
-E17A: DA87E1  		jp	c,type3
-E17D: E5      		push	hl		;yes, read in the next one.
-E17E: CDFEDC  		call	readfcb
-E181: E1      		pop	hl
-E182: C2A0E1  		jp	nz,type4	;end or error?
-E185: AF      		xor	a		;ok, clear byte counter.
-E186: 77      		ld	(hl),a
-E187: 34      	type3:	inc	(hl)		;count this byte.
-E188: 218000  		ld	hl,tbuff	;and get the (a)th one from the buffer (tbuff).
-E18B: CD59DE  		call	addhl
-E18E: 7E      		ld	a,(hl)
-E18F: FE1A    		cp	cntrlz		;end of file mark?
-E191: CA86E3  		jp	z,getback
-E194: CD8CDC  		call	print		;no, print it.
-E197: CDC2DD  		call	chkcon		;check console, quit if anything ready.
-E19A: C286E3  		jp	nz,getback
-E19D: C374E1  		jp	type1
+E16A: CD5EDE  	type:	call	convfst		;convert file name.
+E16D: C209DE  		jp	nz,synerr	;wild cards not allowed.
+E170: CD61E0  		call	dselect		;select indicated drive.
+E173: CDD0DC  		call	openfcb		;open the file.
+E176: CAB4E1  		jp	z,type5		;not there?
+E179: CD98DC  		call	crlf		;ok, start a new line on the screen.
+E17C: 21FEE3  		ld	hl,nbytes	;initialize byte counter.
+E17F: 36FF    		ld	(hl),0ffh	;set to read first sector.
+E181: 21FEE3  	type1:	ld	hl,nbytes
+E184: 7E      	type2:	ld	a,(hl)		;have we written the entire sector?
+E185: FE80    		cp	128
+E187: DA94E1  		jp	c,type3
+E18A: E5      		push	hl		;yes, read in the next one.
+E18B: CDFEDC  		call	readfcb
+E18E: E1      		pop	hl
+E18F: C2ADE1  		jp	nz,type4	;end or error?
+E192: AF      		xor	a		;ok, clear byte counter.
+E193: 77      		ld	(hl),a
+E194: 34      	type3:	inc	(hl)		;count this byte.
+E195: 218000  		ld	hl,tbuff	;and get the (a)th one from the buffer (tbuff).
+E198: CD59DE  		call	addhl
+E19B: 7E      		ld	a,(hl)
+E19C: FE1A    		cp	cntrlz		;end of file mark?
+E19E: CA93E3  		jp	z,getback
+E1A1: CD8CDC  		call	print		;no, print it.
+E1A4: CDC2DD  		call	chkcon		;check console, quit if anything ready.
+E1A7: C293E3  		jp	nz,getback
+E1AA: C381E1  		jp	type1
               	;
               	;   get here on an end of file or read error.
               	;
-E1A0: 3D      	type4:	dec	a		;read error?
-E1A1: CA86E3  		jp	z,getback
-E1A4: CDD9DF  		call	rderror		;yes, print message.
-E1A7: CD66E0  	type5:	call	resetdr		;and reset proper drive
-E1AA: C309DE  		jp	synerr		;now print file name with problem.
+E1AD: 3D      	type4:	dec	a		;read error?
+E1AE: CA93E3  		jp	z,getback
+E1B1: CDE6DF  		call	rderror		;yes, print message.
+E1B4: CD73E0  	type5:	call	resetdr		;and reset proper drive
+E1B7: C309DE  		jp	synerr		;now print file name with problem.
               	;
               	;**************************************************************
               	;*
@@ -973,56 +982,56 @@ E1AA: C309DE  		jp	synerr		;now print file name with problem.
               	;*
               	;**************************************************************
               	;
-E1AD: CDF8DF  	save:	call	decode		;get numeric number that follows save.
-E1B0: F5      		push	af		;save number of pages to write.
-E1B1: CD5EDE  		call	convfst		;convert file name.
-E1B4: C209DE  		jp	nz,synerr	;wild cards not allowed.
-E1B7: CD54E0  		call	dselect		;select specified drive.
-E1BA: 11CDE3  		ld	de,fcb		;now delete this file.
-E1BD: D5      		push	de
-E1BE: CDEFDC  		call	delete
-E1C1: D1      		pop	de
-E1C2: CD09DD  		call	create		;and create it again.
-E1C5: CAFBE1  		jp	z,save3		;can't create?
-E1C8: AF      		xor	a		;clear record number byte.
-E1C9: 32EDE3  		ld	(fcb+32),a
-E1CC: F1      		pop	af		;convert pages to sectors.
-E1CD: 6F      		ld	l,a
-E1CE: 2600    		ld	h,0
-E1D0: 29      		add	hl,hl		;(hl)=number of sectors to write.
-E1D1: 110001  		ld	de,tbase	;and we start from here.
-E1D4: 7C      	save1:	ld	a,h		;done yet?
-E1D5: B5      		or	l
-E1D6: CAF1E1  		jp	z,save2
-E1D9: 2B      		dec	hl		;nope, count this and compute the start
-E1DA: E5      		push	hl		;of the next 128 byte sector.
-E1DB: 218000  		ld	hl,128
-E1DE: 19      		add	hl,de
-E1DF: E5      		push	hl		;save it and set the transfer address.
-E1E0: CDD8DD  		call	dmaset
-E1E3: 11CDE3  		ld	de,fcb		;write out this sector now.
-E1E6: CD04DD  		call	wrtrec
-E1E9: D1      		pop	de		;reset (de) to the start of the last sector.
-E1EA: E1      		pop	hl		;restore sector count.
-E1EB: C2FBE1  		jp	nz,save3	;write error?
-E1EE: C3D4E1  		jp	save1
+E1BA: CD05E0  	save:	call	decode		;get numeric number that follows save.
+E1BD: F5      		push	af		;save number of pages to write.
+E1BE: CD5EDE  		call	convfst		;convert file name.
+E1C1: C209DE  		jp	nz,synerr	;wild cards not allowed.
+E1C4: CD61E0  		call	dselect		;select specified drive.
+E1C7: 11DAE3  		ld	de,fcb		;now delete this file.
+E1CA: D5      		push	de
+E1CB: CDEFDC  		call	delete
+E1CE: D1      		pop	de
+E1CF: CD09DD  		call	create		;and create it again.
+E1D2: CA08E2  		jp	z,save3		;can't create?
+E1D5: AF      		xor	a		;clear record number byte.
+E1D6: 32FAE3  		ld	(fcb+32),a
+E1D9: F1      		pop	af		;convert pages to sectors.
+E1DA: 6F      		ld	l,a
+E1DB: 2600    		ld	h,0
+E1DD: 29      		add	hl,hl		;(hl)=number of sectors to write.
+E1DE: 110001  		ld	de,tbase	;and we start from here.
+E1E1: 7C      	save1:	ld	a,h		;done yet?
+E1E2: B5      		or	l
+E1E3: CAFEE1  		jp	z,save2
+E1E6: 2B      		dec	hl		;nope, count this and compute the start
+E1E7: E5      		push	hl		;of the next 128 byte sector.
+E1E8: 218000  		ld	hl,128
+E1EB: 19      		add	hl,de
+E1EC: E5      		push	hl		;save it and set the transfer address.
+E1ED: CDD8DD  		call	dmaset
+E1F0: 11DAE3  		ld	de,fcb		;write out this sector now.
+E1F3: CD04DD  		call	wrtrec
+E1F6: D1      		pop	de		;reset (de) to the start of the last sector.
+E1F7: E1      		pop	hl		;restore sector count.
+E1F8: C208E2  		jp	nz,save3	;write error?
+E1FB: C3E1E1  		jp	save1
               	;
               	;   get here after writing all of the file.
               	;
-E1F1: 11CDE3  	save2:	ld	de,fcb		;now close the file.
-E1F4: CDDADC  		call	close
-E1F7: 3C      		inc	a		;did it close ok?
-E1F8: C201E2  		jp	nz,save4
+E1FE: 11DAE3  	save2:	ld	de,fcb		;now close the file.
+E201: CDDADC  		call	close
+E204: 3C      		inc	a		;did it close ok?
+E205: C20EE2  		jp	nz,save4
               	;
               	;   print out error message (no space).
               	;
-E1FB: 0107E2  	save3:	ld	bc,nospace
-E1FE: CDA7DC  		call	pline
-E201: CDD5DD  	save4:	call	stddma		;reset the standard dma address.
-E204: C386E3  		jp	getback
-E207: 6E6F2073	nospace:defb	'no space',0
-E20B: 70616365	
-E20F: 00      	
+E208: 0114E2  	save3:	ld	bc,nospace
+E20B: CDA7DC  		call	pline
+E20E: CDD5DD  	save4:	call	stddma		;reset the standard dma address.
+E211: C393E3  		jp	getback
+E214: 6E6F2073	nospace:defb	'no space',0
+E218: 70616365	
+E21C: 00      	
               	;
               	;**************************************************************
               	;*
@@ -1030,59 +1039,59 @@ E20F: 00
               	;*
               	;**************************************************************
               	;
-E210: CD5EDE  	rename:	call	convfst		;convert first file name.
-E213: C209DE  		jp	nz,synerr	;wild cards not allowed.
-E216: 3AF0E3  		ld	a,(chgdrv)	;remember any change in drives specified.
-E219: F5      		push	af
-E21A: CD54E0  		call	dselect		;and select this drive.
-E21D: CDE9DC  		call	srchfcb		;is this file present?
-E220: C279E2  		jp	nz,rename6	;yes, print error message.
-E223: 21CDE3  		ld	hl,fcb		;yes, move this name into second slot.
-E226: 11DDE3  		ld	de,fcb+16
-E229: 0610    		ld	b,16
-E22B: CD42E0  		call	hl2de
-E22E: 2A88DC  		ld	hl,(inpoint)	;get input pointer.
-E231: EB      		ex	de,hl
-E232: CD4FDE  		call	nonblank	;get next non blank character.
-E235: FE3D    		cp	'='		;only allow an '=' or '_' seperator.
-E237: CA3FE2  		jp	z,rename1
-E23A: FE5F    		cp	'_'
-E23C: C273E2  		jp	nz,rename5
-E23F: EB      	rename1:ex	de,hl
-E240: 23      		inc	hl		;ok, skip seperator.
-E241: 2288DC  		ld	(inpoint),hl	;save input line pointer.
-E244: CD5EDE  		call	convfst		;convert this second file name now.
-E247: C273E2  		jp	nz,rename5	;again, no wild cards.
-E24A: F1      		pop	af		;if a drive was specified, then it
-E24B: 47      		ld	b,a		;must be the same as before.
-E24C: 21F0E3  		ld	hl,chgdrv
-E24F: 7E      		ld	a,(hl)
-E250: B7      		or	a
-E251: CA59E2  		jp	z,rename2
-E254: B8      		cp	b
-E255: 70      		ld	(hl),b
-E256: C273E2  		jp	nz,rename5	;they were different, error.
-E259: 70      	rename2:ld	(hl),b		;	reset as per the first file specification.
-E25A: AF      		xor	a
-E25B: 32CDE3  		ld	(fcb),a		;clear the drive byte of the fcb.
-E25E: CDE9DC  	rename3:call	srchfcb		;and go look for second file.
-E261: CA6DE2  		jp	z,rename4	;doesn't exist?
-E264: 11CDE3  		ld	de,fcb
-E267: CD0EDD  		call	renam		;ok, rename the file.
-E26A: C386E3  		jp	getback
+E21D: CD5EDE  	rename:	call	convfst		;convert first file name.
+E220: C209DE  		jp	nz,synerr	;wild cards not allowed.
+E223: 3AFDE3  		ld	a,(chgdrv)	;remember any change in drives specified.
+E226: F5      		push	af
+E227: CD61E0  		call	dselect		;and select this drive.
+E22A: CDE9DC  		call	srchfcb		;is this file present?
+E22D: C286E2  		jp	nz,rename6	;yes, print error message.
+E230: 21DAE3  		ld	hl,fcb		;yes, move this name into second slot.
+E233: 11EAE3  		ld	de,fcb+16
+E236: 0610    		ld	b,16
+E238: CD4FE0  		call	hl2de
+E23B: 2A88DC  		ld	hl,(inpoint)	;get input pointer.
+E23E: EB      		ex	de,hl
+E23F: CD4FDE  		call	nonblank	;get next non blank character.
+E242: FE3D    		cp	'='		;only allow an '=' or '_' seperator.
+E244: CA4CE2  		jp	z,rename1
+E247: FE5F    		cp	'_'
+E249: C280E2  		jp	nz,rename5
+E24C: EB      	rename1:ex	de,hl
+E24D: 23      		inc	hl		;ok, skip seperator.
+E24E: 2288DC  		ld	(inpoint),hl	;save input line pointer.
+E251: CD5EDE  		call	convfst		;convert this second file name now.
+E254: C280E2  		jp	nz,rename5	;again, no wild cards.
+E257: F1      		pop	af		;if a drive was specified, then it
+E258: 47      		ld	b,a		;must be the same as before.
+E259: 21FDE3  		ld	hl,chgdrv
+E25C: 7E      		ld	a,(hl)
+E25D: B7      		or	a
+E25E: CA66E2  		jp	z,rename2
+E261: B8      		cp	b
+E262: 70      		ld	(hl),b
+E263: C280E2  		jp	nz,rename5	;they were different, error.
+E266: 70      	rename2:ld	(hl),b		;	reset as per the first file specification.
+E267: AF      		xor	a
+E268: 32DAE3  		ld	(fcb),a		;clear the drive byte of the fcb.
+E26B: CDE9DC  	rename3:call	srchfcb		;and go look for second file.
+E26E: CA7AE2  		jp	z,rename4	;doesn't exist?
+E271: 11DAE3  		ld	de,fcb
+E274: CD0EDD  		call	renam		;ok, rename the file.
+E277: C393E3  		jp	getback
               	;
               	;   process rename errors here.
               	;
-E26D: CDEADF  	rename4:call	none		;file not there.
-E270: C386E3  		jp	getback
-E273: CD66E0  	rename5:call	resetdr		;bad command format.
-E276: C309DE  		jp	synerr
-E279: 0182E2  	rename6:ld	bc,exists	;destination file already exists.
-E27C: CDA7DC  		call	pline
-E27F: C386E3  		jp	getback
-E282: 66696C65	exists:	defb	'file exists',0
-E286: 20657869	
-E28A: 73747300	
+E27A: CDF7DF  	rename4:call	none		;file not there.
+E27D: C393E3  		jp	getback
+E280: CD73E0  	rename5:call	resetdr		;bad command format.
+E283: C309DE  		jp	synerr
+E286: 018FE2  	rename6:ld	bc,exists	;destination file already exists.
+E289: CDA7DC  		call	pline
+E28C: C393E3  		jp	getback
+E28F: 66696C65	exists:	defb	'file exists',0
+E293: 20657869	
+E297: 73747300	
               	;
               	;**************************************************************
               	;*
@@ -1090,15 +1099,15 @@ E28A: 73747300
               	;*
               	;**************************************************************
               	;
-E28E: CDF8DF  	user:	call	decode		;get numeric value following command.
-E291: FE10    		cp	16		;legal user number?
-E293: D209DE  		jp	nc,synerr
-E296: 5F      		ld	e,a		;yes but is there anything else?
-E297: 3ACEE3  		ld	a,(fcb+1)
-E29A: FE20    		cp	' '
-E29C: CA09DE  		jp	z,synerr	;yes, that is not allowed.
-E29F: CD15DD  		call	getsetuc	;ok, set user code.
-E2A2: C389E3  		jp	getback1
+E29B: CD05E0  	user:	call	decode		;get numeric value following command.
+E29E: FE10    		cp	16		;legal user number?
+E2A0: D209DE  		jp	nc,synerr
+E2A3: 5F      		ld	e,a		;yes but is there anything else?
+E2A4: 3ADBE3  		ld	a,(fcb+1)
+E2A7: FE20    		cp	' '
+E2A9: CA09DE  		jp	z,synerr	;yes, that is not allowed.
+E2AC: CD15DD  		call	getsetuc	;ok, set user code.
+E2AF: C396E3  		jp	getback1
               	;
               	;**************************************************************
               	;*
@@ -1106,170 +1115,166 @@ E2A2: C389E3  		jp	getback1
               	;*
               	;**************************************************************
               	;
-E2A5: CDF5DD  	unknown:call	verify		;check for valid system (why?).
-E2A8: 3ACEE3  		ld	a,(fcb+1)	;anything to execute?
-E2AB: FE20    		cp	' '
-E2AD: C2C4E2  		jp	nz,unkwn1
-E2B0: 3AF0E3  		ld	a,(chgdrv)	;nope, only a drive change?
-E2B3: B7      		or	a
-E2B4: CA89E3  		jp	z,getback1	;neither???
-E2B7: 3D      		dec	a
-E2B8: 32EFE3  		ld	(cdrive),a	;ok, store new drive.
-E2BB: CD29DD  		call	movecd		;set (tdrive) also.
-E2BE: CDBDDC  		call	dsksel		;and select this drive.
-E2C1: C389E3  		jp	getback1	;then return.
+E2B2: CDF5DD  	unknown:call	verify		;check for valid system (why?).
+E2B5: 3ADBE3  		ld	a,(fcb+1)	;anything to execute?
+E2B8: FE20    		cp	' '
+E2BA: C2D1E2  		jp	nz,unkwn1
+E2BD: 3AFDE3  		ld	a,(chgdrv)	;nope, only a drive change?
+E2C0: B7      		or	a
+E2C1: CA96E3  		jp	z,getback1	;neither???
+E2C4: 3D      		dec	a
+E2C5: 32FCE3  		ld	(cdrive),a	;ok, store new drive.
+E2C8: CD29DD  		call	movecd		;set (tdrive) also.
+E2CB: CDBDDC  		call	dsksel		;and select this drive.
+E2CE: C396E3  		jp	getback1	;then return.
               	;
               	;   here a file name was typed. prepare to execute it.
               	;
-E2C4: 11D6E3  	unkwn1:	ld	de,fcb+9	;an extension specified?
-E2C7: 1A      		ld	a,(de)
-E2C8: FE20    		cp	' '
-E2CA: C209DE  		jp	nz,synerr	;yes, not allowed.
-E2CD: D5      	unkwn2:	push	de
-E2CE: CD54E0  		call	dselect		;select specified drive.
-E2D1: D1      		pop	de
-E2D2: 2183E3  		ld	hl,comfile	;set the extension to 'com'.
-E2D5: CD40E0  		call	move3
-E2D8: CDD0DC  		call	openfcb		;and open this file.
-E2DB: CA6BE3  		jp	z,unkwn9	;not present?
+E2D1: 11E3E3  	unkwn1:	ld	de,fcb+9	;an extension specified?
+E2D4: 1A      		ld	a,(de)
+E2D5: FE20    		cp	' '
+E2D7: C209DE  		jp	nz,synerr	;yes, not allowed.
+E2DA: D5      	unkwn2:	push	de
+E2DB: CD61E0  		call	dselect		;select specified drive.
+E2DE: D1      		pop	de
+E2DF: 2190E3  		ld	hl,comfile	;set the extension to 'com'.
+E2E2: CD4DE0  		call	move3
+E2E5: CDD0DC  		call	openfcb		;and open this file.
+E2E8: CA78E3  		jp	z,unkwn9	;not present?
               	;
               	;   load in the program.
               	;
-E2DE: 210001  		ld	hl,tbase	;store the program starting here.
-E2E1: E5      	unkwn3:	push	hl
-E2E2: EB      		ex	de,hl
-E2E3: CDD8DD  		call	dmaset		;set transfer address.
-E2E6: 11CDE3  		ld	de,fcb		;and read the next record.
-E2E9: CDF9DC  		call	rdrec
-E2EC: C201E3  		jp	nz,unkwn4	;end of file or read error?
-E2EF: E1      		pop	hl		;nope, bump pointer for next sector.
-E2F0: 118000  		ld	de,128
-E2F3: 19      		add	hl,de
-E2F4: 1100DC  		ld	de,cbase	;enough room for the whole file?
-E2F7: 7D      		ld	a,l
-E2F8: 93      		sub	e
-E2F9: 7C      		ld	a,h
-E2FA: 9A      		sbc	a,d
-E2FB: D271E3  		jp	nc,unkwn0	;no, it can't fit.
-E2FE: C3E1E2  		jp	unkwn3
+E2EB: 210001  		ld	hl,tbase	;store the program starting here.
+E2EE: E5      	unkwn3:	push	hl
+E2EF: EB      		ex	de,hl
+E2F0: CDD8DD  		call	dmaset		;set transfer address.
+E2F3: 11DAE3  		ld	de,fcb		;and read the next record.
+E2F6: CDF9DC  		call	rdrec
+E2F9: C20EE3  		jp	nz,unkwn4	;end of file or read error?
+E2FC: E1      		pop	hl		;nope, bump pointer for next sector.
+E2FD: 118000  		ld	de,128
+E300: 19      		add	hl,de
+E301: 1100DC  		ld	de,cbase	;enough room for the whole file?
+E304: 7D      		ld	a,l
+E305: 93      		sub	e
+E306: 7C      		ld	a,h
+E307: 9A      		sbc	a,d
+E308: D27EE3  		jp	nc,unkwn0	;no, it can't fit.
+E30B: C3EEE2  		jp	unkwn3
               	;
               	;   get here after finished reading.
               	;
-E301: E1      	unkwn4:	pop	hl
-E302: 3D      		dec	a		;normal end of file?
-E303: C271E3  		jp	nz,unkwn0
-E306: CD66E0  		call	resetdr		;yes, reset previous drive.
-E309: CD5EDE  		call	convfst		;convert the first file name that follows
-E30C: 21F0E3  		ld	hl,chgdrv	;command name.
-E30F: E5      		push	hl
-E310: 7E      		ld	a,(hl)		;set drive code in default fcb.
-E311: 32CDE3  		ld	(fcb),a
-E314: 3E10    		ld	a,16		;put second name 16 bytes later.
-E316: CD60DE  		call	convert		;convert second file name.
-E319: E1      		pop	hl
-E31A: 7E      		ld	a,(hl)		;and set the drive for this second file.
-E31B: 32DDE3  		ld	(fcb+16),a
-E31E: AF      		xor	a		;clear record byte in fcb.
-E31F: 32EDE3  		ld	(fcb+32),a
-E322: 115C00  		ld	de,tfcb		;move it into place at(005ch).
-E325: 21CDE3  		ld	hl,fcb
-E328: 0621    		ld	b,33
-E32A: CD42E0  		call	hl2de
-E32D: 2108DC  		ld	hl,inbuff+2	;now move the remainder of the input
-E330: 7E      	unkwn5:	ld	a,(hl)		;line down to (0080h). look for a non blank.
-E331: B7      		or	a		;or a null.
-E332: CA3EE3  		jp	z,unkwn6
-E335: FE20    		cp	' '
-E337: CA3EE3  		jp	z,unkwn6
-E33A: 23      		inc	hl
-E33B: C330E3  		jp	unkwn5
+E30E: E1      	unkwn4:	pop	hl
+E30F: 3D      		dec	a		;normal end of file?
+E310: C27EE3  		jp	nz,unkwn0
+E313: CD73E0  		call	resetdr		;yes, reset previous drive.
+E316: CD5EDE  		call	convfst		;convert the first file name that follows
+E319: 21FDE3  		ld	hl,chgdrv	;command name.
+E31C: E5      		push	hl
+E31D: 7E      		ld	a,(hl)		;set drive code in default fcb.
+E31E: 32DAE3  		ld	(fcb),a
+E321: 3E10    		ld	a,16		;put second name 16 bytes later.
+E323: CD60DE  		call	convert		;convert second file name.
+E326: E1      		pop	hl
+E327: 7E      		ld	a,(hl)		;and set the drive for this second file.
+E328: 32EAE3  		ld	(fcb+16),a
+E32B: AF      		xor	a		;clear record byte in fcb.
+E32C: 32FAE3  		ld	(fcb+32),a
+E32F: 115C00  		ld	de,tfcb		;move it into place at(005ch).
+E332: 21DAE3  		ld	hl,fcb
+E335: 0621    		ld	b,33
+E337: CD4FE0  		call	hl2de
+E33A: 2108DC  		ld	hl,inbuff+2	;now move the remainder of the input
+E33D: 7E      	unkwn5:	ld	a,(hl)		;line down to (0080h). look for a non blank.
+E33E: B7      		or	a		;or a null.
+E33F: CA4BE3  		jp	z,unkwn6
+E342: FE20    		cp	' '
+E344: CA4BE3  		jp	z,unkwn6
+E347: 23      		inc	hl
+E348: C33DE3  		jp	unkwn5
               	;
               	;   do the line move now. it ends in a null byte.
               	;
-E33E: 0600    	unkwn6:	ld	b,0		;keep a character count.
-E340: 118100  		ld	de,tbuff+1	;data gets put here.
-E343: 7E      	unkwn7:	ld	a,(hl)		;move it now.
-E344: 12      		ld	(de),a
-E345: B7      		or	a
-E346: CA4FE3  		jp	z,unkwn8
-E349: 04      		inc	b
-E34A: 23      		inc	hl
-E34B: 13      		inc	de
-E34C: C343E3  		jp	unkwn7
-E34F: 78      	unkwn8:	ld	a,b		;now store the character count.
-E350: 328000  		ld	(tbuff),a
-E353: CD98DC  		call	crlf		;clean up the screen.
-E356: CDD5DD  		call	stddma		;set standard transfer address.
-E359: CD1ADD  		call	setcdrv		;reset current drive.
-E35C: CD0001  		call	tbase		;and execute the program.
+E34B: 0600    	unkwn6:	ld	b,0		;keep a character count.
+E34D: 118100  		ld	de,tbuff+1	;data gets put here.
+E350: 7E      	unkwn7:	ld	a,(hl)		;move it now.
+E351: 12      		ld	(de),a
+E352: B7      		or	a
+E353: CA5CE3  		jp	z,unkwn8
+E356: 04      		inc	b
+E357: 23      		inc	hl
+E358: 13      		inc	de
+E359: C350E3  		jp	unkwn7
+E35C: 78      	unkwn8:	ld	a,b		;now store the character count.
+E35D: 328000  		ld	(tbuff),a
+E360: CD98DC  		call	crlf		;clean up the screen.
+E363: CDD5DD  		call	stddma		;set standard transfer address.
+E366: CD1ADD  		call	setcdrv		;reset current drive.
+E369: CD0001  		call	tbase		;and execute the program.
               	;
               	;   transiant programs return here (or reboot).
               	;
-E35F: 31ABE3  		ld	sp,batch	;set stack first off.
-E362: CD29DD  		call	movecd		;move current drive into place (tdrive).
-E365: CDBDDC  		call	dsksel		;and reselect it.
-E368: C382DF  		jp	cmmnd1		;back to comand mode.
+E36C: 31B8E3  		ld	sp,batch	;set stack first off.
+E36F: CD29DD  		call	movecd		;move current drive into place (tdrive).
+E372: CDBDDC  		call	dsksel		;and reselect it.
+E375: C382DF  		jp	cmmnd1		;back to comand mode.
               	;
               	;   get here if some error occured.
               	;
-E36B: CD66E0  	unkwn9:	call	resetdr		;inproper format.
-E36E: C309DE  		jp	synerr
-E371: 017AE3  	unkwn0:	ld	bc,badload	;read error or won't fit.
-E374: CDA7DC  		call	pline
-E377: C386E3  		jp	getback
-E37A: 42616420	badload:defb	'Bad load',0
-E37E: 6C6F6164	
-E382: 00      	
-E383: 434F4D  	comfile:defb	'COM'		;command file extension.
+E378: CD73E0  	unkwn9:	call	resetdr		;inproper format.
+E37B: C309DE  		jp	synerr
+E37E: 0187E3  	unkwn0:	ld	bc,badload	;read error or won't fit.
+E381: CDA7DC  		call	pline
+E384: C393E3  		jp	getback
+E387: 42616420	badload:defb	'Bad load',0
+E38B: 6C6F6164	
+E38F: 00      	
+E390: 434F4D  	comfile:defb	'COM'		;command file extension.
               	;
               	;   get here to return to command level. we will reset the
               	; previous active drive and then either return to command
               	; level directly or print error message and then return.
               	;
-E386: CD66E0  	getback:call	resetdr		;reset previous drive.
-E389: CD5EDE  	getback1: call	convfst		;convert first name in (fcb).
-E38C: 3ACEE3  		ld	a,(fcb+1)	;if this was just a drive change request,
-E38F: D620    		sub	' '		;make sure it was valid.
-E391: 21F0E3  		ld	hl,chgdrv
-E394: B6      		or	(hl)
-E395: C209DE  		jp	nz,synerr
-E398: C382DF  		jp	cmmnd1		;ok, return to command level.
+E393: CD73E0  	getback:call	resetdr		;reset previous drive.
+E396: CD5EDE  	getback1: call	convfst		;convert first name in (fcb).
+E399: 3ADBE3  		ld	a,(fcb+1)	;if this was just a drive change request,
+E39C: D620    		sub	' '		;make sure it was valid.
+E39E: 21FDE3  		ld	hl,chgdrv
+E3A1: B6      		or	(hl)
+E3A2: C209DE  		jp	nz,synerr
+E3A5: C382DF  		jp	cmmnd1		;ok, return to command level.
               	;
               	;   ccp stack area.
               	;
-E39B: 00000000		defb	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-E39F: 00...   	
-E3AB:         	ccpstack equ	$	;end of ccp stack area.
+E3A8: 00000000		defb	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+E3AC: 00...   	
+E3B8:         	ccpstack equ	$	;end of ccp stack area.
               	;
               	;   batch (or submit) processing information storage.
               	;
-E3AB: 00      	batch:	defb	0		;batch mode flag (0=not active).
-E3AC: 00242424	batchfcb: defb	0,'$$$     SUB',0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-E3B0: 20202020	
-E3B4: 20535542	
-E3B8: 00000000	
-E3BC: 00...   	
+E3B8: 00      	batch:	defb	0		;batch mode flag (0=not active).
+E3B9: 00242424	batchfcb: defb	0,'$$$     SUB',0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+E3BD: 20202020	
+E3C1: 20535542	
+E3C5: 00000000	
+E3C9: 00...   	
               	;
               	;   file control block setup by the ccp.
               	;
-E3CD: 00202020	fcb:	defb	0,'           ',0,0,0,0,0,'           ',0,0,0,0,0
-E3D1: 20202020	
-E3D5: 20202020	
-E3D9: 00000000	
-E3DD: 00202020	
-E3E1: 20202020	
-E3E5: 20202020	
-E3E9: 00000000	
-E3ED: 00      	
-E3EE: 00      	rtncode:defb	0		;status returned from bdos call.
-E3EF: 00      	cdrive:	defb	0		;currently active drive.
-E3F0: 00      	chgdrv:	defb	0		;change in drives flag (0=no change).
-E3F1: 0000    	nbytes:	defw	0		;byte counter used by type.
-              	;
-              	;   room for expansion?
-              	;
-E3F3: 00000000		defb	0,0,0,0,0,0,0,0,0,0,0,0,0
-E3F7: 00...   	
+E3DA: 00202020	fcb:	defb	0,'           ',0,0,0,0,0,'           ',0,0,0,0,0
+E3DE: 20202020	
+E3E2: 20202020	
+E3E6: 00000000	
+E3EA: 00202020	
+E3EE: 20202020	
+E3F2: 20202020	
+E3F6: 00000000	
+E3FA: 00      	
+E3FB: 00      	rtncode:defb	0		;status returned from bdos call.
+E3FC: 00      	cdrive:	defb	0		;currently active drive.
+E3FD: 00      	chgdrv:	defb	0		;change in drives flag (0=no change).
+E3FE: 0000    	nbytes:	defw	0		;byte counter used by type.
+              	
               	;
               	;   note that the following six bytes must match those at
               	; (pattrn1) or cp/m will halt. why?
@@ -5342,293 +5347,293 @@ F866:         	imgtop:
 
 ; +++ global symbols +++
 
-_end     = $F866 = 63590          cpm22.asm:40 (unused)
-_size    = $1C66 =  7270          cpm22.asm:40 (unused)
-active   = $E748 = 59208          cpm22.asm:1700
-adda2hl  = $E96A = 59754          cpm22.asm:2129
-addhl    = $DE59 = 56921          cpm22.asm:430
-alloc0   = $F1D0 = 61904          cpm22.asm:3677
-alloc1   = $F1D2 = 61906          cpm22.asm:3678
-alocvect = $F1C5 = 61893          cpm22.asm:3667
-auto     = $F1E4 = 61924          cpm22.asm:3692
-autoflag = $F1E6 = 61926          cpm22.asm:3694
-autosel  = $F057 = 61527          cpm22.asm:3407
-autosl1  = $F07B = 61563          cpm22.asm:3423
-backup   = $E5AA = 58794          cpm22.asm:1460
-backup1  = $E5B2 = 58802          cpm22.asm:1463
-badload  = $E37A = 58234          cpm22.asm:1189
-badsctr  = $E40C = 58380          cpm22.asm:1243
-badsec   = $E4D0 = 58576          cpm22.asm:1315
-badsel   = $E4DB = 58587          cpm22.asm:1316
-badslct  = $E40E = 58382          cpm22.asm:1244
-batch    = $E3AB = 58283          cpm22.asm:1212
-batchfcb = $E3AC = 58284          cpm22.asm:1213
+_end     = $F866 = 63590          cpm22.asm:42 (unused)
+_size    = $1C66 =  7270          cpm22.asm:42 (unused)
+active   = $E748 = 59208          cpm22.asm:1706
+adda2hl  = $E96A = 59754          cpm22.asm:2135
+addhl    = $DE59 = 56921          cpm22.asm:432
+alloc0   = $F1D0 = 61904          cpm22.asm:3683
+alloc1   = $F1D2 = 61906          cpm22.asm:3684
+alocvect = $F1C5 = 61893          cpm22.asm:3673
+auto     = $F1E4 = 61924          cpm22.asm:3698
+autoflag = $F1E6 = 61926          cpm22.asm:3700
+autosel  = $F057 = 61527          cpm22.asm:3413
+autosl1  = $F07B = 61563          cpm22.asm:3429
+backup   = $E5AA = 58794          cpm22.asm:1466
+backup1  = $E5B2 = 58802          cpm22.asm:1469
+badload  = $E387 = 58247          cpm22.asm:1198
+badsctr  = $E40C = 58380          cpm22.asm:1249
+badsec   = $E4D0 = 58576          cpm22.asm:1321
+badsel   = $E4DB = 58587          cpm22.asm:1322
+badslct  = $E40E = 58382          cpm22.asm:1250
+batch    = $E3B8 = 58296          cpm22.asm:1221
+batchfcb = $E3B9 = 58297          cpm22.asm:1222
 bdevsw   = $F35C = 62300          config.asm:138
-bdosdrv  = $E4CC = 58572          cpm22.asm:1314
-bdoserr  = $E4C0 = 58560          cpm22.asm:1313
-bigdisk  = $F1E3 = 61923          cpm22.asm:3691
+bdosdrv  = $E4CC = 58572          cpm22.asm:1320
+bdoserr  = $E4C0 = 58560          cpm22.asm:1319
+bigdisk  = $F1E3 = 61923          cpm22.asm:3697
 biodma   = $F339 = 62265          bios.asm:314
-bitmap   = $EAA9 = 60073          cpm22.asm:2422
-bitmap1  = $EAB7 = 60087          cpm22.asm:2437
-bitmap2  = $EAD8 = 60120          cpm22.asm:2458
-bitmap3  = $EAFC = 60156          cpm22.asm:2475
-blkmask  = $F1CA = 61898          cpm22.asm:3673
-blknmbr  = $F1EB = 61931          cpm22.asm:3698
-blkshft  = $F1C9 = 61897          cpm22.asm:3672
+bitmap   = $EAA9 = 60073          cpm22.asm:2428
+bitmap1  = $EAB7 = 60087          cpm22.asm:2443
+bitmap2  = $EAD8 = 60120          cpm22.asm:2464
+bitmap3  = $EAFC = 60156          cpm22.asm:2481
+blkmask  = $F1CA = 61898          cpm22.asm:3679
+blknmbr  = $F1EB = 61931          cpm22.asm:3704
+blkshft  = $F1C9 = 61897          cpm22.asm:3678
 boot     = $F235 = 62005          bios.asm:42
-bs       = $0008 =     8          cpm22.asm:25
+bs       = $0008 =     8          cpm22.asm:27
 callbd   = $F2E8 = 62184          bios.asm:213
 callmj   = $F336 = 62262          bios.asm:308
-cbase    = $DC00 = 56320          cpm22.asm:42
-ccpstack = $E3AB = 58283          cpm22.asm:1208
+cbase    = $DC00 = 56320          cpm22.asm:44
+ccpstack = $E3B8 = 58296          cpm22.asm:1217
 cdevsw   = $F39C = 62364          config.asm:177
 cdindi0  = $F30E = 62222          bios.asm:273
 cdindi1  = $F314 = 62228          bios.asm:277
 cdindir  = $F30A = 62218          bios.asm:271
-cdrive   = $E3EF = 58351          cpm22.asm:1219
+cdrive   = $E3FC = 58364          cpm22.asm:1228
 cfinit   = $F33B = 62267          config.asm:55
 cfirq    = $F352 = 62290          config.asm:85
-charbuf  = $E714 = 59156          cpm22.asm:1689
-check    = $DE30 = 56880          cpm22.asm:396
-checkdir = $E9A4 = 59812          cpm22.asm:2202
-checksum = $E8FD = 59645          cpm22.asm:2041
-chgdrv   = $E3F0 = 58352          cpm22.asm:1220
-chgnam1  = $EC2D = 60461          cpm22.asm:2714
-chgnames = $EC1C = 60444          cpm22.asm:2706
-chkblk   = $E88A = 59530          cpm22.asm:1948
-chkchar  = $E51A = 58650          cpm22.asm:1357
-chkcon   = $DDC2 = 56770          cpm22.asm:321
-chkdir1  = $E9CA = 59850          cpm22.asm:2222
-chknmbr  = $E992 = 59794          cpm22.asm:2175
-chkrofl  = $E94A = 59722          cpm22.asm:2105
-chksum1  = $E903 = 59651          cpm22.asm:2044
-chkvect  = $F1C3 = 61891          cpm22.asm:3666
-chkwprt  = $E95A = 59738          cpm22.asm:2116
+charbuf  = $E714 = 59156          cpm22.asm:1695
+check    = $DE30 = 56880          cpm22.asm:398
+checkdir = $E9A4 = 59812          cpm22.asm:2208
+checksum = $E8FD = 59645          cpm22.asm:2047
+chgdrv   = $E3FD = 58365          cpm22.asm:1229
+chgnam1  = $EC2D = 60461          cpm22.asm:2720
+chgnames = $EC1C = 60444          cpm22.asm:2712
+chkblk   = $E88A = 59530          cpm22.asm:1954
+chkchar  = $E51A = 58650          cpm22.asm:1363
+chkcon   = $DDC2 = 56770          cpm22.asm:323
+chkdir1  = $E9CA = 59850          cpm22.asm:2228
+chknmbr  = $E992 = 59794          cpm22.asm:2181
+chkrofl  = $E94A = 59722          cpm22.asm:2111
+chksum1  = $E903 = 59651          cpm22.asm:2050
+chkvect  = $F1C3 = 61891          cpm22.asm:3672
+chkwprt  = $E95A = 59738          cpm22.asm:2122
 chrout   = $F2AB = 62123          bios.asm:154
-ckbitmap = $EA3B = 59963          cpm22.asm:2316
-ckbmap1  = $EA5C = 59996          cpm22.asm:2351
-ckcon1   = $E548 = 58696          cpm22.asm:1387
-ckcon2   = $E54B = 58699          cpm22.asm:1388
-ckconsol = $E529 = 58665          cpm22.asm:1373
-ckfilpos = $E9FB = 59899          cpm22.asm:2265
-ckrof1   = $E94D = 59725          cpm22.asm:2106
-cksumtbl = $F1F2 = 61938          cpm22.asm:3706
-clearbuf = $DF58 = 57176          cpm22.asm:596
-clears2  = $E978 = 59768          cpm22.asm:2146
-close    = $DCDA = 56538          cpm22.asm:136
-closefil = $F0AB = 61611          cpm22.asm:3454
-closeflg = $F1D8 = 61912          cpm22.asm:3683
-closeit  = $ECA8 = 60584          cpm22.asm:2800
-closeit1 = $ECD3 = 60627          cpm22.asm:2820
-closeit2 = $ECE1 = 60641          cpm22.asm:2828
-closeit3 = $ECE7 = 60647          cpm22.asm:2832
-closeit4 = $ECEE = 60654          cpm22.asm:2835
-closeit5 = $ED03 = 60675          cpm22.asm:2848
-closeit6 = $ED1D = 60701          cpm22.asm:2866
-closeit7 = $ED25 = 60709          cpm22.asm:2869
-cmdadr   = $DFC1 = 57281          cpm22.asm:668
-cmdtbl   = $DF10 = 57104          cpm22.asm:550
-cmmnd1   = $DF82 = 57218          cpm22.asm:629
-cmmnd2   = $DF98 = 57240          cpm22.asm:640
-cntrlc   = $0003 =     3          cpm22.asm:23
-cntrle   = $0005 =     5          cpm22.asm:24
-cntrlp   = $0010 =    16          cpm22.asm:30
-cntrlr   = $0012 =    18          cpm22.asm:31
-cntrls   = $0013 =    19          cpm22.asm:32
-cntrlu   = $0015 =    21          cpm22.asm:33
-cntrlx   = $0018 =    24          cpm22.asm:34
-cntrlz   = $001A =    26          cpm22.asm:35
-comblk   = $E87D = 59517          cpm22.asm:1939
-comfile  = $E383 = 58243          cpm22.asm:1190
-command  = $DF5C = 57180          cpm22.asm:606
-comprand = $EFAB = 61355          cpm22.asm:3273
+ckbitmap = $EA3B = 59963          cpm22.asm:2322
+ckbmap1  = $EA5C = 59996          cpm22.asm:2357
+ckcon1   = $E548 = 58696          cpm22.asm:1393
+ckcon2   = $E54B = 58699          cpm22.asm:1394
+ckconsol = $E529 = 58665          cpm22.asm:1379
+ckfilpos = $E9FB = 59899          cpm22.asm:2271
+ckrof1   = $E94D = 59725          cpm22.asm:2112
+cksumtbl = $F1F2 = 61938          cpm22.asm:3712
+clearbuf = $DF58 = 57176          cpm22.asm:598
+clears2  = $E978 = 59768          cpm22.asm:2152
+close    = $DCDA = 56538          cpm22.asm:138
+closefil = $F0AB = 61611          cpm22.asm:3460
+closeflg = $F1D8 = 61912          cpm22.asm:3689
+closeit  = $ECA8 = 60584          cpm22.asm:2806
+closeit1 = $ECD3 = 60627          cpm22.asm:2826
+closeit2 = $ECE1 = 60641          cpm22.asm:2834
+closeit3 = $ECE7 = 60647          cpm22.asm:2838
+closeit4 = $ECEE = 60654          cpm22.asm:2841
+closeit5 = $ED03 = 60675          cpm22.asm:2854
+closeit6 = $ED1D = 60701          cpm22.asm:2872
+closeit7 = $ED25 = 60709          cpm22.asm:2875
+cmdadr   = $DFCE = 57294          cpm22.asm:677
+cmdtbl   = $DF10 = 57104          cpm22.asm:552
+cmmnd1   = $DF82 = 57218          cpm22.asm:633
+cmmnd2   = $DFA5 = 57253          cpm22.asm:649
+cntrlc   = $0003 =     3          cpm22.asm:25
+cntrle   = $0005 =     5          cpm22.asm:26
+cntrlp   = $0010 =    16          cpm22.asm:32
+cntrlr   = $0012 =    18          cpm22.asm:33
+cntrls   = $0013 =    19          cpm22.asm:34
+cntrlu   = $0015 =    21          cpm22.asm:35
+cntrlx   = $0018 =    24          cpm22.asm:36
+cntrlz   = $001A =    26          cpm22.asm:37
+comblk   = $E87D = 59517          cpm22.asm:1945
+comfile  = $E390 = 58256          cpm22.asm:1199
+command  = $DF5C = 57180          cpm22.asm:608
+comprand = $EFAB = 61355          cpm22.asm:3279
 conin    = $F29D = 62109          bios.asm:141
 conout   = $F2A9 = 62121          bios.asm:153
 const    = $F292 = 62098          bios.asm:129
-convert  = $DE60 = 56928          cpm22.asm:444
-convfst  = $DE5E = 56926          cpm22.asm:438
-convrt1  = $DE89 = 56969          cpm22.asm:467
-convrt2  = $DE90 = 56976          cpm22.asm:470
-convrt3  = $DE96 = 56982          cpm22.asm:477
-convrt4  = $DE98 = 56984          cpm22.asm:478
-convrt5  = $DEA9 = 57001          cpm22.asm:485
-convrt6  = $DEAB = 57003          cpm22.asm:487
-convrt7  = $DEAF = 57007          cpm22.asm:489
-convrt8  = $DEB9 = 57017          cpm22.asm:493
-counter  = $F1DE = 61918          cpm22.asm:3689
+convert  = $DE60 = 56928          cpm22.asm:446
+convfst  = $DE5E = 56926          cpm22.asm:440
+convrt1  = $DE89 = 56969          cpm22.asm:469
+convrt2  = $DE90 = 56976          cpm22.asm:472
+convrt3  = $DE96 = 56982          cpm22.asm:479
+convrt4  = $DE98 = 56984          cpm22.asm:480
+convrt5  = $DEA9 = 57001          cpm22.asm:487
+convrt6  = $DEAB = 57003          cpm22.asm:489
+convrt7  = $DEAF = 57007          cpm22.asm:491
+convrt8  = $DEB9 = 57017          cpm22.asm:495
+counter  = $F1DE = 61918          cpm22.asm:3695
 cpmlow   = $F28A = 62090          bios.asm:118
-cr       = $000D =    13          cpm22.asm:29
-create   = $DD09 = 56585          cpm22.asm:186
-crlf     = $DC98 = 56472          cpm22.asm:78
-curpos   = $E712 = 59154          cpm22.asm:1687
-de2hl    = $E755 = 59221          cpm22.asm:1718
-de2hl1   = $E756 = 59222          cpm22.asm:1719
-decode   = $DFF8 = 57336          cpm22.asm:695
-decode1  = $E008 = 57352          cpm22.asm:701
-decode2  = $E02A = 57386          cpm22.asm:721 (unused)
-decode3  = $E033 = 57395          cpm22.asm:726
-decode4  = $E03A = 57402          cpm22.asm:730 (unused)
-defdma   = $E9E0 = 59872          cpm22.asm:2240
-del      = $007F =   127          cpm22.asm:36
-delbatch = $DDDD = 56797          cpm22.asm:346
-delete   = $DCEF = 56559          cpm22.asm:157
-delfile  = $F0DD = 61661          cpm22.asm:3485
-dirbuf   = $F1BF = 61887          cpm22.asm:3664
-dirc1    = $E6E6 = 59110          cpm22.asm:1645
+cr       = $000D =    13          cpm22.asm:31
+create   = $DD09 = 56585          cpm22.asm:188
+crlf     = $DC98 = 56472          cpm22.asm:80
+curpos   = $E712 = 59154          cpm22.asm:1693
+de2hl    = $E755 = 59221          cpm22.asm:1724
+de2hl1   = $E756 = 59222          cpm22.asm:1725
+decode   = $E005 = 57349          cpm22.asm:704
+decode1  = $E015 = 57365          cpm22.asm:710
+decode2  = $E037 = 57399          cpm22.asm:730 (unused)
+decode3  = $E040 = 57408          cpm22.asm:735
+decode4  = $E047 = 57415          cpm22.asm:739 (unused)
+defdma   = $E9E0 = 59872          cpm22.asm:2246
+del      = $007F =   127          cpm22.asm:38
+delbatch = $DDDD = 56797          cpm22.asm:348
+delete   = $DCEF = 56559          cpm22.asm:159
+delfile  = $F0DD = 61661          cpm22.asm:3491
+dirbuf   = $F1BF = 61887          cpm22.asm:3670
+dirc1    = $E6E6 = 59110          cpm22.asm:1651
 dircbuf  = $F980 = 63872          config.asm:40
-dircio   = $E6DA = 59098          cpm22.asm:1639
-dirdma   = $E9E6 = 59878          cpm22.asm:2245
-dirdma1  = $E9E9 = 59881          cpm22.asm:2250
-direct   = $E077 = 57463          cpm22.asm:792
-direct1  = $E088 = 57480          cpm22.asm:799
-direct2  = $E08F = 57487          cpm22.asm:803
-direct3  = $E098 = 57496          cpm22.asm:807
-direct4  = $E0CC = 57548          cpm22.asm:834
-direct5  = $E0D4 = 57556          cpm22.asm:837
-direct6  = $E0D9 = 57561          cpm22.asm:839
-direct7  = $E10E = 57614          cpm22.asm:863
-direct8  = $E10F = 57615          cpm22.asm:864
-direct9  = $E11B = 57627          cpm22.asm:868
-dirread  = $E9DA = 59866          cpm22.asm:2235
-dirsize  = $F1CE = 61902          cpm22.asm:3676
-dirwrite = $E9CC = 59852          cpm22.asm:2227
-diskpb   = $F1C1 = 61889          cpm22.asm:3665
-diskro   = $E4E7 = 58599          cpm22.asm:1318
-dmaset   = $DDD8 = 56792          cpm22.asm:341
-doread   = $E7B8 = 59320          cpm22.asm:1789
-dowrite  = $E7BE = 59326          cpm22.asm:1794
-drect63  = $E0F7 = 57591          cpm22.asm:853
-drect65  = $E0F9 = 57593          cpm22.asm:854
-dselect  = $E054 = 57428          cpm22.asm:762
-dsksel   = $DCBD = 56509          cpm22.asm:110
-dsksize  = $F1CC = 61900          cpm22.asm:3675
-emptyfcb = $F1B2 = 61874          cpm22.asm:3651
-entry    = $0005 =     5          cpm22.asm:16
-entry1   = $DCC3 = 56515          cpm22.asm:117
-entry2   = $DCF4 = 56564          cpm22.asm:163
-eparam   = $F1DC = 61916          cpm22.asm:3687
-erafil1  = $EBAA = 60330          cpm22.asm:2592
-erafile  = $EBA2 = 60322          cpm22.asm:2589
-erase    = $E11F = 57631          cpm22.asm:877
-erase1   = $E142 = 57666          cpm22.asm:892
-error1   = $E49F = 58527          cpm22.asm:1296
-error2   = $E4AB = 58539          cpm22.asm:1302
-error3   = $E4B1 = 58545          cpm22.asm:1305
-error4   = $E4B7 = 58551          cpm22.asm:1308
-error5   = $E4BA = 58554          cpm22.asm:1310
-exists   = $E282 = 57986          cpm22.asm:1054
-extblk   = $E864 = 59492          cpm22.asm:1920
-extblk1  = $E877 = 59511          cpm22.asm:1930
-extmask  = $F1CB = 61899          cpm22.asm:3674
-extract  = $E04B = 57419          cpm22.asm:752
-fbase    = $E406 = 58374          cpm22.asm:1238
-fbase1   = $E414 = 58388          cpm22.asm:1251
-fcb      = $E3CD = 58317          cpm22.asm:1217
-fcb2hl   = $E964 = 59748          cpm22.asm:2124
-fcbpos   = $F1EF = 61935          cpm22.asm:3700
-fcbset   = $EC03 = 60419          cpm22.asm:2684
-fcreate  = $F0F2 = 61682          cpm22.asm:3502
-ff       = $000C =    12          cpm22.asm:28 (unused)
-filepos  = $F1F0 = 61936          cpm22.asm:3701
-filero   = $E4E2 = 58594          cpm22.asm:1317
-filesize = $F153 = 61779          cpm22.asm:3576
-findfst  = $EB1E = 60190          cpm22.asm:2509
-findnxt  = $EB33 = 60211          cpm22.asm:2522
-fndnxt1  = $EB50 = 60240          cpm22.asm:2535
-fndnxt2  = $EB59 = 60249          cpm22.asm:2539
-fndnxt3  = $EB79 = 60281          cpm22.asm:2555
-fndnxt4  = $EB82 = 60290          cpm22.asm:2564
-fndnxt5  = $EB89 = 60297          cpm22.asm:2569
-fndnxt6  = $EB9A = 60314          cpm22.asm:2582
-fndspa1  = $EBC6 = 60358          cpm22.asm:2622
-fndspa2  = $EBD7 = 60375          cpm22.asm:2645
-fndspa3  = $EBF2 = 60402          cpm22.asm:2666
-fndspa4  = $EBFA = 60410          cpm22.asm:2676
-fndspace = $EBC4 = 60356          cpm22.asm:2616
-fndstat  = $F1DA = 61914          cpm22.asm:3685
-functns  = $E44D = 58445          cpm22.asm:1287
-getaloc  = $F117 = 61719          cpm22.asm:3530
-getback  = $E386 = 58246          cpm22.asm:1196
-getback1 = $E389 = 58249          cpm22.asm:1197
-getblk1  = $E84B = 59467          cpm22.asm:1898
-getblk2  = $E859 = 59481          cpm22.asm:1907
-getblk3  = $E862 = 59490          cpm22.asm:1912
-getblock = $E844 = 59460          cpm22.asm:1895
-getchar  = $E501 = 58625          cpm22.asm:1335
-getcon   = $E6CE = 59086          cpm22.asm:1627
-getcrnt  = $F10A = 61706          cpm22.asm:3519
-getcsts  = $E704 = 59140          cpm22.asm:1672
-getdsk   = $DDD0 = 56784          cpm22.asm:332
-getecho  = $E50C = 58636          cpm22.asm:1344
-getempty = $ED2A = 60714          cpm22.asm:2876
-getext   = $DEC0 = 57024          cpm22.asm:500
-getext1  = $DEC8 = 57032          cpm22.asm:504
-getext2  = $DED9 = 57049          cpm22.asm:511
-getext3  = $DEDB = 57051          cpm22.asm:513
-getext4  = $DEDF = 57055          cpm22.asm:515
-getext5  = $DEE9 = 57065          cpm22.asm:519
-getext6  = $DEF0 = 57072          cpm22.asm:523
-getext7  = $DEF2 = 57074          cpm22.asm:524
-getext8  = $DF01 = 57089          cpm22.asm:536
-getext9  = $DF09 = 57097          cpm22.asm:541
-getfst   = $F0B1 = 61617          cpm22.asm:3461
-getfst1  = $F0C8 = 61640          cpm22.asm:3472
-getinp   = $DD39 = 56633          cpm22.asm:237
-getinp1  = $DD96 = 56726          cpm22.asm:293
-getinp2  = $DDA7 = 56743          cpm22.asm:302
-getinp3  = $DDAB = 56747          cpm22.asm:304
-getinp4  = $DDBA = 56762          cpm22.asm:313
-getiob   = $E6F3 = 59123          cpm22.asm:1653
-getlog   = $F104 = 61700          cpm22.asm:3514
-getmt1   = $ED4C = 60748          cpm22.asm:2892
-getnext  = $ED60 = 60768          cpm22.asm:2906
-getnxt   = $F0CE = 61646          cpm22.asm:3477
-getparm  = $F12C = 61740          cpm22.asm:3547
-getprm1  = $F12F = 61743          cpm22.asm:3548
-getrdr   = $E6D4 = 59092          cpm22.asm:1632
-getrov   = $F11D = 61725          cpm22.asm:3535
-gets2    = $E96F = 59759          cpm22.asm:2138
-getsetuc = $DD15 = 56597          cpm22.asm:202
-getuser  = $F133 = 61747          cpm22.asm:3555
-getusr   = $DD13 = 56595          cpm22.asm:197
-getver   = $F084 = 61572          cpm22.asm:3431
-getwprt  = $E924 = 59684          cpm22.asm:2078
-goback   = $F17A = 61818          cpm22.asm:3611
-goback1  = $F197 = 61847          cpm22.asm:3623
-gtnext1  = $ED89 = 60809          cpm22.asm:2926
-gtnext2  = $ED94 = 60820          cpm22.asm:2935
-gtnext3  = $EDB2 = 60850          cpm22.asm:2946
-gtnext4  = $EDB5 = 60853          cpm22.asm:2947
-gtnext5  = $EDBC = 60860          cpm22.asm:2954
-halt     = $DFCF = 57295          cpm22.asm:673
-hl2de    = $E042 = 57410          cpm22.asm:742
+dircio   = $E6DA = 59098          cpm22.asm:1645
+dirdma   = $E9E6 = 59878          cpm22.asm:2251
+dirdma1  = $E9E9 = 59881          cpm22.asm:2256
+direct   = $E084 = 57476          cpm22.asm:801
+direct1  = $E095 = 57493          cpm22.asm:808
+direct2  = $E09C = 57500          cpm22.asm:812
+direct3  = $E0A5 = 57509          cpm22.asm:816
+direct4  = $E0D9 = 57561          cpm22.asm:843
+direct5  = $E0E1 = 57569          cpm22.asm:846
+direct6  = $E0E6 = 57574          cpm22.asm:848
+direct7  = $E11B = 57627          cpm22.asm:872
+direct8  = $E11C = 57628          cpm22.asm:873
+direct9  = $E128 = 57640          cpm22.asm:877
+dirread  = $E9DA = 59866          cpm22.asm:2241
+dirsize  = $F1CE = 61902          cpm22.asm:3682
+dirwrite = $E9CC = 59852          cpm22.asm:2233
+diskpb   = $F1C1 = 61889          cpm22.asm:3671
+diskro   = $E4E7 = 58599          cpm22.asm:1324
+dmaset   = $DDD8 = 56792          cpm22.asm:343
+doread   = $E7B8 = 59320          cpm22.asm:1795
+dowrite  = $E7BE = 59326          cpm22.asm:1800
+drect63  = $E104 = 57604          cpm22.asm:862
+drect65  = $E106 = 57606          cpm22.asm:863
+dselect  = $E061 = 57441          cpm22.asm:771
+dsksel   = $DCBD = 56509          cpm22.asm:112
+dsksize  = $F1CC = 61900          cpm22.asm:3681
+emptyfcb = $F1B2 = 61874          cpm22.asm:3657
+entry    = $0005 =     5          cpm22.asm:18
+entry1   = $DCC3 = 56515          cpm22.asm:119
+entry2   = $DCF4 = 56564          cpm22.asm:165
+eparam   = $F1DC = 61916          cpm22.asm:3693
+erafil1  = $EBAA = 60330          cpm22.asm:2598
+erafile  = $EBA2 = 60322          cpm22.asm:2595
+erase    = $E12C = 57644          cpm22.asm:886
+erase1   = $E14F = 57679          cpm22.asm:901
+error1   = $E49F = 58527          cpm22.asm:1302
+error2   = $E4AB = 58539          cpm22.asm:1308
+error3   = $E4B1 = 58545          cpm22.asm:1311
+error4   = $E4B7 = 58551          cpm22.asm:1314
+error5   = $E4BA = 58554          cpm22.asm:1316
+exists   = $E28F = 57999          cpm22.asm:1063
+extblk   = $E864 = 59492          cpm22.asm:1926
+extblk1  = $E877 = 59511          cpm22.asm:1936
+extmask  = $F1CB = 61899          cpm22.asm:3680
+extract  = $E058 = 57432          cpm22.asm:761
+fbase    = $E406 = 58374          cpm22.asm:1244
+fbase1   = $E414 = 58388          cpm22.asm:1257
+fcb      = $E3DA = 58330          cpm22.asm:1226
+fcb2hl   = $E964 = 59748          cpm22.asm:2130
+fcbpos   = $F1EF = 61935          cpm22.asm:3706
+fcbset   = $EC03 = 60419          cpm22.asm:2690
+fcreate  = $F0F2 = 61682          cpm22.asm:3508
+ff       = $000C =    12          cpm22.asm:30 (unused)
+filepos  = $F1F0 = 61936          cpm22.asm:3707
+filero   = $E4E2 = 58594          cpm22.asm:1323
+filesize = $F153 = 61779          cpm22.asm:3582
+findfst  = $EB1E = 60190          cpm22.asm:2515
+findnxt  = $EB33 = 60211          cpm22.asm:2528
+fndnxt1  = $EB50 = 60240          cpm22.asm:2541
+fndnxt2  = $EB59 = 60249          cpm22.asm:2545
+fndnxt3  = $EB79 = 60281          cpm22.asm:2561
+fndnxt4  = $EB82 = 60290          cpm22.asm:2570
+fndnxt5  = $EB89 = 60297          cpm22.asm:2575
+fndnxt6  = $EB9A = 60314          cpm22.asm:2588
+fndspa1  = $EBC6 = 60358          cpm22.asm:2628
+fndspa2  = $EBD7 = 60375          cpm22.asm:2651
+fndspa3  = $EBF2 = 60402          cpm22.asm:2672
+fndspa4  = $EBFA = 60410          cpm22.asm:2682
+fndspace = $EBC4 = 60356          cpm22.asm:2622
+fndstat  = $F1DA = 61914          cpm22.asm:3691
+functns  = $E44D = 58445          cpm22.asm:1293
+getaloc  = $F117 = 61719          cpm22.asm:3536
+getback  = $E393 = 58259          cpm22.asm:1205
+getback1 = $E396 = 58262          cpm22.asm:1206
+getblk1  = $E84B = 59467          cpm22.asm:1904
+getblk2  = $E859 = 59481          cpm22.asm:1913
+getblk3  = $E862 = 59490          cpm22.asm:1918
+getblock = $E844 = 59460          cpm22.asm:1901
+getchar  = $E501 = 58625          cpm22.asm:1341
+getcon   = $E6CE = 59086          cpm22.asm:1633
+getcrnt  = $F10A = 61706          cpm22.asm:3525
+getcsts  = $E704 = 59140          cpm22.asm:1678
+getdsk   = $DDD0 = 56784          cpm22.asm:334
+getecho  = $E50C = 58636          cpm22.asm:1350
+getempty = $ED2A = 60714          cpm22.asm:2882
+getext   = $DEC0 = 57024          cpm22.asm:502
+getext1  = $DEC8 = 57032          cpm22.asm:506
+getext2  = $DED9 = 57049          cpm22.asm:513
+getext3  = $DEDB = 57051          cpm22.asm:515
+getext4  = $DEDF = 57055          cpm22.asm:517
+getext5  = $DEE9 = 57065          cpm22.asm:521
+getext6  = $DEF0 = 57072          cpm22.asm:525
+getext7  = $DEF2 = 57074          cpm22.asm:526
+getext8  = $DF01 = 57089          cpm22.asm:538
+getext9  = $DF09 = 57097          cpm22.asm:543
+getfst   = $F0B1 = 61617          cpm22.asm:3467
+getfst1  = $F0C8 = 61640          cpm22.asm:3478
+getinp   = $DD39 = 56633          cpm22.asm:239
+getinp1  = $DD96 = 56726          cpm22.asm:295
+getinp2  = $DDA7 = 56743          cpm22.asm:304
+getinp3  = $DDAB = 56747          cpm22.asm:306
+getinp4  = $DDBA = 56762          cpm22.asm:315
+getiob   = $E6F3 = 59123          cpm22.asm:1659
+getlog   = $F104 = 61700          cpm22.asm:3520
+getmt1   = $ED4C = 60748          cpm22.asm:2898
+getnext  = $ED60 = 60768          cpm22.asm:2912
+getnxt   = $F0CE = 61646          cpm22.asm:3483
+getparm  = $F12C = 61740          cpm22.asm:3553
+getprm1  = $F12F = 61743          cpm22.asm:3554
+getrdr   = $E6D4 = 59092          cpm22.asm:1638
+getrov   = $F11D = 61725          cpm22.asm:3541
+gets2    = $E96F = 59759          cpm22.asm:2144
+getsetuc = $DD15 = 56597          cpm22.asm:204
+getuser  = $F133 = 61747          cpm22.asm:3561
+getusr   = $DD13 = 56595          cpm22.asm:199
+getver   = $F084 = 61572          cpm22.asm:3437
+getwprt  = $E924 = 59684          cpm22.asm:2084
+goback   = $F17A = 61818          cpm22.asm:3617
+goback1  = $F197 = 61847          cpm22.asm:3629
+gtnext1  = $ED89 = 60809          cpm22.asm:2932
+gtnext2  = $ED94 = 60820          cpm22.asm:2941
+gtnext3  = $EDB2 = 60850          cpm22.asm:2952
+gtnext4  = $EDB5 = 60853          cpm22.asm:2953
+gtnext5  = $EDBC = 60860          cpm22.asm:2960
+halt     = $DFDC = 57308          cpm22.asm:682
+hl2de    = $E04F = 57423          cpm22.asm:751
 home     = $F2CB = 62155          bios.asm:187
-homedrv  = $E7A7 = 59303          cpm22.asm:1775
+homedrv  = $E7A7 = 59303          cpm22.asm:1781
 imgtop   = $F866 = 63590          config.asm:194
-inbuff   = $DC06 = 56326          cpm22.asm:49
+inbuff   = $DC06 = 56326          cpm22.asm:51
 inbulen  = $DC07 = 56327          config.asm:21
-inpoint  = $DC88 = 56456          cpm22.asm:58
-iobyte   = $0003 =     3          cpm22.asm:14
-ioerr1   = $E70B = 59147          cpm22.asm:1682
-ioret    = $E7C1 = 59329          cpm22.asm:1795
-jumphl   = $E750 = 59216          cpm22.asm:1710
-lf       = $000A =    10          cpm22.asm:27
+inpoint  = $DC88 = 56456          cpm22.asm:60
+iobyte   = $0003 =     3          cpm22.asm:16
+ioerr1   = $E70B = 59147          cpm22.asm:1688
+ioret    = $E7C1 = 59329          cpm22.asm:1801
+jumphl   = $E750 = 59216          cpm22.asm:1716
+lf       = $000A =    10          cpm22.asm:29
 list     = $F2B5 = 62133          bios.asm:164
-logical  = $E890 = 59536          cpm22.asm:1959
-logicl1  = $E896 = 59542          cpm22.asm:1961
-login    = $F1B5 = 61877          cpm22.asm:3653
-logindrv = $F027 = 61479          cpm22.asm:3375
-logoff   = $F159 = 61785          cpm22.asm:3585
-logsect  = $F1ED = 61933          cpm22.asm:3699
+logical  = $E890 = 59536          cpm22.asm:1965
+logicl1  = $E896 = 59542          cpm22.asm:1967
+login    = $F1B5 = 61877          cpm22.asm:3659
+logindrv = $F027 = 61479          cpm22.asm:3381
+logoff   = $F159 = 61785          cpm22.asm:3591
+logsect  = $F1ED = 61933          cpm22.asm:3705
 mem      = $0037 =    55          config.asm:19
-mode     = $F1DB = 61915          cpm22.asm:3686
-morefls  = $E985 = 59781          cpm22.asm:2162
-move3    = $E040 = 57408          cpm22.asm:738
-movecd   = $DD29 = 56617          cpm22.asm:219
-movedir  = $E9EF = 59887          cpm22.asm:2257
-moveword = $EC9A = 60570          cpm22.asm:2783
-namepnt  = $DC8A = 56458          cpm22.asm:59
-nbytes   = $E3F1 = 58353          cpm22.asm:1221
+mode     = $F1DB = 61915          cpm22.asm:3692
+morefls  = $E985 = 59781          cpm22.asm:2168
+move3    = $E04D = 57421          cpm22.asm:747
+movecd   = $DD29 = 56617          cpm22.asm:221
+movedir  = $E9EF = 59887          cpm22.asm:2263
+moveword = $EC9A = 60570          cpm22.asm:2789
+namepnt  = $DC8A = 56458          cpm22.asm:61
+nbytes   = $E3FE = 58366          cpm22.asm:1230
 nd_asva  = $FA8C = 64140          nabu_ndsk.asm:450
 nd_asvb  = $FB0D = 64269          nabu_ndsk.asm:451
 nd_atla  = $0041 =    65          nabu_ndsk.asm:29
@@ -5684,188 +5689,188 @@ nd_ssec  = $F6D9 = 63193          nabu_ndsk.asm:144
 nd_strk  = $F6D3 = 63187          nabu_ndsk.asm:134
 nd_writ  = $F6EF = 63215          nabu_ndsk.asm:163
 ndkdev   = $F689 = 63113          nabu_ndsk.asm:73
-newline  = $E5B7 = 58807          cpm22.asm:1469
-newln1   = $E5BF = 58815          cpm22.asm:1472
-nfuncts  = $0029 =    41          cpm22.asm:1285
+newline  = $E5B7 = 58807          cpm22.asm:1475
+newln1   = $E5BF = 58815          cpm22.asm:1478
+nfuncts  = $0029 =    41          cpm22.asm:1291
 nh_get1  = $F78D = 63373          nabu_ndsk.asm:277
-nofile   = $DFF0 = 57328          cpm22.asm:688
-nonblank = $DE4F = 56911          cpm22.asm:420
-none     = $DFEA = 57322          cpm22.asm:686
-nospace  = $E207 = 57863          cpm22.asm:996
+nofile   = $DFFD = 57341          cpm22.asm:697
+nonblank = $DE4F = 56911          cpm22.asm:422
+none     = $DFF7 = 57335          cpm22.asm:695
+nospace  = $E214 = 57876          cpm22.asm:1005
 nulldev  = $F335 = 62261          bios.asm:305 (unused)
-numcmds  = $0006 =     6          cpm22.asm:549
-nxent1   = $EA1F = 59935          cpm22.asm:2295
-nxent2   = $EA26 = 59942          cpm22.asm:2298
-nxentry  = $EA0B = 59915          cpm22.asm:2287
-offset   = $F1D4 = 61908          cpm22.asm:3679
-olddrv   = $F1E5 = 61925          cpm22.asm:3693
-open     = $DCCB = 56523          cpm22.asm:124
-openfcb  = $DCD0 = 56528          cpm22.asm:129
-openfil  = $F0A2 = 61602          cpm22.asm:3448
-openit   = $EC57 = 60503          cpm22.asm:2740
-openit1  = $EC60 = 60512          cpm22.asm:2744
-openit2  = $EC91 = 60561          cpm22.asm:2772
-outchar  = $E54E = 58702          cpm22.asm:1395
-outchr1  = $E568 = 58728          cpm22.asm:1409
-outchr2  = $E57F = 58751          cpm22.asm:1425
-outcon   = $E596 = 58774          cpm22.asm:1446
-outcon1  = $E59C = 58780          cpm22.asm:1449
-outcrlf  = $E5CF = 58831          cpm22.asm:1482
-outflag  = $E710 = 59152          cpm22.asm:1685
-params   = $E749 = 59209          cpm22.asm:1701
-pattrn1  = $DF28 = 57128          cpm22.asm:560
-pattrn2  = $E400 = 58368          cpm22.asm:1230
-pline    = $DCA7 = 56487          cpm22.asm:91
-pline2   = $DCAC = 56492          cpm22.asm:94
-position = $EF09 = 61193          cpm22.asm:3150
-positn1  = $EF0D = 61197          cpm22.asm:3155
-positn2  = $EF4D = 61261          cpm22.asm:3201
-positn3  = $EF85 = 61317          cpm22.asm:3233
-positn4  = $EF8A = 61322          cpm22.asm:3239
-positn5  = $EF91 = 61329          cpm22.asm:3246
-print    = $DC8C = 56460          cpm22.asm:64
-printb   = $DC92 = 56466          cpm22.asm:70
+numcmds  = $0006 =     6          cpm22.asm:551
+nxent1   = $EA1F = 59935          cpm22.asm:2301
+nxent2   = $EA26 = 59942          cpm22.asm:2304
+nxentry  = $EA0B = 59915          cpm22.asm:2293
+offset   = $F1D4 = 61908          cpm22.asm:3685
+olddrv   = $F1E5 = 61925          cpm22.asm:3699
+open     = $DCCB = 56523          cpm22.asm:126
+openfcb  = $DCD0 = 56528          cpm22.asm:131
+openfil  = $F0A2 = 61602          cpm22.asm:3454
+openit   = $EC57 = 60503          cpm22.asm:2746
+openit1  = $EC60 = 60512          cpm22.asm:2750
+openit2  = $EC91 = 60561          cpm22.asm:2778
+outchar  = $E54E = 58702          cpm22.asm:1401
+outchr1  = $E568 = 58728          cpm22.asm:1415
+outchr2  = $E57F = 58751          cpm22.asm:1431
+outcon   = $E596 = 58774          cpm22.asm:1452
+outcon1  = $E59C = 58780          cpm22.asm:1455
+outcrlf  = $E5CF = 58831          cpm22.asm:1488
+outflag  = $E710 = 59152          cpm22.asm:1691
+params   = $E749 = 59209          cpm22.asm:1707
+pattrn1  = $DF28 = 57128          cpm22.asm:562
+pattrn2  = $E400 = 58368          cpm22.asm:1236
+pline    = $DCA7 = 56487          cpm22.asm:93
+pline2   = $DCAC = 56492          cpm22.asm:96
+position = $EF09 = 61193          cpm22.asm:3156
+positn1  = $EF0D = 61197          cpm22.asm:3161
+positn2  = $EF4D = 61261          cpm22.asm:3207
+positn3  = $EF85 = 61317          cpm22.asm:3239
+positn4  = $EF8A = 61322          cpm22.asm:3245
+positn5  = $EF91 = 61329          cpm22.asm:3252
+print    = $DC8C = 56460          cpm22.asm:66
+printb   = $DC92 = 56466          cpm22.asm:72
 prstat   = $F304 = 62212          bios.asm:259
-prterr   = $E4EB = 58603          cpm22.asm:1322
-prtflag  = $E713 = 59155          cpm22.asm:1688
-prtmesg  = $E5D9 = 58841          cpm22.asm:1489
-prtstr   = $E6FE = 59134          cpm22.asm:1665
+prterr   = $E4EB = 58603          cpm22.asm:1328
+prtflag  = $E713 = 59155          cpm22.asm:1694
+prtmesg  = $E5D9 = 58841          cpm22.asm:1495
+prtstr   = $E6FE = 59134          cpm22.asm:1671
 punch    = $F2B9 = 62137          bios.asm:170
-putdma   = $F110 = 61712          cpm22.asm:3524
-ransiz1  = $EFEA = 61418          cpm22.asm:3329
-ransiz2  = $F00C = 61452          cpm22.asm:3351
-ransiz3  = $F012 = 61458          cpm22.asm:3353
-ransize  = $EFD8 = 61400          cpm22.asm:3318
-rdbuf1   = $E5F5 = 58869          cpm22.asm:1508
-rdbuf10  = $E676 = 58998          cpm22.asm:1570
-rdbuf11  = $E67E = 59006          cpm22.asm:1576
-rdbuf12  = $E690 = 59024          cpm22.asm:1588
-rdbuf13  = $E69F = 59039          cpm22.asm:1595
-rdbuf14  = $E6AC = 59052          cpm22.asm:1603
-rdbuf15  = $E6AF = 59055          cpm22.asm:1606
-rdbuf16  = $E6C3 = 59075          cpm22.asm:1618
-rdbuf17  = $E6C7 = 59079          cpm22.asm:1620
-rdbuf2   = $E5F7 = 58871          cpm22.asm:1510
-rdbuf3   = $E61C = 58908          cpm22.asm:1527
-rdbuf4   = $E62C = 58924          cpm22.asm:1536
-rdbuf5   = $E63D = 58941          cpm22.asm:1544
-rdbuf6   = $E64E = 58958          cpm22.asm:1553
-rdbuf7   = $E654 = 58964          cpm22.asm:1556
-rdbuf8   = $E665 = 58981          cpm22.asm:1563
-rdbuf9   = $E671 = 58993          cpm22.asm:1568
-rdbuff   = $E5E7 = 58855          cpm22.asm:1501
-rderr    = $DFDF = 57311          cpm22.asm:682
-rderror  = $DFD9 = 57305          cpm22.asm:680
-rdrandom = $F147 = 61767          cpm22.asm:3566
-rdrec    = $DCF9 = 56569          cpm22.asm:170
-rdseq    = $EDC2 = 60866          cpm22.asm:2959
-rdseq1   = $EDC7 = 60871          cpm22.asm:2961
-rdseq2   = $EDEC = 60908          cpm22.asm:2976
-rdseq3   = $EE01 = 60929          cpm22.asm:2986
-rdwrtflg = $F1D9 = 61913          cpm22.asm:3684
+putdma   = $F110 = 61712          cpm22.asm:3530
+ransiz1  = $EFEA = 61418          cpm22.asm:3335
+ransiz2  = $F00C = 61452          cpm22.asm:3357
+ransiz3  = $F012 = 61458          cpm22.asm:3359
+ransize  = $EFD8 = 61400          cpm22.asm:3324
+rdbuf1   = $E5F5 = 58869          cpm22.asm:1514
+rdbuf10  = $E676 = 58998          cpm22.asm:1576
+rdbuf11  = $E67E = 59006          cpm22.asm:1582
+rdbuf12  = $E690 = 59024          cpm22.asm:1594
+rdbuf13  = $E69F = 59039          cpm22.asm:1601
+rdbuf14  = $E6AC = 59052          cpm22.asm:1609
+rdbuf15  = $E6AF = 59055          cpm22.asm:1612
+rdbuf16  = $E6C3 = 59075          cpm22.asm:1624
+rdbuf17  = $E6C7 = 59079          cpm22.asm:1626
+rdbuf2   = $E5F7 = 58871          cpm22.asm:1516
+rdbuf3   = $E61C = 58908          cpm22.asm:1533
+rdbuf4   = $E62C = 58924          cpm22.asm:1542
+rdbuf5   = $E63D = 58941          cpm22.asm:1550
+rdbuf6   = $E64E = 58958          cpm22.asm:1559
+rdbuf7   = $E654 = 58964          cpm22.asm:1562
+rdbuf8   = $E665 = 58981          cpm22.asm:1569
+rdbuf9   = $E671 = 58993          cpm22.asm:1574
+rdbuff   = $E5E7 = 58855          cpm22.asm:1507
+rderr    = $DFEC = 57324          cpm22.asm:691
+rderror  = $DFE6 = 57318          cpm22.asm:689
+rdrandom = $F147 = 61767          cpm22.asm:3572
+rdrec    = $DCF9 = 56569          cpm22.asm:172
+rdseq    = $EDC2 = 60866          cpm22.asm:2965
+rdseq1   = $EDC7 = 60871          cpm22.asm:2967
+rdseq2   = $EDEC = 60908          cpm22.asm:2982
+rdseq3   = $EE01 = 60929          cpm22.asm:2992
+rdwrtflg = $F1D9 = 61913          cpm22.asm:3690
 read     = $F2FC = 62204          bios.asm:244
 reader   = $F2BD = 62141          bios.asm:176
-readfcb  = $DCFE = 56574          cpm22.asm:175
-readran  = $EF99 = 61337          cpm22.asm:3253
-readseq  = $F0E6 = 61670          cpm22.asm:3492
-relblock = $F1DD = 61917          cpm22.asm:3688
-renam    = $DD0E = 56590          cpm22.asm:192
-rename   = $E210 = 57872          cpm22.asm:1004
-rename1  = $E23F = 57919          cpm22.asm:1022
-rename2  = $E259 = 57945          cpm22.asm:1036
-rename3  = $E25E = 57950          cpm22.asm:1039 (unused)
-rename4  = $E26D = 57965          cpm22.asm:1047
-rename5  = $E273 = 57971          cpm22.asm:1049
-rename6  = $E279 = 57977          cpm22.asm:1051
-renfile  = $F0FB = 61691          cpm22.asm:3508
+readfcb  = $DCFE = 56574          cpm22.asm:177
+readran  = $EF99 = 61337          cpm22.asm:3259
+readseq  = $F0E6 = 61670          cpm22.asm:3498
+relblock = $F1DD = 61917          cpm22.asm:3694
+renam    = $DD0E = 56590          cpm22.asm:194
+rename   = $E21D = 57885          cpm22.asm:1013
+rename1  = $E24C = 57932          cpm22.asm:1031
+rename2  = $E266 = 57958          cpm22.asm:1045
+rename3  = $E26B = 57963          cpm22.asm:1048 (unused)
+rename4  = $E27A = 57978          cpm22.asm:1056
+rename5  = $E280 = 57984          cpm22.asm:1058
+rename6  = $E286 = 57990          cpm22.asm:1060
+renfile  = $F0FB = 61691          cpm22.asm:3514
 resccp   = $F356 = 62294          config.asm:127
-resdsk   = $DCB8 = 56504          cpm22.asm:105
-resetdr  = $E066 = 57446          cpm22.asm:776
+resdsk   = $DCB8 = 56504          cpm22.asm:107
+resetdr  = $E073 = 57459          cpm22.asm:785
 resgrb   = $F359 = 62297          config.asm:133
-rodisk   = $E410 = 58384          cpm22.asm:1245
-rofile   = $E412 = 58386          cpm22.asm:1246
-rstdsk   = $F089 = 61577          cpm22.asm:3436
-rtn      = $E70A = 59146          cpm22.asm:1678
-rtncode  = $E3EE = 58350          cpm22.asm:1218
-samext   = $EB0D = 60173          cpm22.asm:2490
-savatr1  = $EC46 = 60486          cpm22.asm:2730
-save     = $E1AD = 57773          cpm22.asm:949
-save1    = $E1D4 = 57812          cpm22.asm:967
-save2    = $E1F1 = 57841          cpm22.asm:985
-save3    = $E1FB = 57851          cpm22.asm:992
-save4    = $E201 = 57857          cpm22.asm:994
-saveattr = $EC41 = 60481          cpm22.asm:2728
-savefcb  = $F1DF = 61919          cpm22.asm:3690
-savext   = $F1E8 = 61928          cpm22.asm:3696
-savnrec  = $F1E9 = 61929          cpm22.asm:3697
-savnxt   = $F1E7 = 61927          cpm22.asm:3695
-scratch1 = $F1B9 = 61881          cpm22.asm:3658
-scratch2 = $F1BB = 61883          cpm22.asm:3659
-scratch3 = $F1BD = 61885          cpm22.asm:3660
-search   = $DF2E = 57134          cpm22.asm:568
-search1  = $DF33 = 57139          cpm22.asm:570
-search2  = $DF3C = 57148          cpm22.asm:575
-search3  = $DF4F = 57167          cpm22.asm:587
-search4  = $DF54 = 57172          cpm22.asm:590
-sectors  = $F1C7 = 61895          cpm22.asm:3671
+rodisk   = $E410 = 58384          cpm22.asm:1251
+rofile   = $E412 = 58386          cpm22.asm:1252
+rstdsk   = $F089 = 61577          cpm22.asm:3442
+rtn      = $E70A = 59146          cpm22.asm:1684
+rtncode  = $E3FB = 58363          cpm22.asm:1227
+samext   = $EB0D = 60173          cpm22.asm:2496
+savatr1  = $EC46 = 60486          cpm22.asm:2736
+save     = $E1BA = 57786          cpm22.asm:958
+save1    = $E1E1 = 57825          cpm22.asm:976
+save2    = $E1FE = 57854          cpm22.asm:994
+save3    = $E208 = 57864          cpm22.asm:1001
+save4    = $E20E = 57870          cpm22.asm:1003
+saveattr = $EC41 = 60481          cpm22.asm:2734
+savefcb  = $F1DF = 61919          cpm22.asm:3696
+savext   = $F1E8 = 61928          cpm22.asm:3702
+savnrec  = $F1E9 = 61929          cpm22.asm:3703
+savnxt   = $F1E7 = 61927          cpm22.asm:3701
+scratch1 = $F1B9 = 61881          cpm22.asm:3664
+scratch2 = $F1BB = 61883          cpm22.asm:3665
+scratch3 = $F1BD = 61885          cpm22.asm:3666
+search   = $DF2E = 57134          cpm22.asm:570
+search1  = $DF33 = 57139          cpm22.asm:572
+search2  = $DF3C = 57148          cpm22.asm:577
+search3  = $DF4F = 57167          cpm22.asm:589
+search4  = $DF54 = 57172          cpm22.asm:592
+sectors  = $F1C7 = 61895          cpm22.asm:3677
 sectrn   = $F307 = 62215          bios.asm:264
 seldsk   = $F2D0 = 62160          bios.asm:196
-select   = $E75F = 59231          cpm22.asm:1729
-select1  = $E7A3 = 59299          cpm22.asm:1769
-setattr  = $F123 = 61731          cpm22.asm:3540
-setbit   = $E911 = 59665          cpm22.asm:2061
-setcdrv  = $DD1A = 56602          cpm22.asm:207
-setdir   = $E9A2 = 59810          cpm22.asm:2195
+select   = $E75F = 59231          cpm22.asm:1735
+select1  = $E7A3 = 59299          cpm22.asm:1775
+setattr  = $F123 = 61731          cpm22.asm:3546
+setbit   = $E911 = 59665          cpm22.asm:2067
+setcdrv  = $DD1A = 56602          cpm22.asm:209
+setdir   = $E9A2 = 59810          cpm22.asm:2201
 setdma   = $F2F6 = 62198          bios.asm:236
-setdsk   = $F04B = 61515          cpm22.asm:3396
-setext   = $E8AC = 59564          cpm22.asm:1976
-setfile  = $EA71 = 60017          cpm22.asm:2380
-setfl1   = $EA7B = 60027          cpm22.asm:2385
-setfl2   = $EA8E = 60046          cpm22.asm:2397
-setfl3   = $EA94 = 60052          cpm22.asm:2403
-setfl4   = $EAA3 = 60067          cpm22.asm:2412
-sethlde  = $E8B4 = 59572          cpm22.asm:1984
-setiob   = $E6F9 = 59129          cpm22.asm:1658
-setnrec  = $E8D8 = 59608          cpm22.asm:2010
-setran   = $F014 = 61460          cpm22.asm:3359
-sets2b7  = $E97E = 59774          cpm22.asm:2152
+setdsk   = $F04B = 61515          cpm22.asm:3402
+setext   = $E8AC = 59564          cpm22.asm:1982
+setfile  = $EA71 = 60017          cpm22.asm:2386
+setfl1   = $EA7B = 60027          cpm22.asm:2391
+setfl2   = $EA8E = 60046          cpm22.asm:2403
+setfl3   = $EA94 = 60052          cpm22.asm:2409
+setfl4   = $EAA3 = 60067          cpm22.asm:2418
+sethlde  = $E8B4 = 59572          cpm22.asm:1990
+setiob   = $E6F9 = 59129          cpm22.asm:1664
+setnrec  = $E8D8 = 59608          cpm22.asm:2016
+setran   = $F014 = 61460          cpm22.asm:3365
+sets2b7  = $E97E = 59774          cpm22.asm:2158
 setsec   = $F2F2 = 62194          bios.asm:229
-setstat  = $E707 = 59143          cpm22.asm:1677
+setstat  = $E707 = 59143          cpm22.asm:1683
 settrk   = $F2EE = 62190          bios.asm:222
-setuser  = $F141 = 61761          cpm22.asm:3560
-shiftl   = $E90A = 59658          cpm22.asm:2052
-shiftl1  = $E90B = 59659          cpm22.asm:2053
-shiftr   = $E8F0 = 59632          cpm22.asm:2026
-shiftr1  = $E8F1 = 59633          cpm22.asm:2027
-showit   = $E585 = 58757          cpm22.asm:1433
-slcterr  = $E74D = 59213          cpm22.asm:1706
-space    = $DCA2 = 56482          cpm22.asm:85
-srchfcb  = $DCE9 = 56553          cpm22.asm:152
-srchfst  = $DCDF = 56543          cpm22.asm:142
-srchnxt  = $DCE4 = 56548          cpm22.asm:147
-starting = $E711 = 59153          cpm22.asm:1686
-status   = $E74B = 59211          cpm22.asm:1702
-stbitmap = $EA62 = 60002          cpm22.asm:2360
-stbmap1  = $EA6A = 60010          cpm22.asm:2371
-stddma   = $DDD5 = 56789          cpm22.asm:337
-stfilpos = $EA04 = 59908          cpm22.asm:2275
-stkarea  = $E747 = 59207          cpm22.asm:1697
-stnrec1  = $E8E4 = 59620          cpm22.asm:2015
-strdata  = $E8C1 = 59585          cpm22.asm:1994
-ststatus = $EB07 = 60167          cpm22.asm:2482
-subhl    = $E99B = 59803          cpm22.asm:2185
+setuser  = $F141 = 61761          cpm22.asm:3566
+shiftl   = $E90A = 59658          cpm22.asm:2058
+shiftl1  = $E90B = 59659          cpm22.asm:2059
+shiftr   = $E8F0 = 59632          cpm22.asm:2032
+shiftr1  = $E8F1 = 59633          cpm22.asm:2033
+showit   = $E585 = 58757          cpm22.asm:1439
+slcterr  = $E74D = 59213          cpm22.asm:1712
+space    = $DCA2 = 56482          cpm22.asm:87
+srchfcb  = $DCE9 = 56553          cpm22.asm:154
+srchfst  = $DCDF = 56543          cpm22.asm:144
+srchnxt  = $DCE4 = 56548          cpm22.asm:149
+starting = $E711 = 59153          cpm22.asm:1692
+status   = $E74B = 59211          cpm22.asm:1708
+stbitmap = $EA62 = 60002          cpm22.asm:2366
+stbmap1  = $EA6A = 60010          cpm22.asm:2377
+stddma   = $DDD5 = 56789          cpm22.asm:339
+stfilpos = $EA04 = 59908          cpm22.asm:2281
+stkarea  = $E747 = 59207          cpm22.asm:1703
+stnrec1  = $E8E4 = 59620          cpm22.asm:2021
+strdata  = $E8C1 = 59585          cpm22.asm:2000
+ststatus = $EB07 = 60167          cpm22.asm:2488
+subhl    = $E99B = 59803          cpm22.asm:2191
 swindi0  = $F31D = 62237          bios.asm:288
 swindi1  = $F323 = 62243          bios.asm:292
 swindir  = $F319 = 62233          bios.asm:286
-synerr   = $DE09 = 56841          cpm22.asm:375
-synerr1  = $DE0F = 56847          cpm22.asm:377
-synerr2  = $DE22 = 56866          cpm22.asm:387
+synerr   = $DE09 = 56841          cpm22.asm:377
+synerr1  = $DE0F = 56847          cpm22.asm:379
+synerr2  = $DE22 = 56866          cpm22.asm:389
 syshook  = $F355 = 62293          config.asm:105
-tab      = $0009 =     9          cpm22.asm:26
-tbase    = $0100 =   256          cpm22.asm:19
-tbuff    = $0080 =   128          cpm22.asm:18
-tdrive   = $0004 =     4          cpm22.asm:15
-tfcb     = $005C =    92          cpm22.asm:17
+tab      = $0009 =     9          cpm22.asm:28
+tbase    = $0100 =   256          cpm22.asm:21
+tbuff    = $0080 =   128          cpm22.asm:20
+tdrive   = $0004 =     4          cpm22.asm:17
+tfcb     = $005C =    92          cpm22.asm:19
 tm_addh  = $F64D = 63053          nabu_vdp.asm:564
 tm_addr  = $F64F = 63055          nabu_vdp.asm:566
 tm_bs    = $F4B5 = 62645          nabu_vdp.asm:246
@@ -5933,67 +5938,67 @@ tm_vcpy  = $F601 = 62977          nabu_vdp.asm:508
 tm_wri0  = $F48C = 62604          nabu_vdp.asm:216
 tm_wri1  = $F4CB = 62667          nabu_vdp.asm:266
 tm_writ  = $F477 = 62583          nabu_vdp.asm:198
-trksec   = $E7C9 = 59337          cpm22.asm:1803
-trksec1  = $E7D7 = 59351          cpm22.asm:1812
-trksec2  = $E7EA = 59370          cpm22.asm:1825
-trksec3  = $E800 = 59392          cpm22.asm:1841
-trksec4  = $E815 = 59413          cpm22.asm:1858
-type     = $E15D = 57693          cpm22.asm:906
-type1    = $E174 = 57716          cpm22.asm:914
-type2    = $E177 = 57719          cpm22.asm:915 (unused)
-type3    = $E187 = 57735          cpm22.asm:924
-type4    = $E1A0 = 57760          cpm22.asm:937
-type5    = $E1A7 = 57767          cpm22.asm:940
-unknown  = $E2A5 = 58021          cpm22.asm:1078
-unkwn0   = $E371 = 58225          cpm22.asm:1186
-unkwn1   = $E2C4 = 58052          cpm22.asm:1093
-unkwn2   = $E2CD = 58061          cpm22.asm:1097 (unused)
-unkwn3   = $E2E1 = 58081          cpm22.asm:1108
-unkwn4   = $E301 = 58113          cpm22.asm:1127
-unkwn5   = $E330 = 58160          cpm22.asm:1148
-unkwn6   = $E33E = 58174          cpm22.asm:1158
-unkwn7   = $E343 = 58179          cpm22.asm:1160
-unkwn8   = $E34F = 58191          cpm22.asm:1168
-unkwn9   = $E36B = 58219          cpm22.asm:1184
-update   = $EC07 = 60423          cpm22.asm:2691
-update1  = $EC16 = 60438          cpm22.asm:2699
-upper    = $DD30 = 56624          cpm22.asm:226
-user     = $E28E = 57998          cpm22.asm:1062
-userdma  = $F1B7 = 61879          cpm22.asm:3654
-userno   = $E747 = 59207          cpm22.asm:1699
-usrstack = $E715 = 59157          cpm22.asm:1693
+trksec   = $E7C9 = 59337          cpm22.asm:1809
+trksec1  = $E7D7 = 59351          cpm22.asm:1818
+trksec2  = $E7EA = 59370          cpm22.asm:1831
+trksec3  = $E800 = 59392          cpm22.asm:1847
+trksec4  = $E815 = 59413          cpm22.asm:1864
+type     = $E16A = 57706          cpm22.asm:915
+type1    = $E181 = 57729          cpm22.asm:923
+type2    = $E184 = 57732          cpm22.asm:924 (unused)
+type3    = $E194 = 57748          cpm22.asm:933
+type4    = $E1AD = 57773          cpm22.asm:946
+type5    = $E1B4 = 57780          cpm22.asm:949
+unknown  = $E2B2 = 58034          cpm22.asm:1087
+unkwn0   = $E37E = 58238          cpm22.asm:1195
+unkwn1   = $E2D1 = 58065          cpm22.asm:1102
+unkwn2   = $E2DA = 58074          cpm22.asm:1106 (unused)
+unkwn3   = $E2EE = 58094          cpm22.asm:1117
+unkwn4   = $E30E = 58126          cpm22.asm:1136
+unkwn5   = $E33D = 58173          cpm22.asm:1157
+unkwn6   = $E34B = 58187          cpm22.asm:1167
+unkwn7   = $E350 = 58192          cpm22.asm:1169
+unkwn8   = $E35C = 58204          cpm22.asm:1177
+unkwn9   = $E378 = 58232          cpm22.asm:1193
+update   = $EC07 = 60423          cpm22.asm:2697
+update1  = $EC16 = 60438          cpm22.asm:2705
+upper    = $DD30 = 56624          cpm22.asm:228
+user     = $E29B = 58011          cpm22.asm:1071
+userdma  = $F1B7 = 61879          cpm22.asm:3660
+userno   = $E747 = 59207          cpm22.asm:1705
+usrstack = $E715 = 59157          cpm22.asm:1699
 vdpdev   = $F3AC = 62380          nabu_vdp.asm:27
-verify   = $DDF5 = 56821          cpm22.asm:361
-verify1  = $DDFD = 56829          cpm22.asm:364
+verify   = $DDF5 = 56821          cpm22.asm:363
+verify1  = $DDFD = 56829          cpm22.asm:366
 wboot    = $F243 = 62019          bios.asm:56
 wboot0   = $F264 = 62052          bios.asm:86
 wbootin  = $F205 = 61957          bios.asm:22
 wbootr   = $F254 = 62036          bios.asm:74
 write    = $F300 = 62208          bios.asm:251
-writeran = $EFA2 = 61346          cpm22.asm:3260
-wrtprt   = $F1B3 = 61875          cpm22.asm:3652
-wrtprtd  = $E932 = 59698          cpm22.asm:2088
-wrtrec   = $DD04 = 56580          cpm22.asm:181
-wrtseq   = $F0EC = 61676          cpm22.asm:3497
-wtrandom = $F14D = 61773          cpm22.asm:3571
-wtseq    = $EE04 = 60932          cpm22.asm:2990
-wtseq1   = $EE09 = 60937          cpm22.asm:2992
-wtseq10  = $EED8 = 61144          cpm22.asm:3107
-wtseq11  = $EF04 = 61188          cpm22.asm:3131
-wtseq12  = $EF06 = 61190          cpm22.asm:3132
-wtseq2   = $EE41 = 60993          cpm22.asm:3015
-wtseq3   = $EE4E = 61006          cpm22.asm:3021
-wtseq4   = $EE6A = 61034          cpm22.asm:3033
-wtseq5   = $EE72 = 61042          cpm22.asm:3040
-wtseq6   = $EE74 = 61044          cpm22.asm:3041
-wtseq7   = $EE92 = 61074          cpm22.asm:3064
-wtseq8   = $EEA0 = 61088          cpm22.asm:3071
-wtseq9   = $EEC1 = 61121          cpm22.asm:3091
-wtseq99  = $EEE5 = 61157          cpm22.asm:3118 (unused)
-wtspecl  = $F1A1 = 61857          cpm22.asm:3637
-xlate    = $F1D6 = 61910          cpm22.asm:3680
-yesno    = $E152 = 57682          cpm22.asm:898
+writeran = $EFA2 = 61346          cpm22.asm:3266
+wrtprt   = $F1B3 = 61875          cpm22.asm:3658
+wrtprtd  = $E932 = 59698          cpm22.asm:2094
+wrtrec   = $DD04 = 56580          cpm22.asm:183
+wrtseq   = $F0EC = 61676          cpm22.asm:3503
+wtrandom = $F14D = 61773          cpm22.asm:3577
+wtseq    = $EE04 = 60932          cpm22.asm:2996
+wtseq1   = $EE09 = 60937          cpm22.asm:2998
+wtseq10  = $EED8 = 61144          cpm22.asm:3113
+wtseq11  = $EF04 = 61188          cpm22.asm:3137
+wtseq12  = $EF06 = 61190          cpm22.asm:3138
+wtseq2   = $EE41 = 60993          cpm22.asm:3021
+wtseq3   = $EE4E = 61006          cpm22.asm:3027
+wtseq4   = $EE6A = 61034          cpm22.asm:3039
+wtseq5   = $EE72 = 61042          cpm22.asm:3046
+wtseq6   = $EE74 = 61044          cpm22.asm:3047
+wtseq7   = $EE92 = 61074          cpm22.asm:3070
+wtseq8   = $EEA0 = 61088          cpm22.asm:3077
+wtseq9   = $EEC1 = 61121          cpm22.asm:3097
+wtseq99  = $EEE5 = 61157          cpm22.asm:3124 (unused)
+wtspecl  = $F1A1 = 61857          cpm22.asm:3643
+xlate    = $F1D6 = 61910          cpm22.asm:3686
+yesno    = $E15F = 57695          cpm22.asm:907
 
 
-total time: 0.0339 sec.
+total time: 0.0343 sec.
 no errors

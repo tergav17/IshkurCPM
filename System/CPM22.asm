@@ -8,6 +8,8 @@
 ;*
 ;*      Modified to build as single image from source
 ;*
+;*         Custom CCP prompt by NabuNetwork.com
+;*
 ;**************************************************************
 
 
@@ -626,11 +628,18 @@ command:ld	sp,ccpstack	;setup stack area.
 ;
 ;   entry point to get a command line from the console.
 ;
+;   Big thanks to NabuNetwork.com for the modified prompt!
+;
 cmmnd1:	ld	sp,ccpstack	;set stack straight.
 	call	crlf		;start a new line on the screen.
 	call	getdsk		;get current drive.
 	add	a,'A'
 	call	print		;print current drive.
+	ld	a,':'
+	call	print
+	call	getusr		;get current user.
+	add	a,'0'
+	call	print		;print current user.
 	ld	a,'>'
 	call	print		;and add prompt.
 	call	getinp		;get line from user.
@@ -1219,10 +1228,7 @@ rtncode:defb	0		;status returned from bdos call.
 cdrive:	defb	0		;currently active drive.
 chgdrv:	defb	0		;change in drives flag (0=no change).
 nbytes:	defw	0		;byte counter used by type.
-;
-;   room for expansion?
-;
-	defb	0,0,0,0,0,0,0,0,0,0,0,0,0
+
 ;
 ;   note that the following six bytes must match those at
 ; (pattrn1) or cp/m will halt. why?
