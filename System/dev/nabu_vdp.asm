@@ -18,7 +18,7 @@
 
 ; TMS9918 Configuration
 tm_data	equ	0xA0	; TMS9918 data register (mode=0)
-tm_latc	equ	0xA1	; TMS9917 latch register (mode=1)
+tm_latc	equ	0xA1	; TMS9918 latch register (mode=1)
 
 tm_keyd	equ	0x90	; Keyboard data register
 tm_keys	equ	0x91	; Keyboard status register
