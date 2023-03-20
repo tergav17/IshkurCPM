@@ -176,7 +176,7 @@ bdevsw:	defw	nfddev,	0	; 'A'
 ; times if it has multipe entires in this table.
 cdevsw:	defw	0,	0	; TTY device
 	defw	vdpdev,	0	; Console device
-	defw	0,	0	; Aux I/O device #1 (LPT)
+	defw	prtdev,	0	; Aux I/O device #1 (LPT)
 	defw	0,	0	; Aux I/O device #2 (GEN)
 
 ;
@@ -188,6 +188,7 @@ cdevsw:	defw	0,	0	; TTY device
 ;
 #include "dev/nabu_fdc.asm"
 #include "dev/nabu_vdp.asm"
+#include "dev/nabu_prt.asm"
 
 ; Image top, no more code after this
 imgtop:

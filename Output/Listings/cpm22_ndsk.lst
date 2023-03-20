@@ -1,6 +1,6 @@
               	; --------------------------------------
               	; zasm: assemble "cpm22.asm"
-              	; date: 2023-03-19 02:13:39
+              	; date: 2023-03-19 22:43:29
               	; --------------------------------------
 
 
@@ -3860,10 +3860,10 @@ F254: F3      	wbootr:	di
               		
               		; Zero out BSS
 F255: AF      		xor	a
-F256: 2166F8  		ld	hl,imgtop
+F256: 2190F8  		ld	hl,imgtop
 F259: 77      		ld	(hl),a
-F25A: 1167F8  		ld	de,imgtop+1
-F25D: 019907  		ld	bc,0xFFFF-imgtop
+F25A: 1191F8  		ld	de,imgtop+1
+F25D: 016F07  		ld	bc,0xFFFF-imgtop
 F260: EDB0    		ldir
               	
               		; Send init signals to all devices
@@ -4276,7 +4276,7 @@ F398: 00000000		defw	0,	0	; 'P'
               	; times if it has multipe entires in this table.
 F39C: 00000000	cdevsw:	defw	0,	0	; TTY device
 F3A0: ACF30000		defw	vdpdev,	0	; Console device
-F3A4: 00000000		defw	0,	0	; Aux I/O device #1 (LPT)
+F3A4: 66F80000		defw	prtdev,	0	; Aux I/O device #1 (LPT)
 F3A8: 00000000		defw	0,	0	; Aux I/O device #2 (GEN)
               	
               	;
@@ -5331,9 +5331,82 @@ FA41:         	nd_ctrk	equ	nd_bss+1	; Current track (2b)
 FA46:         	nd_buff	equ	nd_bss+6	; Buffer (64b)
 FA8C:         	nd_asva	equ	nd_buff+70	; ASV #1 (129b)
 FB0D:         	nd_asvb	equ	nd_buff+199	; ASV #1 (129b)
+              	#include "dev/nabu_prt.asm"
+              	;
+              	;**************************************************************
+              	;*
+              	;*        N A B U   P A R A L L E L   O U T P U T
+              	;*
+              	;*      A simple output-only device driver for the NABU
+              	;*      parellel printer port. 
+              	;* 
+              	;**************************************************************
+              	;
+              	
+0040:         	pr_ayda	equ	0x40		; AY-3-8910 data port
+0041:         	pr_atla	equ	0x41		; AY-3-8910 latch port
+00B0:         	pr_prnt	equ	0xB0		; Parallel output
+0000:         	pr_ctrl	equ	0x00		; Device control register
+              	
+              	; Driver jump table 
+F866: B7      	prtdev:	or	a
+F867: 2808    		jr	z,pr_init
+F869: 3D      		dec	a
+F86A: 2806    		jr	z,pr_stat
+F86C: 3D      		dec	a
+F86D: 2805    		jr	z,pr_read
+F86F: 1805    		jr	pr_writ
+              		
+              	; Device init
+              	; Does nothing
+              	;
+              	; uses: none
+F871: C9      	pr_init:ret
+              	
+              	; Device status 
+              	; There are never any characters to read
+              	;
+              	; Returns a=0xFF if there is a character to read
+              	; uses: af
+F872: AF      	pr_stat:xor	a
+F873: C9      		ret
+              		
+              	; Waits for a character to come in and returns it
+              	; No characters to read, returns 0
+              	;
+              	; Returns ASCII key in A
+              	; uses: af
+F874: AF      	pr_read:xor	a
+F875: C9      		ret
+              		
+              	; Writes a character to the device
+              	; c = Character to write
+              	;
+              	; uses: af, bc
+F876: 3E0F    	pr_writ:ld	a,0x0F
+F878: D341    		out	(pr_atla),a	; AY register = 15
+              		
+F87A: DB40    	pr_wri0:in	a,(pr_ayda)	; Wait for not busy
+F87C: E610    		and	0x10
+F87E: 20FA    		jr	nz,pr_wri0
+              		
+F880: 79      		ld	a,c
+F881: D3B0    		out	(pr_prnt),a	; Write data
+              		
+F883: 3E05    		ld	a,0x05		; Strobe
+F885: D300    		out	(pr_ctrl),a
+              		
+F887: 0620    		ld	b,32		
+F889: 10FE    	pr_wri1:djnz	pr_wri1		; Wait a few cycles
+              		
+F88B: 3E01    		ld	a,0x01		; Strobe off
+F88D: D300    		out	(pr_ctrl),a
+              		
+F88F: C9      		ret
+              		
               	
               	; Image top, no more code after this
-F866:         	imgtop:
+F890:         	imgtop:
               	;
               	;*
               	;******************   E N D   O F   C P / M   *****************
@@ -5343,12 +5416,12 @@ F866:         	imgtop:
 
 ; +++ segments +++
 
-#CODE          = $DC00 = 56320,  size = $1C66 =  7270
+#CODE          = $DC00 = 56320,  size = $1C90 =  7312
 
 ; +++ global symbols +++
 
-_end     = $F866 = 63590          cpm22.asm:42 (unused)
-_size    = $1C66 =  7270          cpm22.asm:42 (unused)
+_end     = $F890 = 63632          cpm22.asm:42 (unused)
+_size    = $1C90 =  7312          cpm22.asm:42 (unused)
 active   = $E748 = 59208          cpm22.asm:1706
 adda2hl  = $E96A = 59754          cpm22.asm:2135
 addhl    = $DE59 = 56921          cpm22.asm:432
@@ -5609,7 +5682,7 @@ halt     = $DFDC = 57308          cpm22.asm:682
 hl2de    = $E04F = 57423          cpm22.asm:751
 home     = $F2CB = 62155          bios.asm:187
 homedrv  = $E7A7 = 59303          cpm22.asm:1781
-imgtop   = $F866 = 63590          config.asm:194
+imgtop   = $F890 = 63632          config.asm:195
 inbuff   = $DC06 = 56326          cpm22.asm:51
 inbulen  = $DC07 = 56327          config.asm:21
 inpoint  = $DC88 = 56456          cpm22.asm:60
@@ -5728,9 +5801,20 @@ positn2  = $EF4D = 61261          cpm22.asm:3207
 positn3  = $EF85 = 61317          cpm22.asm:3239
 positn4  = $EF8A = 61322          cpm22.asm:3245
 positn5  = $EF91 = 61329          cpm22.asm:3252
+pr_atla  = $0041 =    65          nabu_prt.asm:13
+pr_ayda  = $0040 =    64          nabu_prt.asm:12
+pr_ctrl  = $0000 =     0          nabu_prt.asm:15
+pr_init  = $F871 = 63601          nabu_prt.asm:30
+pr_prnt  = $00B0 =   176          nabu_prt.asm:14
+pr_read  = $F874 = 63604          nabu_prt.asm:45
+pr_stat  = $F872 = 63602          nabu_prt.asm:37
+pr_wri0  = $F87A = 63610          nabu_prt.asm:55
+pr_wri1  = $F889 = 63625          nabu_prt.asm:66
+pr_writ  = $F876 = 63606          nabu_prt.asm:52
 print    = $DC8C = 56460          cpm22.asm:66
 printb   = $DC92 = 56466          cpm22.asm:72
 prstat   = $F304 = 62212          bios.asm:259
+prtdev   = $F866 = 63590          nabu_prt.asm:18
 prterr   = $E4EB = 58603          cpm22.asm:1328
 prtflag  = $E713 = 59155          cpm22.asm:1694
 prtmesg  = $E5D9 = 58841          cpm22.asm:1495
@@ -6000,5 +6084,5 @@ xlate    = $F1D6 = 61910          cpm22.asm:3686
 yesno    = $E15F = 57695          cpm22.asm:907
 
 
-total time: 0.0307 sec.
+total time: 0.0314 sec.
 no errors
