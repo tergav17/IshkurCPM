@@ -50,6 +50,7 @@ code_start:  equ $$
 ; Boot start same as NABU bootstrap
 base:
 	di
+	nop
 	ld	sp,base
 	jr	tmsini
 
@@ -78,10 +79,10 @@ tmsini:	in	a,(tmlatc)
 	ld	a,0x0F
 	out	(aylatc),a	; AY register = 15
 	
-	; Move into NHACP protocol mode
+	; Send "HELLO" to NHACP server
 	ld	hl,m_start
 	ld	b,8
-	call	modsen0
+	call	modsend
 	
 	; Get confirmation
 	call	modrecb
@@ -144,16 +145,18 @@ exec:	ld	hl,m_close
 	ld	b,2
 	call	modsend
 
-	jp	z,9+1024*(mem+2)
+;	jp	z,9+1024*(mem+2)
 
-;loop:	jr	loop
+loop:	jr	loop
 
 ; Sends a message to the HCCA modem
 ; b = # of bytes to send
 ; hl = pointer to address
 ;
 ; uses: af, b, hl
-modsend:ld	a,b
+modsend:ld	a,0x8F		; Send NHACP message
+	call	hccawri
+	ld	a,0x08
 	call	hccawri		; Send size of packet
 	xor	a
 	call	hccawri
@@ -226,8 +229,8 @@ hccawr1:pop	af
 	ret
 	
 ; NHACP start message
-; Enables CRC mode
-m_start:defb	0x8F,'ACP',0x01,0x00,0x00,0x00
+; Disables CRC mode
+m_start:defb	0x00,'ACP',0x01,0x00,0x00,0x00
 
 ; NHACP open CP/M 2.2 image
 m_open:	defb	0x01,0xFF,0x01,0x00,0x09,'CPM22.SYS'
