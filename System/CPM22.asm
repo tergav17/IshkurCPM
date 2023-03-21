@@ -635,11 +635,14 @@ cmmnd1:	ld	sp,ccpstack	;set stack straight.
 	call	getdsk		;get current drive.
 	add	a,'A'
 	call	print		;print current drive.
-	ld	a,':'
-	call	print
+	nop
+	nop
+	nop
+	nop
+	nop
 	call	getusr		;get current user.
 	add	a,'0'
-	call	print		;print current user.
+	call	printdc		;print current user.
 	ld	a,'>'
 	call	print		;and add prompt.
 	call	getinp		;get line from user.
@@ -3710,6 +3713,16 @@ filepos:defw	0		;files position within directory (0 to max entries -1).
 ; 16 possible drives.
 ;
 cksumtbl: defb	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+	
+; Small routine to print a decimal 0-19
+printdc:cp	':'
+	jp	c,print
+	sub	10
+	push	af
+	ld	a,'1'
+	call	print
+	pop	af
+	jr	printdc
 	
 #include "bios.asm"
 #include "config.asm"
