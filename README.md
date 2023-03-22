@@ -11,6 +11,8 @@ As of updating this file. The NHACP-based system is nominally functional on real
 - Full support for SSDD floppy disks on the FDC
 - Ability to access virtual disks over an NHACP connection
 - Modified IOBYTE device redirection
+- NABU printer support
+- NABU serial option card support
 
 Near-term goals include printer support, serial card support, and console redirection over NHACP, and maybe NABU-IDE support.
 
