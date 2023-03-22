@@ -87,8 +87,10 @@ tmsini:	in	a,(tmlatc)
 	; Get confirmation
 	call	modrecb
 	ld	a,(buffer)
+	
 	cp	0x80		; Correct confirmation?
 	jp	nz,panic
+	
 
 	; Open the file
 	ld	hl,m_open
@@ -98,6 +100,10 @@ tmsini:	in	a,(tmlatc)
 	; Get file descriptor
 	call	modrecb
 	ld	a,(buffer)
+		
+loop:	jr	loop
+
+	
 	cp	0x83		; File opened?
 	jp	nz,panic
 	ld	a,(buffer+1)
@@ -146,9 +152,6 @@ exec:	ld	hl,m_close
 	call	modsend
 
 ;	jp	z,9+1024*(mem+2)
-
-loop:	jr	loop
-
 ; Sends a message to the HCCA modem
 ; b = # of bytes to send
 ; hl = pointer to address
@@ -156,7 +159,9 @@ loop:	jr	loop
 ; uses: af, b, hl
 modsend:ld	a,0x8F		; Send NHACP message
 	call	hccawri
-	ld	a,0x08
+	xor	a		; Send session
+	call	hccawri
+	ld	a,b
 	call	hccawri		; Send size of packet
 	xor	a
 	call	hccawri
@@ -233,7 +238,7 @@ hccawr1:pop	af
 m_start:defb	0x00,'ACP',0x01,0x00,0x00,0x00
 
 ; NHACP open CP/M 2.2 image
-m_open:	defb	0x01,0xFF,0x01,0x00,0x09,'CPM22.SYS'
+m_open:	defb	0x01,0xFF,0x00,0x00,0x09,'CPM22.SYS'
 
 ; NHACP read block from open file
 m_read:	defb	0x07

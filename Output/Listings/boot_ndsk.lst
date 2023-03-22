@@ -1,6 +1,6 @@
               	; --------------------------------------
               	; zasm: assemble "boot\boot_ndsk.asm"
-              	; date: 2023-03-21 13:56:08
+              	; date: 2023-03-22 13:05:44
               	; --------------------------------------
 
 
@@ -45,7 +45,7 @@ C00E: 2A0130  		ld hl, (scratch + 1)           ; Load return address from stack,
 C011: 111300  		ld de, code_start-$ + 3        ; DE = address of bootloader relative to the call 0 return address
 C014: 19      		add hl, de                     ; HL = absolute address where bootloader is currently residing
 C015: 1100C0  		ld de, entry                   ; DE = address to copy bootloader to.
-C018: 011F01  		ld bc, code_length             ; BC = length of bootloader
+C018: 012201  		ld bc, code_length             ; BC = length of bootloader
 C01B: EDB0    		ldir                           ; Relocate ourselves to known address
 C01D: 2100C0  		ld hl, entry                   ; HL = entry point of bootloader
 C020: E9      		jp (hl)                        ; Jump to bootloader
@@ -86,105 +86,110 @@ C045: 3E0F    		ld	a,0x0F
 C047: D341    		out	(aylatc),a	; AY register = 15
               		
               		; Send "HELLO" to NHACP server
-C049: 21FCC0  		ld	hl,m_start
+C049: 21FFC0  		ld	hl,m_start
 C04C: 0608    		ld	b,8
 C04E: CD9BC0  		call	modsend
               		
               		; Get confirmation
-C051: CDB1C0  		call	modrecb
+C051: CDB4C0  		call	modrecb
 C054: 3A0080  		ld	a,(buffer)
+              		
 C057: FE80    		cp	0x80		; Correct confirmation?
 C059: C207C0  		jp	nz,panic
+              		
               	
               		; Open the file
-C05C: 2104C1  		ld	hl,m_open
+C05C: 2107C1  		ld	hl,m_open
 C05F: 060E    		ld	b,14
 C061: CD9BC0  		call	modsend
               		
               		; Get file descriptor
-C064: CDB1C0  		call	modrecb
+C064: CDB4C0  		call	modrecb
 C067: 3A0080  		ld	a,(buffer)
-C06A: FE83    		cp	0x83		; File opened?
-C06C: C207C0  		jp	nz,panic
-C06F: 3A0180  		ld	a,(buffer+1)
-C072: 3213C1  		ld	(rfdesc),a
-C075: 321BC1  		ld	(cfdesc),a
+              			
+C06A: 18FE    	loop:	jr	loop
+              	
               		
-C078: 2100E4  		ld	hl,1024*(mem+2)	; Set base for loading data
-C07B: EB      	readsec:ex	de,hl
-C07C: 2112C1  		ld	hl,m_read
-C07F: 0609    		ld	b,9
-C081: CD9BC0  		call	modsend
+C06C: FE83    		cp	0x83		; File opened?
+C06E: C207C0  		jp	nz,panic
+C071: 3A0180  		ld	a,(buffer+1)
+C074: 3216C1  		ld	(rfdesc),a
+C077: 321EC1  		ld	(cfdesc),a
+              		
+C07A: 2100E4  		ld	hl,1024*(mem+2)	; Set base for loading data
+C07D: EB      	readsec:ex	de,hl
+C07E: 2115C1  		ld	hl,m_read
+C081: 0609    		ld	b,9
+C083: CD9BC0  		call	modsend
               		
               		; Handle incoming data packet
-C084: CDC3C0  		call	hccared
-C087: CDC6C0  		call	hccarea
-C08A: FE84    		cp	0x84
-C08C: C207C0  		jp	nz,panic
-C08F: CDC3C0  		call	hccared
+C086: CDC6C0  		call	hccared
+C089: CDC9C0  		call	hccarea
+C08C: FE84    		cp	0x84
+C08E: C207C0  		jp	nz,panic
+C091: CDC6C0  		call	hccared
               		
               		; Move it into memory
-C092: EB      		ex	de,hl
-C093: 110004  		ld	de,0x400
-C096: CDC6C0  	readse0:call	hccarea
-C099: 77      		ld	(hl),a
-C09A: 23      		inc	hl
-C09B: 1B      		dec	de
-C09C: 7A      		ld	a,d
-C09D: B3      		or	e
-C09E: 20F6    		jr	nz,readse0
+C094: EB      		ex	de,hl
+C095: 110004  		ld	de,0x400
+C098: CDC9C0  	readse0:call	hccarea
+C09B: 77      		ld	(hl),a
+C09C: 23      		inc	hl
+C09D: 1B      		dec	de
+C09E: 7A      		ld	a,d
+C09F: B3      		or	e
+C0A0: 20F6    		jr	nz,readse0
               		
               		; See if we need to load another sector
-C0A0: 3A1EC1  		ld	a,(nsecle)
-C0A3: 3D      		dec	a
-C0A4: 280C    		jr	z,exec
-C0A6: 321EC1  		ld	(nsecle),a
+C0A2: 3A21C1  		ld	a,(nsecle)
+C0A5: 3D      		dec	a
+C0A6: 280C    		jr	z,exec
+C0A8: 3221C1  		ld	(nsecle),a
               		
               		; Increment address
-C0A9: 3A14C1  		ld	a,(rfaddr)
-C0AC: 3C      		inc	a
-C0AD: 3214C1  		ld	(rfaddr),a
-C0B0: 18C9    		jr	readsec
+C0AB: 3A17C1  		ld	a,(rfaddr)
+C0AE: 3C      		inc	a
+C0AF: 3217C1  		ld	(rfaddr),a
+C0B2: 18C9    		jr	readsec
               		
               		; Execute BDOS
-C0B2: 211AC1  	exec:	ld	hl,m_close
-C0B5: 0602    		ld	b,2
-C0B7: CD9BC0  		call	modsend
+C0B4: 211DC1  	exec:	ld	hl,m_close
+C0B7: 0602    		ld	b,2
+C0B9: CD9BC0  		call	modsend
               	
               	;	jp	z,9+1024*(mem+2)
-              	
-C0BA: 18FE    	loop:	jr	loop
-              	
               	; Sends a message to the HCCA modem
               	; b = # of bytes to send
               	; hl = pointer to address
               	;
               	; uses: af, b, hl
 C0BC: 3E8F    	modsend:ld	a,0x8F		; Send NHACP message
-C0BE: CDE0C0  		call	hccawri
-C0C1: 3E08    		ld	a,0x08
-C0C3: CDE0C0  		call	hccawri		; Send size of packet
-C0C6: AF      		xor	a
-C0C7: CDE0C0  		call	hccawri
-C0CA: 7E      	modsen0:ld	a,(hl)
-C0CB: CDE0C0  		call	hccawri
-C0CE: 23      		inc	hl
-C0CF: 10F9    		djnz	modsen0
-C0D1: C9      		ret
+C0BE: CDE3C0  		call	hccawri
+C0C1: AF      		xor	a		; Send session
+C0C2: CDE3C0  		call	hccawri
+C0C5: 78      		ld	a,b
+C0C6: CDE3C0  		call	hccawri		; Send size of packet
+C0C9: AF      		xor	a
+C0CA: CDE3C0  		call	hccawri
+C0CD: 7E      	modsen0:ld	a,(hl)
+C0CE: CDE3C0  		call	hccawri
+C0D1: 23      		inc	hl
+C0D2: 10F9    		djnz	modsen0
+C0D4: C9      		ret
               		
               	; Receives a message back from the HCCA
               	; hl = pointer to address
               	;
               	; uses: af, b, hl
-C0D2: 210080  	modrecb:ld	hl,buffer	; Read directly into buffer
-C0D5: CDC6C0  	modrece:call	hccarea
-C0D8: 47      		ld	b,a
-C0D9: CDC6C0  		call	hccarea
-C0DC: CDC6C0  	modrec0:call	hccarea
-C0DF: 77      		ld	(hl),a
-C0E0: 23      		inc	hl
-C0E1: 10F9    		djnz	modrec0
-C0E3: C9      		ret
+C0D5: 210080  	modrecb:ld	hl,buffer	; Read directly into buffer
+C0D8: CDC9C0  	modrece:call	hccarea
+C0DB: 47      		ld	b,a
+C0DC: CDC9C0  		call	hccarea
+C0DF: CDC9C0  	modrec0:call	hccarea
+C0E2: 77      		ld	(hl),a
+C0E3: 23      		inc	hl
+C0E4: 10F9    		djnz	modrec0
+C0E6: C9      		ret
               	
               	
               	; Read from the HCCA port
@@ -193,22 +198,22 @@ C0E3: C9      		ret
               	;
               	; Returns return in a
               	; Uses: af
-C0E4: CDC6C0  	hccared:call	hccarea		; Reads 2 bytes, discards 1
-C0E7: D5      	hccarea:push	de
-C0E8: 11FFFF  		ld	de,0xFFFF
-C0EB: DB40    	hccare0:in	a,(aydata)
-C0ED: CB47    		bit	0,a
-C0EF: 28FA    		jr	z,hccare0	; Await an interrupt
-C0F1: CB4F    		bit	1,a
-C0F3: 2808    		jr	z,hccare1
-C0F5: 1B      		dec	de
-C0F6: 7B      		ld	a,e
-C0F7: B2      		or	d
-C0F8: 20F1    		jr	nz,hccare0
-C0FA: C307C0  		jp	panic		; Timed out waiting
-C0FD: DB80    	hccare1:in	a,(hcca)
-C0FF: D1      		pop	de
-C100: C9      		ret
+C0E7: CDC9C0  	hccared:call	hccarea		; Reads 2 bytes, discards 1
+C0EA: D5      	hccarea:push	de
+C0EB: 11FFFF  		ld	de,0xFFFF
+C0EE: DB40    	hccare0:in	a,(aydata)
+C0F0: CB47    		bit	0,a
+C0F2: 28FA    		jr	z,hccare0	; Await an interrupt
+C0F4: CB4F    		bit	1,a
+C0F6: 2808    		jr	z,hccare1
+C0F8: 1B      		dec	de
+C0F9: 7B      		ld	a,e
+C0FA: B2      		or	d
+C0FB: 20F1    		jr	nz,hccare0
+C0FD: C307C0  		jp	panic		; Timed out waiting
+C100: DB80    	hccare1:in	a,(hcca)
+C102: D1      		pop	de
+C103: C9      		ret
               		
               	; Write to the HCCA port
               	; Assumes AY is set to reg 15
@@ -216,97 +221,97 @@ C100: C9      		ret
               	; a = Character to write
               	;
               	; Uses: none
-C101: D5      	hccawri:push	de
-C102: F5      		push	af
-C103: 11FFFF  		ld	de,0xFFFF
-C106: DB40    	hccawr0:in	a,(aydata)
-C108: CB47    		bit	0,a
-C10A: 28FA    		jr	z,hccawr0	; Await an interrupt
-C10C: CB4F    		bit	1,a
-C10E: 2008    		jr	nz,hccawr1
-C110: 1B      		dec	de
-C111: 7B      		ld	a,e
-C112: B2      		or	d
-C113: 20F1    		jr	nz,hccawr0
-C115: C307C0  		jp	panic		; Timed out waiting
-C118: F1      	hccawr1:pop	af
-C119: D380    		out	(hcca),a
-C11B: D1      		pop	de
-C11C: C9      		ret
+C104: D5      	hccawri:push	de
+C105: F5      		push	af
+C106: 11FFFF  		ld	de,0xFFFF
+C109: DB40    	hccawr0:in	a,(aydata)
+C10B: CB47    		bit	0,a
+C10D: 28FA    		jr	z,hccawr0	; Await an interrupt
+C10F: CB4F    		bit	1,a
+C111: 2008    		jr	nz,hccawr1
+C113: 1B      		dec	de
+C114: 7B      		ld	a,e
+C115: B2      		or	d
+C116: 20F1    		jr	nz,hccawr0
+C118: C307C0  		jp	panic		; Timed out waiting
+C11B: F1      	hccawr1:pop	af
+C11C: D380    		out	(hcca),a
+C11E: D1      		pop	de
+C11F: C9      		ret
               		
               	; NHACP start message
               	; Disables CRC mode
-C11D: 00414350	m_start:defb	0x00,'ACP',0x01,0x00,0x00,0x00
-C121: 01000000	
+C120: 00414350	m_start:defb	0x00,'ACP',0x01,0x00,0x00,0x00
+C124: 01000000	
               	
               	; NHACP open CP/M 2.2 image
-C125: 01FF0100	m_open:	defb	0x01,0xFF,0x01,0x00,0x09,'CPM22.SYS'
-C129: 0943504D	
-C12D: 32322E53	
-C131: 5953    	
+C128: 01FF0000	m_open:	defb	0x01,0xFF,0x00,0x00,0x09,'CPM22.SYS'
+C12C: 0943504D	
+C130: 32322E53	
+C134: 5953    	
               	
               	; NHACP read block from open file
-C133: 07      	m_read:	defb	0x07
-C134: 00      	rfdesc:	defb	0x00		; Read command file descriptor
-C135: 02      	rfaddr:	defb	0x02		; Read command start offset
-C136: 000000  		defb	0x00,0x00,0x00
-C139: 0004    		defb	0x00,0x04
+C136: 07      	m_read:	defb	0x07
+C137: 00      	rfdesc:	defb	0x00		; Read command file descriptor
+C138: 02      	rfaddr:	defb	0x02		; Read command start offset
+C139: 000000  		defb	0x00,0x00,0x00
+C13C: 0004    		defb	0x00,0x04
               		
               	; NHACP close file
-C13B: 05      	m_close:defb	0x05
-C13C: 00      	cfdesc:	defb	0x00		; Close command file descriptor
-C13D: 0000    		defw	0x00		; Fucking magic
+C13E: 05      	m_close:defb	0x05
+C13F: 00      	cfdesc:	defb	0x00		; Close command file descriptor
+C140: 0000    		defw	0x00		; Fucking magic
               	
               	; Variables
-C13F: 06      	nsecle:	defb	nsec
+C142: 06      	nsecle:	defb	nsec
               	
-011F:         	code_length: equ $$-code_start
+0122:         	code_length: equ $$-code_start
               	.DEPHASE
 
 
 ; +++ segments +++
 
-#CODE          = $C000 = 49152,  size = $0140 =   320
+#CODE          = $C000 = 49152,  size = $0143 =   323
 
 ; +++ global symbols +++
 
-_end        = $C140 = 49472          boot\boot_ndsk.asm:28 (unused)
-_size       = $0140 =   320          boot\boot_ndsk.asm:28 (unused)
+_end        = $C143 = 49475          boot\boot_ndsk.asm:28 (unused)
+_size       = $0143 =   323          boot\boot_ndsk.asm:28 (unused)
 aydata      = $0040 =    64          boot\boot_ndsk.asm:14
 aylatc      = $0041 =    65          boot\boot_ndsk.asm:15
 base        = $C000 = 49152          boot\boot_ndsk.asm:51
 buffer      = $8000 = 32768          boot\boot_ndsk.asm:20
-cfdesc      = $C11B = 49435          boot\boot_ndsk.asm:247
-code_length = $011F =   287          boot\boot_ndsk.asm:253
+cfdesc      = $C11E = 49438          boot\boot_ndsk.asm:252
+code_length = $0122 =   290          boot\boot_ndsk.asm:258
 code_start  = $C021 = 49185          boot\boot_ndsk.asm:48
 entry       = $C000 = 49152          boot\boot_ndsk.asm:24
-exec        = $C091 = 49297          boot\boot_ndsk.asm:144
+exec        = $C093 = 49299          boot\boot_ndsk.asm:150
 hcca        = $0080 =   128          boot\boot_ndsk.asm:16
-hccare0     = $C0CA = 49354          boot\boot_ndsk.asm:193
-hccare1     = $C0DC = 49372          boot\boot_ndsk.asm:203
-hccarea     = $C0C6 = 49350          boot\boot_ndsk.asm:191
-hccared     = $C0C3 = 49347          boot\boot_ndsk.asm:190
-hccawr0     = $C0E5 = 49381          boot\boot_ndsk.asm:216
-hccawr1     = $C0F7 = 49399          boot\boot_ndsk.asm:226
-hccawri     = $C0E0 = 49376          boot\boot_ndsk.asm:213
-loop        = $C099 = 49305          boot\boot_ndsk.asm:150
-m_close     = $C11A = 49434          boot\boot_ndsk.asm:246
-m_open      = $C104 = 49412          boot\boot_ndsk.asm:236
-m_read      = $C112 = 49426          boot\boot_ndsk.asm:239
-m_start     = $C0FC = 49404          boot\boot_ndsk.asm:233
+hccare0     = $C0CD = 49357          boot\boot_ndsk.asm:198
+hccare1     = $C0DF = 49375          boot\boot_ndsk.asm:208
+hccarea     = $C0C9 = 49353          boot\boot_ndsk.asm:196
+hccared     = $C0C6 = 49350          boot\boot_ndsk.asm:195
+hccawr0     = $C0E8 = 49384          boot\boot_ndsk.asm:221
+hccawr1     = $C0FA = 49402          boot\boot_ndsk.asm:231
+hccawri     = $C0E3 = 49379          boot\boot_ndsk.asm:218
+loop        = $C049 = 49225          boot\boot_ndsk.asm:104
+m_close     = $C11D = 49437          boot\boot_ndsk.asm:251
+m_open      = $C107 = 49415          boot\boot_ndsk.asm:241
+m_read      = $C115 = 49429          boot\boot_ndsk.asm:244
+m_start     = $C0FF = 49407          boot\boot_ndsk.asm:238
 mem         = $0037 =    55          boot\boot_ndsk.asm:11
-modrec0     = $C0BB = 49339          boot\boot_ndsk.asm:177
-modrecb     = $C0B1 = 49329          boot\boot_ndsk.asm:173
-modrece     = $C0B4 = 49332          boot\boot_ndsk.asm:174 (unused)
-modsen0     = $C0A9 = 49321          boot\boot_ndsk.asm:163
-modsend     = $C09B = 49307          boot\boot_ndsk.asm:157
+modrec0     = $C0BE = 49342          boot\boot_ndsk.asm:182
+modrecb     = $C0B4 = 49332          boot\boot_ndsk.asm:178
+modrece     = $C0B7 = 49335          boot\boot_ndsk.asm:179 (unused)
+modsen0     = $C0AC = 49324          boot\boot_ndsk.asm:168
+modsend     = $C09B = 49307          boot\boot_ndsk.asm:160
 nsec        = $0006 =     6          boot\boot_ndsk.asm:9
-nsecle      = $C11E = 49438          boot\boot_ndsk.asm:251
+nsecle      = $C121 = 49441          boot\boot_ndsk.asm:256
 panic       = $C007 = 49159          boot\boot_ndsk.asm:59
-readse0     = $C075 = 49269          boot\boot_ndsk.asm:123
-readsec     = $C05A = 49242          boot\boot_ndsk.asm:108
-rfaddr      = $C114 = 49428          boot\boot_ndsk.asm:241
-rfdesc      = $C113 = 49427          boot\boot_ndsk.asm:240
+readse0     = $C077 = 49271          boot\boot_ndsk.asm:129
+readsec     = $C05C = 49244          boot\boot_ndsk.asm:114
+rfaddr      = $C117 = 49431          boot\boot_ndsk.asm:246
+rfdesc      = $C116 = 49430          boot\boot_ndsk.asm:245
 scratch     = $3000 = 12288          boot\boot_ndsk.asm:22
 start       = $C003 = 49155          boot\boot_ndsk.asm:33 (unused)
 tmdata      = $00A0 =   160          boot\boot_ndsk.asm:17 (unused)
@@ -314,5 +319,5 @@ tmlatc      = $00A1 =   161          boot\boot_ndsk.asm:18
 tmsini      = $C00A = 49162          boot\boot_ndsk.asm:62
 
 
-total time: 0.0031 sec.
+total time: 0.0039 sec.
 no errors
