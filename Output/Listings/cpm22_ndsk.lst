@@ -1,6 +1,6 @@
               	; --------------------------------------
               	; zasm: assemble "cpm22.asm"
-              	; date: 2023-03-21 00:47:45
+              	; date: 2023-03-21 23:21:48
               	; --------------------------------------
 
 
@@ -3873,10 +3873,10 @@ F264: F3      	wbootr:	di
               		
               		; Zero out BSS
 F265: AF      		xor	a
-F266: 21A0F8  		ld	hl,imgtop
+F266: 212EF9  		ld	hl,imgtop
 F269: 77      		ld	(hl),a
-F26A: 11A1F8  		ld	de,imgtop+1
-F26D: 015F07  		ld	bc,0xFFFF-imgtop
+F26A: 112FF9  		ld	de,imgtop+1
+F26D: 01D106  		ld	bc,0xFFFF-imgtop
 F270: EDB0    		ldir
               	
               		; Send init signals to all devices
@@ -4287,7 +4287,7 @@ F3A8: 00000000		defw	0,	0	; 'P'
               	; A device of "0" will be read as a non-existant device
               	; The 'init' signal can be sent to the same devices many 
               	; times if it has multipe entires in this table.
-F3AC: 00000000	cdevsw:	defw	0,	0	; TTY device
+F3AC: A0F80000	cdevsw:	defw	siodev,	0	; TTY device
 F3B0: BCF30000		defw	vdpdev,	0	; Console device
 F3B4: 76F80000		defw	prtdev,	0	; Aux I/O device #1 (LPT)
 F3B8: 00000000		defw	0,	0	; Aux I/O device #2 (GEN)
@@ -5417,9 +5417,157 @@ F89D: D300    		out	(pr_ctrl),a
               		
 F89F: C9      		ret
               		
+              	#include "dev/nabu_sio.asm"
+              	;
+              	;**************************************************************
+              	;*
+              	;*        N A B U   S E R I A L   O P T I O N   C A R D
+              	;*
+              	;*      This driver allows the NABU serial option card to be
+              	;*      used as a bidirectional Ishkur serial device. It will
+              	;*      automatically search for a serial card on init. Serial
+              	;*      cards are numbered by order. The first serial card gets
+              	;*      a minor # of 0, the second card gets a minor number of
+              	;*      1, etc... Up to 4 serial cards are supported.
+              	;* 
+              	;**************************************************************
+              	;
+              	
+              	
+              	
+              	; Driver jump table 
+F8A0: B7      	siodev:	or	a
+F8A1: 2808    		jr	z,so_init
+F8A3: 3D      		dec	a
+F8A4: 2833    		jr	z,so_stat
+F8A6: 3D      		dec	a
+F8A7: 2841    		jr	z,so_read
+F8A9: 1851    		jr	so_writ
+              		
+              	; Device init
+              	; Tries to find the option card if it is installed
+              	; hl = Device options
+              	;
+              	; uses: none
+F8AB: 1110F9  	so_init:ld	de,so_atab
+F8AE: 45      		ld	b,l
+F8AF: 04      		inc	b		; Slot 1,2,3,...
+F8B0: 19      		add	hl,de 		; Get address table entry
+F8B1: 0ECF    		ld	c,0xCF		; First slot
+              		
+F8B3: ED78    	so_ini0:in	a,(c)
+F8B5: FE08    		cp	0x08
+F8B7: 2807    		jr	z,so_ini2
+              		
+F8B9: 3E10    	so_ini1:ld	a,0x10
+F8BB: 81      		add	c
+F8BC: F0      		ret	p		; Can't find, failure
+F8BD: 4F      		ld	c,a
+F8BE: 18F3    		jr	so_ini0
+              		
+F8C0: 10F7    	so_ini2:djnz	so_ini1		; Repeat if looking for next card
+F8C2: 79      		ld	a,c
+F8C3: D60F    		sub	0x0F
+F8C5: 4F      		ld	c,a
+F8C6: 71      		ld	(hl),c
+F8C7: 1114F9  		ld	de,so_conf
+F8CA: 060D    		ld	b,13
+              		
+              		; Lets set up the serial card for 9600 8N1
+              		; First we set up the 8253, then the 8251
+F8CC: 1A      	so_ini3:ld	a,(de)
+F8CD: 13      		inc	de
+F8CE: 86      		add	a,(hl)
+F8CF: 4F      		ld	c,a
+F8D0: 1A      		ld	a,(de)
+F8D1: 13      		inc	de
+F8D2: ED79    		out	(c),a
+F8D4: E5      		push	hl
+F8D5: E1      		pop	hl	; Small delay
+F8D6: 10F4    		djnz	so_ini3
+F8D8: C9      		ret
+              	
+              	; Device status 
+              	; hl = Device options
+              	;
+              	; Returns a=0xFF if there is a character to read
+              	; uses: af
+F8D9: 1110F9  	so_stat:ld	de,so_atab
+F8DC: 19      		add	hl,de
+F8DD: AF      		xor	a
+F8DE: BE      		cp	(hl)
+F8DF: C8      		ret	z	; No device, return 0
+F8E0: 4E      		ld	c,(hl)
+F8E1: 0C      		inc	c
+F8E2: ED78    	so_sta0:in	a,(c)	; Check status register
+F8E4: E602    		and	0x02
+F8E6: C8      		ret	z
+F8E7: 3EFF    		ld	a,0xFF
+F8E9: C9      		ret
+              		
+              		
+              	; Waits for a character to come in and returns it
+              	; hl = Device options
+              	;
+              	; Returns ASCII key in A
+              	; uses: af
+F8EA: 1110F9  	so_read:ld	de,so_atab
+F8ED: 19      		add	hl,de
+F8EE: AF      		xor	a
+F8EF: BE      		cp	(hl)
+F8F0: C8      		ret	z	; No device, return 0
+F8F1: 4E      		ld	c,(hl)
+F8F2: 0C      		inc	c
+F8F3: CDE2F8  	so_rea0:call	so_sta0	; Wait for a character
+F8F6: 28FB    		jr	z,so_rea0
+F8F8: 0D      		dec	c
+F8F9: ED78    		in	a,(c)
+F8FB: C9      		ret
+              		
+              	; Writes a character to the device
+              	; c = Character to write
+              	; hl = Device options
+              	;
+              	; uses: af, bc
+F8FC: 41      	so_writ:ld	b,c
+F8FD: 1110F9  		ld	de,so_atab
+F900: 19      		add	hl,de
+F901: AF      		xor	a
+F902: BE      		cp	(hl)
+F903: C8      		ret	z	; No device, return 0
+F904: 4E      		ld	c,(hl)
+F905: 0C      		inc	c
+F906: ED78    	so_wri0:in	a,(c)
+F908: E601    		and	0x01
+F90A: 28FA    		jr	z,so_wri0
+F90C: 0D      		dec	c
+F90D: ED41    		out	(c),b
+F90F: C9      		ret
+              		
+              		
+              	; Variables
+              	; 4 possible slots
+F910: 00000000	so_atab:defb	0x00,0x00,0x00,0x00
+              	
+              	; Configuration string
+              	; Sets up counters 1 and 2 on the 8523 timer
+F914: 0737    	so_conf:defb	0x07,0x37	; Counter 1 setup
+F916: 0412    		defb	0x04,0x12
+F918: 0400    		defb	0x04,0x00
+F91A: 0777    		defb	0x07,0x77	; Counter 2 setup
+F91C: 0512    		defb	0x05,0x12
+F91E: 0500    		defb	0x05,0x00
+              		
+F920: 0100    		defb	0x01,0x00	; 8251 setup
+F922: 0100    		defb	0x01,0x00
+F924: 0100    		defb	0x01,0x00
+F926: 0100    		defb	0x01,0x00
+F928: 0140    		defb	0x01,0x40
+F92A: 014E    		defb	0x01,0x4E
+F92C: 0137    		defb	0x01,0x37
               	
               	; Image top, no more code after this
-F8A0:         	imgtop:
+F92E:         	imgtop:
               	;
               	;*
               	;******************   E N D   O F   C P / M   *****************
@@ -5429,12 +5577,12 @@ F8A0:         	imgtop:
 
 ; +++ segments +++
 
-#CODE          = $DC00 = 56320,  size = $1CA0 =  7328
+#CODE          = $DC00 = 56320,  size = $1D2E =  7470
 
 ; +++ global symbols +++
 
-_end     = $F8A0 = 63648          cpm22.asm:42 (unused)
-_size    = $1CA0 =  7328          cpm22.asm:42 (unused)
+_end     = $F92E = 63790          cpm22.asm:42 (unused)
+_size    = $1D2E =  7470          cpm22.asm:42 (unused)
 active   = $E748 = 59208          cpm22.asm:1709
 adda2hl  = $E96A = 59754          cpm22.asm:2138
 addhl    = $DE59 = 56921          cpm22.asm:432
@@ -5695,7 +5843,7 @@ halt     = $DFDC = 57308          cpm22.asm:685
 hl2de    = $E04F = 57423          cpm22.asm:754
 home     = $F2DB = 62171          bios.asm:187
 homedrv  = $E7A7 = 59303          cpm22.asm:1784
-imgtop   = $F8A0 = 63648          config.asm:195
+imgtop   = $F92E = 63790          config.asm:196
 inbuff   = $DC06 = 56326          cpm22.asm:51
 inbulen  = $DC07 = 56327          config.asm:21
 inpoint  = $DC88 = 56456          cpm22.asm:60
@@ -5941,7 +6089,21 @@ shiftl1  = $E90B = 59659          cpm22.asm:2062
 shiftr   = $E8F0 = 59632          cpm22.asm:2035
 shiftr1  = $E8F1 = 59633          cpm22.asm:2036
 showit   = $E585 = 58757          cpm22.asm:1442
+siodev   = $F8A0 = 63648          nabu_sio.asm:19
 slcterr  = $E74D = 59213          cpm22.asm:1715
+so_atab  = $F910 = 63760          nabu_sio.asm:130
+so_conf  = $F914 = 63764          nabu_sio.asm:134
+so_ini0  = $F8B3 = 63667          nabu_sio.asm:38
+so_ini1  = $F8B9 = 63673          nabu_sio.asm:42
+so_ini2  = $F8C0 = 63680          nabu_sio.asm:48
+so_ini3  = $F8CC = 63692          nabu_sio.asm:58
+so_init  = $F8AB = 63659          nabu_sio.asm:32
+so_rea0  = $F8F3 = 63731          nabu_sio.asm:101
+so_read  = $F8EA = 63722          nabu_sio.asm:94
+so_sta0  = $F8E2 = 63714          nabu_sio.asm:82
+so_stat  = $F8D9 = 63705          nabu_sio.asm:75
+so_wri0  = $F906 = 63750          nabu_sio.asm:120
+so_writ  = $F8FC = 63740          nabu_sio.asm:112
 space    = $DCA2 = 56482          cpm22.asm:87
 srchfcb  = $DCE9 = 56553          cpm22.asm:154
 srchfst  = $DCDF = 56543          cpm22.asm:144
@@ -6098,5 +6260,5 @@ xlate    = $F1D6 = 61910          cpm22.asm:3689
 yesno    = $E15F = 57695          cpm22.asm:910
 
 
-total time: 0.0316 sec.
+total time: 0.0329 sec.
 no errors
