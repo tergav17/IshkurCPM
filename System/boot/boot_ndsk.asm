@@ -100,9 +100,6 @@ tmsini:	in	a,(tmlatc)
 	; Get file descriptor
 	call	modrecb
 	ld	a,(buffer)
-		
-loop:	jr	loop
-
 	
 	cp	0x83		; File opened?
 	jp	nz,panic
@@ -150,8 +147,12 @@ readse0:call	hccarea
 exec:	ld	hl,m_close
 	ld	b,2
 	call	modsend
+	
+		
+;loop:	jr	loop
 
-;	jp	z,9+1024*(mem+2)
+
+	jp	z,9+1024*(mem+2)
 ; Sends a message to the HCCA modem
 ; b = # of bytes to send
 ; hl = pointer to address

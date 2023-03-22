@@ -233,10 +233,10 @@ nd_grb1:call	nd_getb
 ;
 ; uses: af, b, hl
 nd_open:ld	hl,nd_m1
-	ld	b,4
+	ld	b,6
 	call	nd_send
 	ld	hl,nd_m0
-	ld	b,21
+	ld	b,23
 	call	nd_send
 	ld	hl,nd_buff
 	call	nd_rece
@@ -255,7 +255,7 @@ nd_getb:ex	de,hl
 	ex	de,hl
 	push	hl
 	ld	hl,nd_m2
-	ld	b,10
+	ld	b,12
 	call	nd_send
 	pop	hl
 	ret	c
@@ -291,7 +291,7 @@ nd_putb:ex	de,hl
 	ex	de,hl
 	push	hl
 	ld	hl,nd_m3
-	ld	b,10
+	ld	b,12
 	call	nd_send		; Send message precursor
 	pop	hl
 	ret	c
@@ -411,8 +411,9 @@ nd_p2im:defb	'?'		; Disk image name
 	defb	'.IMG',0
 
 ; Message prototype to open a file
-; Total length: 21 bytes
-nd_m0:	defw	19		; Message length
+; Total length: 23 bytes
+nd_m0:	defb	0x8F,0x00
+	defw	19		; Message length
 	defb	0x01		; Cmd: STORAGE-OPEN
 	defb	nd_fild		; Default file descriptor
 nd_m0fl:defw	0x00		; Read/Write flags
@@ -421,23 +422,26 @@ nd_m0na:defb	'XXXXXXXXXXXXXX'; File name field
 	defb	0x00		; Padding
 	
 ; Message prototype to close a file
-; Total length: 4 bytes
-nd_m1:	defw	2		; Message length
+; Total length: 6 bytes
+nd_m1:	defb	0x8F,0x00
+	defw	2		; Message length
 	defb	0x05		; Cmd: FILE-CLOSE
 	defb	nd_fild		; Default file descriptor
 	defw	0x00		; Magic bytes
 	
 ; Message prototype to read a block
-; Total length: 10 bytes
-nd_m2:	defw	8		; Message length
+; Total length: 12 bytes
+nd_m2:	defb	0x8F,0x00
+	defw	8		; Message length
 	defb	0x07		; Cmd: STORAGE-GET-BLOCK
 	defb	nd_fild		; Default file descritor
 nd_m2bn:defw	0x00,0x00	; Block number
 	defw	128		; Block length
 	
 ; Message prototype to write a block
-; Total length: 10 bytes
-nd_m3:	defw	136		; Message length
+; Total length: 12 bytes
+nd_m3:	defb	0x8F,0x00
+	defw	136		; Message length
 	defb	0x08		; Cmd: STORAGE-PUT-BLOCK
 	defb	nd_fild		; Default file descritor
 nd_m3bn:defw	0x00,0x00	; Block number
