@@ -174,7 +174,7 @@ bdevsw:	defw	nfddev,	0	; 'A'
 ; A device of "0" will be read as a non-existant device
 ; The 'init' signal can be sent to the same devices many 
 ; times if it has multipe entires in this table.
-cdevsw:	defw	0,	0	; TTY device
+cdevsw:	defw	siodev,	0	; TTY device
 	defw	vdpdev,	0	; Console device
 	defw	prtdev,	0	; Aux I/O device #1 (LPT)
 	defw	0,	0	; Aux I/O device #2 (GEN)
@@ -189,6 +189,7 @@ cdevsw:	defw	0,	0	; TTY device
 #include "dev/nabu_fdc.asm"
 #include "dev/nabu_vdp.asm"
 #include "dev/nabu_prt.asm"
+#include "dev/nabu_sio.asm"
 
 ; Image top, no more code after this
 imgtop:
