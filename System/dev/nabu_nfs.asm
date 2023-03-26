@@ -31,22 +31,22 @@ nf_fild	equ	0x80		; Default file access desc
 ;**************************************************************
 ;
 
-; Disk A DPH
-nf_dpha:defw	0,0,0,0
+; Dummy DPH
+nf_dph:defw	0,0,0,0
 	defw	dircbuf	; DIRBUF
 	defw	nf_dpb	; DPB
 	defw	0	; CSV
 	defw	0	; ALV 
 	
 	
-; NSHD8 format
+; Dummy format
 nf_dpb:	defw	64	; # sectors per track
-	defb	6	; BSH
-	defb	63	; BLM
-	defb	3	; EXM
-	defw	1023	; DSM
-	defw	255	; DRM
-	defb	0x80	; AL0
+	defb	3	; BSH
+	defb	7	; BLM
+	defb	0	; EXM
+	defw	255	; DSM
+	defw	0	; DRM
+	defb	0	; AL0
 	defb	0	; AL1
 	defw	0	; Size of directory check vector
 	defw	0	; Number of reserved tracks at the beginning of disk
@@ -55,7 +55,7 @@ nf_dpb:	defw	64	; # sectors per track
 ; a = Command #
 ;
 ; uses: all
-ndkdev:	or	a
+nfsdev:	or	a
 	jr	z,nf_init
 	dec	a
 	dec	a
@@ -65,10 +65,21 @@ ndkdev:	or	a
 
 ; Inits the device
 ; Not really needed atm
+; c = Logical device #
 ; hl = Call argument
 ;
 ; uses: none
-nf_init:ret
+nf_init:ld	a,c
+	call	nf_domk
+	ld	hl,(nf_mask)
+	ld	a,h
+	or	b
+	ld	h,a
+	ld	a,l
+	or	c
+	ld	l,a
+	ld	(nf_mask),hl
+	ret
 
 
 ; Selects the drive
@@ -76,7 +87,7 @@ nf_init:ret
 ; hl = Call argument
 ;
 ; uses: hl
-nf_sel:	ret
+nf_sel:	jp	goback
 	
 
 ; Set up the HCCA modem connection
@@ -118,6 +129,67 @@ nf_grb1:call	nf_getb
 	jr	nz,nf_grb1
 	ret
 	
+; System hook
+; Is called whenever a CP/M BDOS call occurs
+nf_sysh:ret
+	
+; Set a 16 bit mask based on a number from 0-15
+; a = Bit to set
+;
+; Returns bit mask in bc
+; Uses, af, bc
+nf_domk:ld	bc,1
+	or	a
+nf_dom0:ret	z
+	sla	c
+	rl	b
+	dec	a
+	jr	nf_dom0
+	
+; Check if driver owns device
+; Bail if it does not
+; If it does, get to logical NHACP device
+; de = Address of FCB
+;
+; Returns logical device in a
+; uses: af, hl
+nf_ownr:push	bc
+	call	nf_getd		; Get FSB device
+	call	nf_domk		; Create bitmask
+	ld	hl,(nf_mask)
+	ld	a,h
+	and	b
+	jr	nz,nf_own0
+	ld	a,l
+	and	c
+nf_own0:jr	z,nf_exit	; Exit if does not own	
+	ld	hl,bdevsw+2
+	ld	a,(de)		; Get FSB device
+	ld	bc,4
+	or	a
+nf_own1:jr	z,nf_own2
+	add	hl,bc
+	dec	a
+	jr	nf_own1
+nf_own2:ld	a,(hl)		; a = Logical NHACP device
+	pop	bc
+	ret
+
+; Exit, do not return to caller
+nf_exit:pop	bc
+	pop	af		; Throw away caller address
+	ret
+
+; Gets the logical device number from a FCB
+; de = Address of FCB
+; 
+; Logical device returns in a
+; uses: af
+nf_getd:ld	a,(de)
+	dec	a
+	ret	p
+	ld	a,(active)
+	ret
 
 ; Open the prepared file
 ; Closes the existing file too
@@ -155,7 +227,7 @@ nf_getb:ex	de,hl
 	ret	c
 	cp	0x84
 	scf
-	jr	nz,nh_get1
+	jr	nz,nf_get1
 	call	nf_hcrd
 	ld	b,128
 nf_get0:call	nf_hcre
@@ -165,7 +237,7 @@ nf_get0:call	nf_hcre
 	djnz	nf_get0
 	or	a
 	ret
-nh_get1:call	nf_hcrd	; Read the error message and exit
+nf_get1:call	nf_hcrd	; Read the error message and exit
 	call	nf_hcre
 	scf
 	ret
@@ -334,3 +406,4 @@ nf_m3bn:defw	0x00,0x00	; Block number
 
 ; Variables
 nf_buff	equ	nf_bss		; Buffer (64b)
+nf_mask equ	nf_bss+64	; Ownership mask (2b)

@@ -100,6 +100,7 @@ nh_fop0:ld	(status),a
 ; If it does, get to logical NHACP device
 ; de = Address of FCB
 ;
+; Returns logical device in a
 ; uses: af, hl
 nh_ownr:push	bc
 	ld	a,(de)		; Get FSB device
