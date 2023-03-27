@@ -1,6 +1,6 @@
               	; --------------------------------------
               	; zasm: assemble "init.asm"
-              	; date: 2023-03-24 21:50:08
+              	; date: 2023-03-27 10:40:40
               	; --------------------------------------
 
 
@@ -38,431 +38,484 @@
               		; Check to see if we are running for the first time
 0100: 3A8000  		ld	a,(cmdlen)
 0103: FE02    		cp	2
-0105: C23101  		jp	nz,config
+0105: C23401  		jp	nz,config
 0108: 3A8200  		ld	a,(cmdarg+1)
 010B: FEFF    		cp	255
-010D: C23101  		jp	nz,config
+010D: C23401  		jp	nz,config
               		
               		; Attempt to find INIT.INI
-0110: CDE901  		call	openini
+0110: CD2602  		call	openini
 0113: CA1901  		jp	z,banner	; Can't open, just exit
               		
 0116: CD2201  		call	docfg
               	
               		; Print banner
 0119: 0E09    	banner:	ld	c,0x09
-011B: 110B02  		ld	de,splash
+011B: 114802  		ld	de,splash
 011E: CD0500  		call	bdos
               	
 0121: C9      		ret
               		
               	; Actually does the configuration
-0122: CDF301  	docfg:	call	setdma
+0122: CD3002  	docfg:	call	setdma
 0125: 0E14    		ld	c,0x14
 0127: 115C00  		ld	de,fcb
 012A: CD0500  		call	bdos		; Read file
               		
-012D: CDCB01  		call	setcol		; Set color
-0130: C9      		ret
+012D: CDEF01  		call	setcol		; Set color
+0130: CDFB01  		call	setf18
+0133: C9      		ret
               			
               		; Do user configuration
               		; Attempt to load INIT.INI
-0131: CDE901  	config:	call	openini
-0134: CA5A01  		jp	z,cretini	; Can't open, create it!
+0134: CD2602  	config:	call	openini
+0137: CA6201  		jp	z,cretini	; Can't open, create it!
               		
-0137: CD2201  		call	docfg
+013A: CD2201  		call	docfg
               		
-013A: 0E09    	prompt:	ld	c,0x09
-013C: 113403  		ld	de,cfgmsg
-013F: CD0500  		call	bdos
+013D: 0E09    	prompt:	ld	c,0x09
+013F: 117103  		ld	de,cfgmsg
+0142: CD0500  		call	bdos
               		
               		; Get user option
-0142: 0E0A    		ld	c,0x0A
-0144: 11F404  		ld	de,inpbuf
-0147: CD0500  		call	bdos
-014A: 3AF604  		ld	a,(inpbuf+2)
+0145: 0E0A    		ld	c,0x0A
+0147: 115405  		ld	de,inpbuf
+014A: CD0500  		call	bdos
+014D: 3A5605  		ld	a,(inpbuf+2)
               		
               		; Do commands?
-014D: FE31    		cp	'1'
-014F: CA8001  		jp	z,cfgcol
+0150: FE31    		cp	'1'
+0152: CA8D01  		jp	z,cfgcol
+0155: FE32    		cp	'2'
+0157: CAD801  		jp	z,cfgf18
               		
               		; Look for exit condition
-0152: FE39    		cp	'9'
-0154: CA6A01  		jp	z,save
+015A: FE39    		cp	'9'
+015C: CA7701  		jp	z,save
               		
-0157: 18E1    		jr	prompt
-0159: C9      		ret
+015F: 18DC    		jr	prompt
+0161: C9      		ret
               		
               		; Create the ini file
-015A: CDD701  	cretini:call	setf
-015D: 0E16    		ld	c,0x16
-015F: CD0500  		call	bdos
+0162: CD1402  	cretini:call	setf
+0165: 0E16    		ld	c,0x16
+0167: CD0500  		call	bdos
               		
               		; Default values
-0162: 3EE1    		ld	a,0xE1		; Default color
-0164: 32F804  		ld	(tsmcol),a
+016A: 3EE1    		ld	a,0xE1		; Default color
+016C: 325805  		ld	(tsmcol),a
+016F: 3E00    		ld	a,0x00		; 80-col disabled
+0171: 325905  		ld	(f18a80),a
               		
-0167: C33A01  		jp	prompt
+0174: C33D01  		jp	prompt
               		
               		; Save the file and exit
-016A: CDE901  	save:	call	openini
-016D: CDF301  		call	setdma
-0170: 0E15    		ld	c,0x15
-0172: 115C00  		ld	de,fcb
-0175: CD0500  		call	bdos
+0177: CD2602  	save:	call	openini
+017A: CD3002  		call	setdma
+017D: 0E15    		ld	c,0x15
+017F: 115C00  		ld	de,fcb
+0182: CD0500  		call	bdos
               		
               		; Close and exit
-0178: 0E10    		ld	c,0x10
-017A: 115C00  		ld	de,fcb
-017D: C30500  		jp	bdos
+0185: 0E10    		ld	c,0x10
+0187: 115C00  		ld	de,fcb
+018A: C30500  		jp	bdos
               		
               		; Configure colors
-0180: 0E09    	cfgcol:	ld	c,0x09
-0182: 118B03  		ld	de,colmsg
-0185: CD0500  		call	bdos
+018D: 0E09    	cfgcol:	ld	c,0x09
+018F: 11EB03  		ld	de,colmsg
+0192: CD0500  		call	bdos
               		
               		; Do foreground color
-0188: 0E09    	fgcol:	ld	c,0x09
-018A: 11CA04  		ld	de,formsg
-018D: CD0500  		call	bdos
+0195: 0E09    	fgcol:	ld	c,0x09
+0197: 112A05  		ld	de,formsg
+019A: CD0500  		call	bdos
               		
               		; Get user option
-0190: 0E0A    		ld	c,0x0A
-0192: 11F404  		ld	de,inpbuf
-0195: CD0500  		call	bdos
-0198: 3AF604  		ld	a,(inpbuf+2)
-019B: D641    		sub	'A'
-019D: FE10    		cp	16
-019F: 30E7    		jr	nc,fgcol
-01A1: 07      		rlca
-01A2: 07      		rlca
-01A3: 07      		rlca
-01A4: 07      		rlca
-01A5: 47      		ld	b,a
-01A6: C5      		push	bc
+019D: 0E0A    		ld	c,0x0A
+019F: 115405  		ld	de,inpbuf
+01A2: CD0500  		call	bdos
+01A5: 3A5605  		ld	a,(inpbuf+2)
+01A8: D641    		sub	'A'
+01AA: FE10    		cp	16
+01AC: 30E7    		jr	nc,fgcol
+01AE: 07      		rlca
+01AF: 07      		rlca
+01B0: 07      		rlca
+01B1: 07      		rlca
+01B2: 47      		ld	b,a
+01B3: C5      		push	bc
               		
               		; Do background color
-01A7: 0E09    	bgcol:	ld	c,0x09
-01A9: 11DF04  		ld	de,bacmsg
-01AC: CD0500  		call	bdos
+01B4: 0E09    	bgcol:	ld	c,0x09
+01B6: 113F05  		ld	de,bacmsg
+01B9: CD0500  		call	bdos
               		
               		; Get user option
-01AF: 0E0A    		ld	c,0x0A
-01B1: 11F404  		ld	de,inpbuf
-01B4: CD0500  		call	bdos
-01B7: 3AF604  		ld	a,(inpbuf+2)
-01BA: D641    		sub	'A'
-01BC: FE10    		cp	16
-01BE: 30E7    		jr	nc,bgcol
-01C0: C1      		pop	bc
-01C1: B0      		or	b
+01BC: 0E0A    		ld	c,0x0A
+01BE: 115405  		ld	de,inpbuf
+01C1: CD0500  		call	bdos
+01C4: 3A5605  		ld	a,(inpbuf+2)
+01C7: D641    		sub	'A'
+01C9: FE10    		cp	16
+01CB: 30E7    		jr	nc,bgcol
+01CD: C1      		pop	bc
+01CE: B0      		or	b
               		
-01C2: 32F804  		ld	(tsmcol),a
-01C5: CDCB01  		call	setcol
-01C8: C33A01  		jp	prompt
+01CF: 325805  		ld	(tsmcol),a
+01D2: CDEF01  		call	setcol
+01D5: C33D01  		jp	prompt
               		
+              		; Configure F18A
+01D8: 3A5905  	cfgf18:	ld	a,(f18a80)
+01DB: B7      		or	a
+01DC: 2806    		jr	z,cfgf180
+              		
+              		; Disable F18A mode
+01DE: AF      		xor	a
+01DF: 325905  		ld	(f18a80),a
+01E2: 1805    		jr	cfgf181
+              		
+              		; Enable F18A mode
+01E4: 3E01    	cfgf180:ld	a,1
+01E6: 325905  		ld	(f18a80),a
+              		
+              		; Update settings
+01E9: CDFB01  	cfgf181:call	setf18
+01EC: C33D01  		jp	prompt
               		
               	; Sets the TMS9918 color 
-01CB: DBA1    	setcol:	in	a,(tm_latc)
-01CD: 3AF804  		ld	a,(tsmcol)
-01D0: D3A1    		out	(tm_latc),a
-01D2: 3E87    		ld	a,0x87
-01D4: D3A1    		out	(tm_latc),a
-01D6: C9      		ret
+01EF: DBA1    	setcol:	in	a,(tm_latc)
+01F1: 3A5805  		ld	a,(tsmcol)
+01F4: D3A1    		out	(tm_latc),a
+01F6: 3E87    		ld	a,0x87
+01F8: D3A1    		out	(tm_latc),a
+01FA: C9      		ret
+              		
+              	; Sets the F18A mode
+01FB: 3A5905  	setf18:	ld	a,(f18a80)
+01FE: B7      		or	a
+01FF: 3EFF    		ld	a,255
+0201: 2802    		jr	z,setf180
+0203: 3EFE    		ld	a,254
+0205: 5F      	setf180:ld	e,a
+0206: D5      		push	de
+0207: 0E02    		ld	c,2
+0209: 1E1B    		ld	e,0x1B
+020B: CD0500  		call	bdos
+020E: 0E02    		ld	c,2
+0210: D1      		pop	de
+0211: C30500  		jp	bdos
               		
               	; Sets the FCB for a file open or creation
               	;
               	; Returns FCB in DE
               	; uses: af, bc, de, hl 
-01D7: 21FB01  	setf:	ld	hl,inifile
-01DA: 115C00  		ld	de,fcb
-01DD: D5      		push	de
-01DE: 011000  		ld	bc,16
-01E1: EDB0    		ldir
-01E3: AF      		xor	a
-01E4: 327C00  		ld	(fcb+0x20),a
-01E7: D1      		pop	de
-01E8: C9      		ret
+0214: 213802  	setf:	ld	hl,inifile
+0217: 115C00  		ld	de,fcb
+021A: D5      		push	de
+021B: 011000  		ld	bc,16
+021E: EDB0    		ldir
+0220: AF      		xor	a
+0221: 327C00  		ld	(fcb+0x20),a
+0224: D1      		pop	de
+0225: C9      		ret
               		
               	; Attempt to open the ini file
               	;
               	; Returns z if failed
               	; uses: all
-01E9: CDD701  	openini:call	setf
-01EC: 0E0F    		ld	c,0x0F
-01EE: CD0500  		call	bdos
-01F1: 3C      		inc	a
-01F2: C9      		ret
+0226: CD1402  	openini:call	setf
+0229: 0E0F    		ld	c,0x0F
+022B: CD0500  		call	bdos
+022E: 3C      		inc	a
+022F: C9      		ret
               		
               	; Set DMA to top of memory
-01F3: 11F804  	setdma:	ld	de,top
-01F6: 0E1A    		ld	c,0x1A
-01F8: C30500  		jp	bdos
+0230: 115805  	setdma:	ld	de,top
+0233: 0E1A    		ld	c,0x1A
+0235: C30500  		jp	bdos
               		
               	; Strings
               	
               	; File prototype
               	; Length: 16 bytes
-01FB:         	inifile:
-01FB: 00494E49		defb	0,'INIT    INI',0,0,0,0
-01FF: 54202020	
-0203: 20494E49	
-0207: 00000000	
+0238:         	inifile:
+0238: 00494E49		defb	0,'INIT    INI',0,0,0,0
+023C: 54202020	
+0240: 20494E49	
+0244: 00000000	
               		
-020B:         	splash:
-020B: 205F5F5F		defb	' _____  _____ _    _ _  ___    _ _____   ',0x0A,0x0D
-020F: 5F5F2020	
-0213: 5F5F5F5F	
-0217: 5F205F20	
-021B: 2020205F	
-021F: 205F2020	
-0223: 5F5F5F20	
-0227: 2020205F	
-022B: 205F5F5F	
-022F: 5F5F2020	
-0233: 200A0D  	
-0236: 7C5F2020		defb	'|_   _|/ ____| |  | | |/ / |  | |  __ \  ',0x0A,0x0D
-023A: 205F7C2F	
-023E: 205F5F5F	
-0242: 5F7C207C	
-0246: 20207C20	
-024A: 7C207C2F	
-024E: 202F207C	
-0252: 20207C20	
-0256: 7C20205F	
-025A: 5F205C20	
-025E: 200A0D  	
-0261: 20207C20		defb	'  | | | (___ | |__| | | /| |  | | |__) | ',0x0A,0x0D
-0265: 7C207C20	
-0269: 285F5F5F	
-026D: 207C207C	
-0271: 5F5F7C20	
-0275: 7C207C20	
-0279: 2F7C207C	
-027D: 20207C20	
-0281: 7C207C5F	
-0285: 5F29207C	
-0289: 200A0D  	
-028C: 20207C20		defb	'  | |  \___ \|  __  |  < | |  | |  _  /  ',0x0A,0x0D
-0290: 7C20205C	
-0294: 5F5F5F20	
-0298: 5C7C2020	
-029C: 5F5F2020	
-02A0: 7C20203C	
-02A4: 207C207C	
-02A8: 20207C20	
-02AC: 7C20205F	
-02B0: 20202F20	
-02B4: 200A0D  	
-02B7: 205F7C20		defb	' _| |_ ____) | |  | | . \| |__| | | \ \  ',0x0A,0x0D
-02BB: 7C5F205F	
-02BF: 5F5F5F29	
-02C3: 207C207C	
-02C7: 20207C20	
-02CB: 7C202E20	
-02CF: 5C7C207C	
-02D3: 5F5F7C20	
-02D7: 7C207C20	
-02DB: 5C205C20	
-02DF: 200A0D  	
-02E2: 7C5F5F5F		defb	'|_____|_____/|_|  |_|_|\_\\____/|_|  \_\ ',0x0A,0x0D
-02E6: 5F5F7C5F	
-02EA: 5F5F5F5F	
-02EE: 2F7C5F7C	
-02F2: 20207C5F	
-02F6: 7C5F7C5C	
-02FA: 5F5C5C5F	
-02FE: 5F5F5F2F	
-0302: 7C5F7C20	
-0306: 205C5F5C	
-030A: 200A0D  	
-030D: 0A0D4350		defb	0x0A,0x0D,'CP/M Version 2.2, Revision ALPHA',0x0A,0x0D
-0311: 2F4D2056	
-0315: 65727369	
-0319: 6F6E2032	
-031D: 2E322C20	
-0321: 52657669	
-0325: 73696F6E	
-0329: 20414C50	
-032D: 48410A0D	
-0331: 0A0D24  		defb	0x0A,0x0D,'$'
+0248:         	splash:
+0248: 205F5F5F		defb	' _____  _____ _    _ _  ___    _ _____   ',0x0A,0x0D
+024C: 5F5F2020	
+0250: 5F5F5F5F	
+0254: 5F205F20	
+0258: 2020205F	
+025C: 205F2020	
+0260: 5F5F5F20	
+0264: 2020205F	
+0268: 205F5F5F	
+026C: 5F5F2020	
+0270: 200A0D  	
+0273: 7C5F2020		defb	'|_   _|/ ____| |  | | |/ / |  | |  __ \  ',0x0A,0x0D
+0277: 205F7C2F	
+027B: 205F5F5F	
+027F: 5F7C207C	
+0283: 20207C20	
+0287: 7C207C2F	
+028B: 202F207C	
+028F: 20207C20	
+0293: 7C20205F	
+0297: 5F205C20	
+029B: 200A0D  	
+029E: 20207C20		defb	'  | | | (___ | |__| | | /| |  | | |__) | ',0x0A,0x0D
+02A2: 7C207C20	
+02A6: 285F5F5F	
+02AA: 207C207C	
+02AE: 5F5F7C20	
+02B2: 7C207C20	
+02B6: 2F7C207C	
+02BA: 20207C20	
+02BE: 7C207C5F	
+02C2: 5F29207C	
+02C6: 200A0D  	
+02C9: 20207C20		defb	'  | |  \___ \|  __  |  < | |  | |  _  /  ',0x0A,0x0D
+02CD: 7C20205C	
+02D1: 5F5F5F20	
+02D5: 5C7C2020	
+02D9: 5F5F2020	
+02DD: 7C20203C	
+02E1: 207C207C	
+02E5: 20207C20	
+02E9: 7C20205F	
+02ED: 20202F20	
+02F1: 200A0D  	
+02F4: 205F7C20		defb	' _| |_ ____) | |  | | . \| |__| | | \ \  ',0x0A,0x0D
+02F8: 7C5F205F	
+02FC: 5F5F5F29	
+0300: 207C207C	
+0304: 20207C20	
+0308: 7C202E20	
+030C: 5C7C207C	
+0310: 5F5F7C20	
+0314: 7C207C20	
+0318: 5C205C20	
+031C: 200A0D  	
+031F: 7C5F5F5F		defb	'|_____|_____/|_|  |_|_|\_\\____/|_|  \_\ ',0x0A,0x0D
+0323: 5F5F7C5F	
+0327: 5F5F5F5F	
+032B: 2F7C5F7C	
+032F: 20207C5F	
+0333: 7C5F7C5C	
+0337: 5F5C5C5F	
+033B: 5F5F5F2F	
+033F: 7C5F7C20	
+0343: 205C5F5C	
+0347: 200A0D  	
+034A: 0A0D4350		defb	0x0A,0x0D,'CP/M Version 2.2, Revision ALPHA',0x0A,0x0D
+034E: 2F4D2056	
+0352: 65727369	
+0356: 6F6E2032	
+035A: 2E322C20	
+035E: 52657669	
+0362: 73696F6E	
+0366: 20414C50	
+036A: 48410A0D	
+036E: 0A0D24  		defb	0x0A,0x0D,'$'
               	
-0334:         	cfgmsg:
-0334: 0A0D4953		defb	0x0A,0x0D,'ISHKUR CP/M Configuration',0x0A,0x0A,0x0D
-0338: 484B5552	
-033C: 2043502F	
-0340: 4D20436F	
-0344: 6E666967	
-0348: 75726174	
-034C: 696F6E0A	
-0350: 0A0D    	
+0371:         	cfgmsg:
+0371: 0A0D4953		defb	0x0A,0x0D,'ISHKUR CP/M Configuration',0x0A,0x0A,0x0D
+0375: 484B5552	
+0379: 2043502F	
+037D: 4D20436F	
+0381: 6E666967	
+0385: 75726174	
+0389: 696F6E0A	
+038D: 0A0D    	
               		
-0352: 20202020		defb	'    1: Change TMS9918 Text Color',0x0A,0x0D
-0356: 313A2043	
-035A: 68616E67	
-035E: 6520544D	
-0362: 53393931	
-0366: 38205465	
-036A: 78742043	
-036E: 6F6C6F72	
-0372: 0A0D    	
-0374: 20202020		defb	'    9: Exit',0x0A,0x0A,0x0D
-0378: 393A2045	
-037C: 7869740A	
-0380: 0A0D    	
-0382: 4F707469		defb	'Option: $'
-0386: 6F6E3A20	
-038A: 24      	
+038F: 20202020		defb	'    1: Change TMS9918 Text Color',0x0A,0x0D
+0393: 313A2043	
+0397: 68616E67	
+039B: 6520544D	
+039F: 53393931	
+03A3: 38205465	
+03A7: 78742043	
+03AB: 6F6C6F72	
+03AF: 0A0D    	
+03B1: 20202020		defb	'    2: Toggle F18A 80 Column Mode',0x0A,0x0D
+03B5: 323A2054	
+03B9: 6F67676C	
+03BD: 65204631	
+03C1: 38412038	
+03C5: 3020436F	
+03C9: 6C756D6E	
+03CD: 204D6F64	
+03D1: 650A0D  	
+03D4: 20202020		defb	'    9: Exit',0x0A,0x0A,0x0D
+03D8: 393A2045	
+03DC: 7869740A	
+03E0: 0A0D    	
+03E2: 4F707469		defb	'Option: $'
+03E6: 6F6E3A20	
+03EA: 24      	
               		
-038B:         	colmsg:
-038B: 0A0D544D		defb	0x0A,0x0D,'TMS9918 Text Color Configuration',0x0A,0x0D
-038F: 53393931	
-0393: 38205465	
-0397: 78742043	
-039B: 6F6C6F72	
-039F: 20436F6E	
-03A3: 66696775	
-03A7: 72617469	
-03AB: 6F6E0A0D	
-03AF: 20202020		defb	'    A: Transparent',0x0A,0x0D
-03B3: 413A2054	
-03B7: 72616E73	
-03BB: 70617265	
-03BF: 6E740A0D	
-03C3: 20202020		defb	'    B: Black',0x0A,0x0D
-03C7: 423A2042	
-03CB: 6C61636B	
-03CF: 0A0D    	
-03D1: 20202020		defb	'    C: Medium Green',0x0A,0x0D
-03D5: 433A204D	
-03D9: 65646975	
-03DD: 6D204772	
-03E1: 65656E0A	
-03E5: 0D      	
-03E6: 20202020		defb	'    D: Light Green',0x0A,0x0D
-03EA: 443A204C	
-03EE: 69676874	
-03F2: 20477265	
-03F6: 656E0A0D	
-03FA: 20202020		defb	'    E: Dark Blue',0x0A,0x0D
-03FE: 453A2044	
-0402: 61726B20	
-0406: 426C7565	
-040A: 0A0D    	
-040C: 20202020		defb	'    F: Light Blue',0x0A,0x0D
-0410: 463A204C	
-0414: 69676874	
-0418: 20426C75	
-041C: 650A0D  	
-041F: 20202020		defb	'    G: Dark Red',0x0A,0x0D
-0423: 473A2044	
-0427: 61726B20	
-042B: 5265640A	
-042F: 0D      	
-0430: 20202020		defb	'    H: Cyan',0x0A,0x0D
-0434: 483A2043	
-0438: 79616E0A	
-043C: 0D      	
-043D: 20202020		defb	'    I: Medium Red',0x0A,0x0D
-0441: 493A204D	
-0445: 65646975	
-0449: 6D205265	
-044D: 640A0D  	
-0450: 20202020		defb	'    J: Light Red',0x0A,0x0D
-0454: 4A3A204C	
-0458: 69676874	
-045C: 20526564	
-0460: 0A0D    	
-0462: 20202020		defb	'    K: Dark Yellow',0x0A,0x0D
-0466: 4B3A2044	
-046A: 61726B20	
-046E: 59656C6C	
-0472: 6F770A0D	
-0476: 20202020		defb	'    L: Light Yellow',0x0A,0x0D
-047A: 4C3A204C	
-047E: 69676874	
-0482: 2059656C	
-0486: 6C6F770A	
-048A: 0D      	
-048B: 20202020		defb	'    M: Dark Green',0x0A,0x0D
-048F: 4D3A2044	
-0493: 61726B20	
-0497: 47726565	
-049B: 6E0A0D  	
-049E: 20202020		defb	'    N: Magenta',0x0A,0x0D
-04A2: 4E3A204D	
-04A6: 6167656E	
-04AA: 74610A0D	
-04AE: 20202020		defb	'    O: Grey',0x0A,0x0D
-04B2: 4F3A2047	
-04B6: 7265790A	
-04BA: 0D      	
-04BB: 20202020		defb	'    P: White',0x0A,0x0D,'$'
-04BF: 503A2057	
-04C3: 68697465	
-04C7: 0A0D24  	
+03EB:         	colmsg:
+03EB: 0A0D544D		defb	0x0A,0x0D,'TMS9918 Text Color Configuration',0x0A,0x0D
+03EF: 53393931	
+03F3: 38205465	
+03F7: 78742043	
+03FB: 6F6C6F72	
+03FF: 20436F6E	
+0403: 66696775	
+0407: 72617469	
+040B: 6F6E0A0D	
+040F: 20202020		defb	'    A: Transparent',0x0A,0x0D
+0413: 413A2054	
+0417: 72616E73	
+041B: 70617265	
+041F: 6E740A0D	
+0423: 20202020		defb	'    B: Black',0x0A,0x0D
+0427: 423A2042	
+042B: 6C61636B	
+042F: 0A0D    	
+0431: 20202020		defb	'    C: Medium Green',0x0A,0x0D
+0435: 433A204D	
+0439: 65646975	
+043D: 6D204772	
+0441: 65656E0A	
+0445: 0D      	
+0446: 20202020		defb	'    D: Light Green',0x0A,0x0D
+044A: 443A204C	
+044E: 69676874	
+0452: 20477265	
+0456: 656E0A0D	
+045A: 20202020		defb	'    E: Dark Blue',0x0A,0x0D
+045E: 453A2044	
+0462: 61726B20	
+0466: 426C7565	
+046A: 0A0D    	
+046C: 20202020		defb	'    F: Light Blue',0x0A,0x0D
+0470: 463A204C	
+0474: 69676874	
+0478: 20426C75	
+047C: 650A0D  	
+047F: 20202020		defb	'    G: Dark Red',0x0A,0x0D
+0483: 473A2044	
+0487: 61726B20	
+048B: 5265640A	
+048F: 0D      	
+0490: 20202020		defb	'    H: Cyan',0x0A,0x0D
+0494: 483A2043	
+0498: 79616E0A	
+049C: 0D      	
+049D: 20202020		defb	'    I: Medium Red',0x0A,0x0D
+04A1: 493A204D	
+04A5: 65646975	
+04A9: 6D205265	
+04AD: 640A0D  	
+04B0: 20202020		defb	'    J: Light Red',0x0A,0x0D
+04B4: 4A3A204C	
+04B8: 69676874	
+04BC: 20526564	
+04C0: 0A0D    	
+04C2: 20202020		defb	'    K: Dark Yellow',0x0A,0x0D
+04C6: 4B3A2044	
+04CA: 61726B20	
+04CE: 59656C6C	
+04D2: 6F770A0D	
+04D6: 20202020		defb	'    L: Light Yellow',0x0A,0x0D
+04DA: 4C3A204C	
+04DE: 69676874	
+04E2: 2059656C	
+04E6: 6C6F770A	
+04EA: 0D      	
+04EB: 20202020		defb	'    M: Dark Green',0x0A,0x0D
+04EF: 4D3A2044	
+04F3: 61726B20	
+04F7: 47726565	
+04FB: 6E0A0D  	
+04FE: 20202020		defb	'    N: Magenta',0x0A,0x0D
+0502: 4E3A204D	
+0506: 6167656E	
+050A: 74610A0D	
+050E: 20202020		defb	'    O: Grey',0x0A,0x0D
+0512: 4F3A2047	
+0516: 7265790A	
+051A: 0D      	
+051B: 20202020		defb	'    P: White',0x0A,0x0D,'$'
+051F: 503A2057	
+0523: 68697465	
+0527: 0A0D24  	
               		
-04CA:         	formsg:	
-04CA: 0A0D466F		defb	0x0A,0x0D,'Foreground Color: $'
-04CE: 72656772	
-04D2: 6F756E64	
-04D6: 20436F6C	
-04DA: 6F723A20	
-04DE: 24      	
-04DF:         	bacmsg:	
-04DF: 0A0D4261		defb	0x0A,0x0D,'Background Color: $'
-04E3: 636B6772	
-04E7: 6F756E64	
-04EB: 20436F6C	
-04EF: 6F723A20	
-04F3: 24      	
+052A:         	formsg:	
+052A: 0A0D466F		defb	0x0A,0x0D,'Foreground Color: $'
+052E: 72656772	
+0532: 6F756E64	
+0536: 20436F6C	
+053A: 6F723A20	
+053E: 24      	
+053F:         	bacmsg:	
+053F: 0A0D4261		defb	0x0A,0x0D,'Background Color: $'
+0543: 636B6772	
+0547: 6F756E64	
+054B: 20436F6C	
+054F: 6F723A20	
+0553: 24      	
               		
               		
               	; Input buffer
-04F4: 02000000	inpbuf:	defb	0x02, 0x00, 0x00, 0x00
+0554: 02000000	inpbuf:	defb	0x02, 0x00, 0x00, 0x00
               		
               	; Top of program, use it to store stuff
-04F8:         	top:
-04F8:         	tsmcol	equ	top	; TMS9918 Color
+0558:         	top:
+0558:         	tsmcol	equ	top	; TMS9918 Color (1 byte)
+0559:         	f18a80	equ	top+1	; F18A 80 Column (1 byte)
 
 
 ; +++ segments +++
 
-#CODE          = $0100 =   256,  size = $03F8 =  1016
+#CODE          = $0100 =   256,  size = $0458 =  1112
 
 ; +++ global symbols +++
 
-_end    = $04F8 =  1272          init.asm:30 (unused)
-_size   = $03F8 =  1016          init.asm:30 (unused)
-bacmsg  = $04DF =  1247          init.asm:241
+_end    = $0558 =  1368          init.asm:30 (unused)
+_size   = $0458 =  1112          init.asm:30 (unused)
+bacmsg  = $053F =  1343          init.asm:279
 banner  = $0119 =   281          init.asm:47
 bdos    = $0005 =     5          init.asm:20
-bgcol   = $01A7 =   423          init.asm:139
-cfgcol  = $0180 =   384          init.asm:114
-cfgmsg  = $0334 =   820          init.asm:213
+bgcol   = $01B4 =   436          init.asm:144
+cfgcol  = $018D =   397          init.asm:119
+cfgf18  = $01D8 =   472          init.asm:164
+cfgf180 = $01E4 =   484          init.asm:174
+cfgf181 = $01E9 =   489          init.asm:178
+cfgmsg  = $0371 =   881          init.asm:250
 cmdarg  = $0081 =   129          init.asm:23
 cmdlen  = $0080 =   128          init.asm:22
-colmsg  = $038B =   907          init.asm:220
-config  = $0131 =   305          init.asm:64
-cretini = $015A =   346          init.asm:91
+colmsg  = $03EB =  1003          init.asm:258
+config  = $0134 =   308          init.asm:65
+cretini = $0162 =   354          init.asm:94
 docfg   = $0122 =   290          init.asm:54
+f18a80  = $0559 =  1369          init.asm:289
 fcb     = $005C =    92          init.asm:21
-fgcol   = $0188 =   392          init.asm:119
-formsg  = $04CA =  1226          init.asm:239
-inifile = $01FB =   507          init.asm:200
-inpbuf  = $04F4 =  1268          init.asm:246
-openini = $01E9 =   489          init.asm:185
-prompt  = $013A =   314          init.asm:69
-save    = $016A =   362          init.asm:102
-setcol  = $01CB =   459          init.asm:160
-setdma  = $01F3 =   499          init.asm:192
-setf    = $01D7 =   471          init.asm:171
-splash  = $020B =   523          init.asm:203
+fgcol   = $0195 =   405          init.asm:124
+formsg  = $052A =  1322          init.asm:277
+inifile = $0238 =   568          init.asm:237
+inpbuf  = $0554 =  1364          init.asm:284
+openini = $0226 =   550          init.asm:222
+prompt  = $013D =   317          init.asm:70
+save    = $0177 =   375          init.asm:107
+setcol  = $01EF =   495          init.asm:182
+setdma  = $0230 =   560          init.asm:229
+setf    = $0214 =   532          init.asm:208
+setf18  = $01FB =   507          init.asm:190
+setf180 = $0205 =   517          init.asm:195
+splash  = $0248 =   584          init.asm:240
 tm_data = $00A0 =   160          init.asm:25 (unused)
 tm_latc = $00A1 =   161          init.asm:26
-top     = $04F8 =  1272          init.asm:249
-tsmcol  = $04F8 =  1272          init.asm:250
+top     = $0558 =  1368          init.asm:287
+tsmcol  = $0558 =  1368          init.asm:288
 
 
-total time: 0.0064 sec.
+total time: 0.0042 sec.
 no errors
