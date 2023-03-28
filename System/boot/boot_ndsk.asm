@@ -110,7 +110,7 @@ tmsini:	in	a,(tmlatc)
 	ld	hl,1024*(mem+2)	; Set base for loading data
 readsec:ex	de,hl
 	ld	hl,m_read
-	ld	b,9
+	ld	b,8
 	call	modsend
 	
 	; Handle incoming data packet
