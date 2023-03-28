@@ -165,7 +165,7 @@ tm_read:ld	a,(tm_curx)
 	ld	c,a
 	ld	a,(tm_cury)
 	ld	d,a
-	ld	hl,0x0C00
+	ld	hl,0x1000
 	ld	a,80
 	call	tm_chat
 	in	a,(tm_data)	; char is in A
@@ -360,7 +360,7 @@ tm_clea:inc	b
 	push	bc
 	push	de
 	ld	a,80
-	ld	hl,0x4C00
+	ld	hl,0x5000
 	call	tm_chat
 	pop	de
 	pop	bc
@@ -387,7 +387,7 @@ tm_cupd:ld	(tm_mode),hl
 	jr	tm_escd
 	
 tm_80c:	push	hl
-	ld	hl,0x0403
+	ld	hl,0x0404
 	jr	tm_cupd
 	
 	
@@ -398,8 +398,8 @@ tm_dsco:ld	hl,0x0800+40
 	ld	de,0x4800
 	ld	b,24
 	call	tm_dsc0
-	ld	hl,0x0C00+80
-	ld	de,0x4C00
+	ld	hl,0x1000+80
+	ld	de,0x5000
 	ld	b,48
 tm_dsc0:push	bc
 	push	de
@@ -503,7 +503,7 @@ tm_sclf:ld	a,(tm_scro)
 ; e = Character to put
 ;
 ; uses: af, bc, de, hl
-tm_putc:ld	hl,0x4C00
+tm_putc:ld	hl,0x5000
 	ld	a,80
 	push	bc
 	push	de
@@ -563,7 +563,7 @@ tm_vcpy:call	tm_addh
 ; Updates the frame buffer based on the scroll position
 ;
 ; uses: af, bc, de, hl
-tm_usco:ld	hl,0x0C00
+tm_usco:ld	hl,0x1000
 	ld	de,0x4800
 	ld	a,(tm_scro)
 	ld	b,0
@@ -592,7 +592,7 @@ tm_usc0:push	bc
 ;
 ; uses: af, bc, de
 tm_cls:	ld	bc,0x4800
-	ld	de,0x0C00
+	ld	de,0x1000
 	call	tm_addr
 tm_cls0:out	(c),0
 	dec	de
