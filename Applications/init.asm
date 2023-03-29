@@ -57,6 +57,7 @@ docfg:	call	setdma
 	call	bdos		; Read file
 	
 	call	setcol		; Set color
+	call	setf18
 	ret
 		
 	; Do user configuration
@@ -79,6 +80,8 @@ prompt:	ld	c,0x09
 	; Do commands?
 	cp	'1'
 	jp	z,cfgcol
+	cp	'2'
+	jp	z,cfgf18
 	
 	; Look for exit condition
 	cp	'9'
@@ -95,6 +98,8 @@ cretini:call	setf
 	; Default values
 	ld	a,0xE1		; Default color
 	ld	(tsmcol),a
+	ld	a,0x00		; 80-col disabled
+	ld	(f18a80),a
 	
 	jp	prompt
 	
@@ -155,6 +160,23 @@ bgcol:	ld	c,0x09
 	call	setcol
 	jp	prompt
 	
+	; Configure F18A
+cfgf18:	ld	a,(f18a80)
+	or	a
+	jr	z,cfgf180
+	
+	; Disable F18A mode
+	xor	a
+	ld	(f18a80),a
+	jr	cfgf181
+	
+	; Enable F18A mode
+cfgf180:ld	a,1
+	ld	(f18a80),a
+	
+	; Update settings
+cfgf181:call	setf18
+	jp	prompt
 	
 ; Sets the TMS9918 color 
 setcol:	in	a,(tm_latc)
@@ -163,6 +185,21 @@ setcol:	in	a,(tm_latc)
 	ld	a,0x87
 	out	(tm_latc),a
 	ret
+	
+; Sets the F18A mode
+setf18:	ld	a,(f18a80)
+	or	a
+	ld	a,255
+	jr	z,setf180
+	ld	a,254
+setf180:ld	e,a
+	push	de
+	ld	c,2
+	ld	e,0x1B
+	call	bdos
+	ld	c,2
+	pop	de
+	jp	bdos
 	
 ; Sets the FCB for a file open or creation
 ;
@@ -214,6 +251,7 @@ cfgmsg:
 	defb	0x0A,0x0D,'ISHKUR CP/M Configuration',0x0A,0x0A,0x0D
 	
 	defb	'    1: Change TMS9918 Text Color',0x0A,0x0D
+	defb	'    2: Toggle F18A 80 Column Mode',0x0A,0x0D
 	defb	'    9: Exit',0x0A,0x0A,0x0D
 	defb	'Option: $'
 	
@@ -247,4 +285,5 @@ inpbuf:	defb	0x02, 0x00, 0x00, 0x00
 	
 ; Top of program, use it to store stuff
 top:
-tsmcol	equ	top	; TMS9918 Color
+tsmcol	equ	top	; TMS9918 Color (1 byte)
+f18a80	equ	top+1	; F18A 80 Column (1 byte)

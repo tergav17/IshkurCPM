@@ -8,6 +8,8 @@
 ;*      not resident is memory, and must be provided by
 ;*      a compatable block I/O device.
 ;*
+;*      F18A style 80 column mode is supported
+;*
 ;*      This specific version uses the NABU keyboard as
 ;*      an input to the emulated termina 
 ;*
@@ -80,24 +82,9 @@ tm_stat:ld	a,(tm_outc)
 ; Load font record, set up terminal
 tm_init:call	resgrb
 
-	; Set TMS to text mode
-	in	a,(tm_latc)
-	ld	a,0x00
-	out	(tm_latc),a
-	ld	a,0x80
-	out	(tm_latc),a
-	in	a,(tm_latc)
-	ld	a,0xF0
-	out	(tm_latc),a
-	ld	a,0x81
-	out	(tm_latc),a
-	
-	; Set TMS name table to 0x0800
-	in	a,(tm_latc)
-	ld	a,0x02
-	out	(tm_latc),a
-	ld	a,0x82
-	out	(tm_latc),a
+	; Set up registers
+	call	tm_cf18
+	call	tm_setp
 	
 	; Set TMS pattern generator block to 0
 	in	a,(tm_latc)
@@ -130,6 +117,46 @@ tm_cloc:ld	a,0xFF
 
 	ret
 
+; Sets up registers depending on mode
+; used to change between 40-col and 80-col
+;
+; uses: af, hl
+tm_setp:ld	hl,(tm_mode)
+
+	; Set TMS to text mode
+	in	a,(tm_latc)
+	ld	a,h
+	out	(tm_latc),a
+	ld	a,0x80
+	out	(tm_latc),a
+	in	a,(tm_latc)
+	ld	a,0xF0
+	out	(tm_latc),a
+	ld	a,0x81
+	out	(tm_latc),a
+	
+	; Set TMS name table to 0x0800
+	in	a,(tm_latc)
+	ld	a,l
+	out	(tm_latc),a
+	ld	a,0x82
+	out	(tm_latc),a
+	ret
+	
+; Checks to see if the F18A is present
+; if it is, set a flag to enable F18A mode
+;
+; uses: af
+tm_cf18:in	a,(tm_latc)	; Unlock sequence
+	ld	a,0x1C
+	out	(tm_latc),a
+	ld	a,0xB7
+	in	a,(tm_latc)
+	ld	a,0x1C
+	out	(tm_latc),a
+	ld	a,0xB7
+	ret
+
 ; Waits for the user to press a key, and returns it
 ;
 ; Returns ASCII key in A
@@ -138,7 +165,7 @@ tm_read:ld	a,(tm_curx)
 	ld	c,a
 	ld	a,(tm_cury)
 	ld	d,a
-	ld	hl,0x0C00
+	ld	hl,0x1000
 	ld	a,80
 	call	tm_chat
 	in	a,(tm_data)	; char is in A
@@ -174,7 +201,7 @@ tm_rea2:push	de
 	ld	c,a
 	ld	a,(tm_cury)
 	ld	d,a
-	call	tm_putf
+	call	tm_putc
 	pop	de
 	ret
 
@@ -298,7 +325,13 @@ tm_esc:	dec	a
 tm_escd:xor	a	; Escape done
 tm_escr:ld	(tm_escs),a
 	ret
-tm_esc0:ld	a,0x3D	; '='
+tm_esc0:ld	a,0xFF	; Do 40-col
+	cp	e
+	jr	z,tm_40c
+	ld	a,0xFE	; Do 80-col
+	cp	e
+	jr	z,tm_80c
+	ld	a,0x3D	; '='
 	cp	e
 	jr	nz,tm_escd
 tm_esci:ld	a,(tm_escs)
@@ -327,7 +360,7 @@ tm_clea:inc	b
 	push	bc
 	push	de
 	ld	a,80
-	ld	hl,0x4C00
+	ld	hl,0x5000
 	call	tm_chat
 	pop	de
 	pop	bc
@@ -346,6 +379,17 @@ tm_cle0:xor	a
 	pop	de	; Do not update character
 	jp	tm_usco
 	
+tm_40c:	push	hl
+	ld	hl,0x0002
+tm_cupd:ld	(tm_mode),hl
+	call	tm_setp
+	pop	hl
+	jr	tm_escd
+	
+tm_80c:	push	hl
+	ld	hl,0x0404
+	jr	tm_cupd
+	
 	
 ; Scroll both frame buffers down one
 ;
@@ -354,8 +398,8 @@ tm_dsco:ld	hl,0x0800+40
 	ld	de,0x4800
 	ld	b,24
 	call	tm_dsc0
-	ld	hl,0x0C00+80
-	ld	de,0x4C00
+	ld	hl,0x1000+80
+	ld	de,0x5000
 	ld	b,48
 tm_dsc0:push	bc
 	push	de
@@ -459,7 +503,7 @@ tm_sclf:ld	a,(tm_scro)
 ; e = Character to put
 ;
 ; uses: af, bc, de, hl
-tm_putc:ld	hl,0x4C00
+tm_putc:ld	hl,0x5000
 	ld	a,80
 	push	bc
 	push	de
@@ -519,7 +563,7 @@ tm_vcpy:call	tm_addh
 ; Updates the frame buffer based on the scroll position
 ;
 ; uses: af, bc, de, hl
-tm_usco:ld	hl,0x0C00
+tm_usco:ld	hl,0x1000
 	ld	de,0x4800
 	ld	a,(tm_scro)
 	ld	b,0
@@ -548,7 +592,7 @@ tm_usc0:push	bc
 ;
 ; uses: af, bc, de
 tm_cls:	ld	bc,0x4800
-	ld	de,0x0C00
+	ld	de,0x1000
 	call	tm_addr
 tm_cls0:out	(c),0
 	dec	de
@@ -572,6 +616,10 @@ tm_addr:in	a,(tm_latc)
 	ret
 	
 ; Variables
+tm_mode:defw	0x0002
+tm_f18a:defb	0
+
+
 tm_curx:equ	tm_bss		; Cursor X
 tm_cury:equ	tm_bss+1	; Cursor Y
 tm_outc:equ	tm_bss+2	; Output character
