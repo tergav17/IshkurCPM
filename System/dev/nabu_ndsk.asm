@@ -416,7 +416,7 @@ nd_m0:	defb	0x8F,0x00
 	defw	19		; Message length
 	defb	0x01		; Cmd: STORAGE-OPEN
 	defb	nd_fild		; Default file descriptor
-nd_m0fl:defw	0x00		; Read/Write flags
+nd_m0fl:defw	0x01		; Read/Write flags
 	defb	0x0E		; Message length
 nd_m0na:defb	'XXXXXXXXXXXXXX'; File name field
 	defb	0x00		; Padding
