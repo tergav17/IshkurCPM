@@ -67,7 +67,12 @@ tm_inr0:in	a,(c)
 ;
 ; Returns a=0xFF if there is a key to read 
 ; uses: af, bc, de, hl
-tm_stat:ld	a,(tm_outc)
+tm_stat:ld	a,(tm_last)
+	cp	0xE4
+	jr	z,tm_scri
+	cp	0xE5
+	jr	z,tm_sclf
+tm_sta0:ld	a,(tm_outc)
 	inc	a
 	ld	a,0xFF
 	ret	nz
@@ -83,7 +88,6 @@ tm_stat:ld	a,(tm_outc)
 tm_init:call	resgrb
 
 	; Set up registers
-	call	tm_cf18
 	call	tm_setp
 	
 	; Set TMS pattern generator block to 0
@@ -116,6 +120,23 @@ tm_cloc:ld	a,0xFF
 	ld	(tm_outc),a
 
 	ret
+	
+; Scroll left / scroll right
+;
+; uses: af, bc, de, hl
+tm_scri:ld	a,(tm_scro)
+	or	a
+	cp	40
+	jr	z,tm_scr1
+	add	a,4
+tm_scr0:ld	(tm_scro),a
+	call	tm_usco
+tm_scr1:jr	tm_sta0
+tm_sclf:ld	a,(tm_scro)
+	or	a
+	jr	z,tm_scr1
+	sub	4
+	jr	tm_scr0
 
 ; Sets up registers depending on mode
 ; used to change between 40-col and 80-col
@@ -141,20 +162,6 @@ tm_setp:ld	hl,(tm_mode)
 	out	(tm_latc),a
 	ld	a,0x82
 	out	(tm_latc),a
-	ret
-	
-; Checks to see if the F18A is present
-; if it is, set a flag to enable F18A mode
-;
-; uses: af
-tm_cf18:in	a,(tm_latc)	; Unlock sequence
-	ld	a,0x1C
-	out	(tm_latc),a
-	ld	a,0xB7
-	in	a,(tm_latc)
-	ld	a,0x1C
-	out	(tm_latc),a
-	ld	a,0xB7
 	ret
 
 ; Waits for the user to press a key, and returns it
@@ -427,13 +434,9 @@ tm_getc:in	a,(tm_keys)
 	dec	a
 	ret	m
 	
-	; Check for scrolling
+	; Grab the key
 	in	a,(tm_keyd)
-	cp	0xE4
-	jr	z,tm_scri
-	cp	0xE5
-	jr	z,tm_sclf
-	
+	ld	(tm_last),a
 	call	tm_map
 	ld	a,c
 	ret
@@ -478,24 +481,6 @@ tm_mapt:defb	0x7F,0x08	; DEL -> BS
 	defb	0xE6,0x7C	; NO -> '|'
 	defb	0xE7,0x7E	; YES -> '~'
 	defb	0
-	
-; Scroll left / scroll right
-;
-; uses: af, bc, de, hl
-tm_scri:ld	a,(tm_scro)
-	or	a
-	cp	40
-	jr	z,tm_scr1
-	add	a,10
-tm_scr0:ld	(tm_scro),a
-	call	tm_usco
-tm_scr1:ld	a,0xFF
-	ret
-tm_sclf:ld	a,(tm_scro)
-	or	a
-	jr	z,tm_scr1
-	sub	10
-	jr	tm_scr0
 
 ; Puts a character on the screen
 ; c = X position
@@ -617,7 +602,6 @@ tm_addr:in	a,(tm_latc)
 	
 ; Variables
 tm_mode:defw	0x0002
-tm_f18a:defb	0
 
 
 tm_curx:equ	tm_bss		; Cursor X
@@ -625,6 +609,5 @@ tm_cury:equ	tm_bss+1	; Cursor Y
 tm_outc:equ	tm_bss+2	; Output character
 tm_scro:equ	tm_bss+3	; Scroll width
 tm_escs:equ	tm_bss+4	; Escape state
-
-; 40 byte character buffer
-tm_cbuf:equ	tm_bss+5
+tm_last:equ	tm_bss+5	; Last character read
+tm_cbuf:equ	tm_bss+6	; 40 byte character buffer
