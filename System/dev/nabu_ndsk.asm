@@ -259,11 +259,7 @@ nd_getb:ex	de,hl
 	ld	b,12
 	call	nd_send
 	pop	hl
-	ld	a,0x09
-	out	(nd_nctl),a	; Turn on recv light
-	call	nd_get9
-	jr	nd_oret
-nd_get9:ret	c
+	ret	c
 	call	nd_hcrd
 	call	nd_hcre
 	ret	c
@@ -299,11 +295,7 @@ nd_putb:ex	de,hl
 	ld	b,12
 	call	nd_send		; Send message precursor
 	pop	hl
-	ld	a,0x21
-	out	(nd_nctl),a	; Turn on send light
-	call	nd_put9
-	jr	nd_oret
-nd_put9:ret	c
+	ret	c
 	ld	b,128
 nd_put0:ld	a,(hl)		; Send the block
 	call	nd_hcwr
@@ -323,22 +315,18 @@ nd_put0:ld	a,(hl)		; Send the block
 ;
 ; Carry flag set on error
 ; uses: af, b, hl
-nd_rece:ld	a,0x09
-	out	(nd_nctl),a	; Turn on recv light
-	call	nd_rec0
-	jr	nd_oret
-nd_rec0:call	nd_hcre
+nd_rece:call	nd_hcre
 	ret	c		; Existing error
 	ld	b,a
 	call	nd_hcre
 	ret	c		; Existing error
 	scf
 	ret	nz		; Message too big!
-nd_rec1:call	nd_hcre
+nd_rec0:call	nd_hcre
 	ret	c		; Error!
 	ld	(hl),a
 	inc	hl
-	djnz	nd_rec1
+	djnz	nd_rec0
 	or	a
 	ret
 	
@@ -348,17 +336,11 @@ nd_rec1:call	nd_hcre
 ;
 ; Carry flag set on error
 ; uses: af, b, hl
-nd_send:ld	a,0x21
-	out	(nd_nctl),a	; Turn on send light
-	call	nd_sen0
-nd_oret:ld	a,0x01
-	out	(nd_nctl),a	; Turn off light
-	ret
-nd_sen0:ld	a,(hl)
+nd_send:ld	a,(hl)
 	inc	hl
 	call	nd_hcwr
 	ret	c		; Error!
-	djnz	nd_sen0
+	djnz	nd_send
 	ret
 	
 ; Read from the HCCA port
@@ -370,6 +352,8 @@ nd_sen0:ld	a,(hl)
 ; Uses: af
 nd_hcrd:call	nd_hcre
 nd_hcre:push	de
+	ld	a,0x09
+	out	(nd_nctl),a	; Turn on recv light
 	ld	de,0xFFFF
 nd_hcr0:in	a,(nd_ayda)
 	bit	0,a
@@ -380,9 +364,13 @@ nd_hcr0:in	a,(nd_ayda)
 	ld	a,e
 	or	d
 	jr	nz,nd_hcr0
+nd_hcer:ld	a,0x01
+	out	(nd_nctl),a	; Turn off recv light
 	scf
 	ret			; Timed out waiting
-nd_hcr1:in	a,(nd_hcca)
+nd_hcr1:ld	a,0x01
+	out	(nd_nctl),a	; Turn off recv light
+	in	a,(nd_hcca)
 	pop	de
 	or	a
 	ret
@@ -398,6 +386,8 @@ nd_hcwd:call	nd_hcwr
 nd_hcwr:push	de
 	push	af
 	ld	de,0xFFFF
+	ld	a,0x21
+	out	(nd_nctl),a	; Turn on send light
 nd_hcw0:in	a,(nd_ayda)
 	bit	0,a
 	jr	z,nd_hcw0	; Await an interrupt
@@ -407,9 +397,10 @@ nd_hcw0:in	a,(nd_ayda)
 	ld	a,e
 	or	d
 	jr	nz,nd_hcw0
-	scf
-	ret			; Timed out waiting
-nd_hcw1:pop	af
+	jr	nd_hcer		; Timed out waiting
+nd_hcw1:ld	a,0x01
+	out	(nd_nctl),a	; Turn off send light
+	pop	af
 	out	(nd_hcca),a
 	pop	de
 	or	a
