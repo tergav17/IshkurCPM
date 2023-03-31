@@ -28,6 +28,7 @@
 nd_ayda	equ	0x40		; AY-3-8910 data port
 nd_atla	equ	0x41		; AY-3-8910 latch port
 nd_hcca	equ	0x80		; Modem data port
+nd_nctl	equ	0x00		; NABU control port
 
 nd_fild	equ	0x80		; Default file access desc
 
@@ -258,7 +259,11 @@ nd_getb:ex	de,hl
 	ld	b,12
 	call	nd_send
 	pop	hl
-	ret	c
+	ld	a,0x09
+	out	(nd_nctl),a	; Turn on recv light
+	call	nd_get9
+	jr	nd_oret
+nd_get9:ret	c
 	call	nd_hcrd
 	call	nd_hcre
 	ret	c
@@ -294,7 +299,11 @@ nd_putb:ex	de,hl
 	ld	b,12
 	call	nd_send		; Send message precursor
 	pop	hl
-	ret	c
+	ld	a,0x21
+	out	(nd_nctl),a	; Turn on send light
+	call	nd_put9
+	jr	nd_oret
+nd_put9:ret	c
 	ld	b,128
 nd_put0:ld	a,(hl)		; Send the block
 	call	nd_hcwr
@@ -314,18 +323,22 @@ nd_put0:ld	a,(hl)		; Send the block
 ;
 ; Carry flag set on error
 ; uses: af, b, hl
-nd_rece:call	nd_hcre
+nd_rece:ld	a,0x09
+	out	(nd_nctl),a	; Turn on recv light
+	call	nd_rec0
+	jr	nd_oret
+nd_rec0:call	nd_hcre
 	ret	c		; Existing error
 	ld	b,a
 	call	nd_hcre
 	ret	c		; Existing error
 	scf
 	ret	nz		; Message too big!
-nd_rec0:call	nd_hcre
+nd_rec1:call	nd_hcre
 	ret	c		; Error!
 	ld	(hl),a
 	inc	hl
-	djnz	nd_rec0
+	djnz	nd_rec1
 	or	a
 	ret
 	
@@ -335,11 +348,17 @@ nd_rec0:call	nd_hcre
 ;
 ; Carry flag set on error
 ; uses: af, b, hl
-nd_send:ld	a,(hl)
+nd_send:ld	a,0x21
+	out	(nd_nctl),a	; Turn on send light
+	call	nd_sen0
+nd_oret:ld	a,0x01
+	out	(nd_nctl),a	; Turn off light
+	ret
+nd_sen0:ld	a,(hl)
 	inc	hl
 	call	nd_hcwr
 	ret	c		; Error!
-	djnz	nd_send
+	djnz	nd_sen0
 	ret
 	
 ; Read from the HCCA port
