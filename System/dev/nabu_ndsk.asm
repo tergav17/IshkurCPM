@@ -351,7 +351,7 @@ nd_send:ld	a,(hl)
 ; Uses: af
 nd_hcrd:call	nd_hcre
 nd_hcre:push	de
-	ld	de,0x8000
+	ld	de,0xFFFF
 nd_hcr0:in	a,(nd_ayda)
 	bit	0,a
 	jr	z,nd_hcr0	; Await an interrupt
@@ -378,7 +378,7 @@ nd_hcr1:in	a,(nd_hcca)
 nd_hcwd:call	nd_hcwr
 nd_hcwr:push	de
 	push	af
-	ld	de,0x8000
+	ld	de,0xFFFF
 nd_hcw0:in	a,(nd_ayda)
 	bit	0,a
 	jr	z,nd_hcw0	; Await an interrupt
