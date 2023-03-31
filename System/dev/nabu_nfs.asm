@@ -327,7 +327,7 @@ ns_send:ld	a,(hl)
 ; Uses: af
 ns_hcrd:call	ns_hcre
 ns_hcre:push	de
-	ld	de,0xFFFF
+	ld	de,0x8000
 ns_hcr0:in	a,(ns_ayda)
 	bit	0,a
 	jr	z,ns_hcr0	; Await an interrupt
@@ -354,7 +354,7 @@ ns_hcr1:in	a,(ns_hcca)
 ns_hcwd:call	ns_hcwr
 ns_hcwr:push	de
 	push	af
-	ld	de,0xFFFF
+	ld	de,0x8000
 ns_hcw0:in	a,(ns_ayda)
 	bit	0,a
 	jr	z,ns_hcw0	; Await an interrupt
