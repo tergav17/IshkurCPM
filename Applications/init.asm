@@ -130,6 +130,7 @@ fgcol:	ld	c,0x09
 	ld	de,inpbuf
 	call	bdos
 	ld	a,(inpbuf+2)
+	call	ltou
 	sub	'A'
 	cp	16
 	jr	nc,fgcol
@@ -150,6 +151,7 @@ bgcol:	ld	c,0x09
 	ld	de,inpbuf
 	call	bdos
 	ld	a,(inpbuf+2)
+	call	ltou
 	sub	'A'
 	cp	16
 	jr	nc,bgcol
@@ -229,6 +231,19 @@ openini:call	setf
 setdma:	ld	de,top
 	ld	c,0x1A
 	jp	bdos
+	
+; Converts lowercase to uppercase
+; a = Character to convert
+;
+; Returns uppercase in A
+; uses: af
+ltou:	and	0x7F
+	cp	0x61		; 'a'
+	ret	c
+	cp	0x7B		; '{'
+	ret	nc
+	sub	0x20
+	ret
 	
 ; Strings
 

@@ -412,6 +412,19 @@ ns_for4:ex	de,hl
 	ld	(ns_dore),a
 	ret
 	
+; Converts lowercase to uppercase
+; a = Character to convert
+;
+; Returns uppercase in A
+; uses: af
+nS_ltou:and	0x7F
+	cp	0x61		; 'a'
+	ret	c
+	cp	0x7B		; '{'
+	ret	nc
+	sub	0x20
+	ret
+	
 ; Path to CP/M image
 ; Total length: 10 bytes
 ns_p0:	defb	'CPM22.SYS',0
