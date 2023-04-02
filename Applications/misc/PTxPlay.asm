@@ -298,6 +298,9 @@ NOWPLA3 LD E,(HL)
 	INC HL
 	DJNZ NOWPLA3
 	
+	LD A,(HASSC2)
+	OR A
+	RET NZ		; Don't print out if SC2 is displayed
 	LD C,2		; CR / LF
 	LD E,#0A
 	CALL BDOS
