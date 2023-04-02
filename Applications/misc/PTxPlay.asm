@@ -18,6 +18,8 @@ ACBBAC=0
 LoopChecker=1
 ;5) Insert official identificator
 Id=1
+;6) Optional SC2 loader
+DoSC2=1
 
 ;Features
 ;--------
@@ -52,6 +54,7 @@ Id=1
 ; CP/M Addresses
 BDOS	EQU #0005
 FCB	EQU #005C
+FCB2	EQU #006C
 	
 ; This is the start of the CP/M shell that will faciliate running
 ; PTxPlay under user control.
@@ -60,6 +63,11 @@ SHELL
 	LD C,#09
 	LD DE,HELLOMSG
 	CALL BDOS
+	
+	IF DoSC2
+	; Try to load a SC2 if there is one
+	CALL SCLOAD
+	ENDIF
 	
 	; Attempt to open the default file
 DOOPEN	LD HL,0	
@@ -142,8 +150,11 @@ DODELAY	CALL DELAY
 	; Mute AY
 	CALL START+8
 	
-	; Return
-	RET
+	; Return?
+	LD A,(HASSC2)
+	OR A
+	RET Z
+	RST 0		; Lets do a warm boot instead
 	
 	; Mute AY
 DONE	CALL START+8
@@ -248,42 +259,44 @@ DELAY0	DEC HL
 	RET
 	
 ; Print the currently playing file
-NOWPLAY
+NOWPLAY LD A,(HASSC2)
+	OR A
+	JP NZ,NOWPLA0	; Don't print out message if a SC2 is displayed
 	LD C,#09
 	LD DE,PLAYMSG
 	CALL BDOS
 
-	LD HL,FCB+1
+NOWPLA0	LD HL,FCB+1
 	LD B,8
 	LD C,2
 	
-NOWPLA0	LD E,(HL)
+NOWPLA1	LD E,(HL)
 	LD A,#20	; Space character
 	CP E
-	JR NC,NOWPLA1
+	JR NC,NOWPLA2
 	PUSH BC
 	PUSH HL
 	CALL BDOS
 	POP HL
 	POP BC
 	INC HL
-	DJNZ NOWPLA0
+	DJNZ NOWPLA1
 	
-NOWPLA1	LD E,#2E	; Dot
+NOWPLA2	LD E,#2E	; Dot
 	CALL BDOS
 	
 	LD HL,FCB+9
 	LD B,3
 	LD C,2
 	
-NOWPLA2 LD E,(HL)
+NOWPLA3 LD E,(HL)
 	PUSH BC
 	PUSH HL
 	CALL BDOS
 	POP HL
 	POP BC
 	INC HL
-	DJNZ NOWPLA2
+	DJNZ NOWPLA3
 	
 	LD C,2		; CR / LF
 	LD E,#0A
@@ -292,23 +305,131 @@ NOWPLA2 LD E,(HL)
 	LD E,#0D
 	JP BDOS
 	
+; Before we start playing music, lets see if there is a SC2 file to load
+SCLOAD	LD HL,FCB2+9
+	LD A,'S'
+	CP (HL)
+	RET NZ
+	INC HL
+	LD A,'C'
+	CP (HL)
+	RET NZ
+	INC HL
+	LD A,'2'
+	CP (HL)
+	RET NZ
+	INC HL
+	
+	; Attempt to open FCB #2
+	LD HL,0	
+	LD (FCB2+#0C),HL
+	LD (FCB2+#0E),HL
+	XOR A
+	LD (FCB2+#20),A
+	
+	LD C,#0F
+	LD DE,FCB2
+	CALL BDOS
+	INC A
+	RET Z		; Nope! :)
+	
+	; First, lets clear out buffer
+	LD BC,#4007
+	LD DE,MDLADDR+1
+	LD HL,MDLADDR
+	XOR A
+	LD (HL),A
+	LDIR
+	
+	; OK, start loading it into memory
+	LD HL,MDLADDR
+	
+	; Set DMA
+SCLOAD0	PUSH HL
+	LD C,#1A
+	EX DE,HL
+	CALL BDOS
+	
+	; Read block into memory
+	LD C,#14
+	LD DE,FCB2
+	CALL BDOS
+	POP HL
+	
+	; Do another?
+	LD DE,128
+	ADD HL,DE
+	OR A
+	JR Z,SCLOAD0
+	
+	; Load successful, we can now display
+	LD A,#FF
+	LD (HASSC2),A
+	
+	; Ok, lets set the registers
+	LD HL,TMSDATA
+	LD B,0
+SCLOAD1	LD C,(HL)
+	CALL TMSWRI
+	INC HL
+	INC B
+	LD A,7
+	CP B
+	JR NZ,SCLOAD1
+	
+	; And finally, load it all into VRAM
+	IN A,(#A1)
+	XOR A
+	OUT (#A1),A
+	LD A,#40
+	OUT (#A1),A
+	
+	LD BC,#4000
+	LD HL,MDLADDR+7
+SCLOAD2	LD A,(HL)
+	OUT (#A0),A
+	INC HL
+	DEC BC
+	LD A,B
+	OR C
+	JR NZ,SCLOAD2
+	RET		; All done!
+	
+TMSDATA DB #02,#E0,#06,#FF,#03,#FF,#FF
+	
+; Write to a TMS9918 register
+; B = Register #
+; C = Content
+;
+; Uses: A, BC
+TMSWRI	IN A,(0xA1)
+	LD A,C
+	OUT (0xA1),A
+	LD A,0x80
+	ADD A,B
+	OUT (0xA1),A
+	RET
 	
 
 ; Exit out of CP/M with an error
 CPMERROR
 	LD C,#09
 	LD DE,ERRORMSG
-	JP BDOS
+	CALL BDOS
+	LD A,(HASSC2)
+	OR A
+	RET Z
+	RST 0		; Lets do a warm boot instead
 
 LOOKGLOB
 	DB "????????PT?",0
 
 HELLOMSG
 	DB "PTxPlay r.",Release,", Written by S.V.Bulba",#0D,#0A
-	DB "NABU support by tergav17 (Gavin) Rev 2b",#0D,#0A,"$"
+	DB "NABU support by tergav17 (Gavin) Rev 3c",#0D,#0A,"$"
 	
 ERRORMSG
-	DB "Cannot load file!$"
+	DB "Cannot fine PTX file!$"
 	
 PLAYMSG
 	DB "Now playing: $"
@@ -317,6 +438,9 @@ NPLAY
 	DB 0
 	
 MAXFILE
+	DB 0
+	
+HASSC2
 	DB 0
 
 ;Test codes (commented)
