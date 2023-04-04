@@ -19,6 +19,7 @@
 ns_ayda	equ	0x40		; AY-3-8910 data port
 ns_atla	equ	0x41		; AY-3-8910 latch port
 ns_hcca	equ	0x80		; Modem data port
+ns_nctl	equ	0x00		; NABU control port
 
 ns_fild	equ	0x80		; Default file access desc
 
@@ -327,7 +328,9 @@ ns_send:ld	a,(hl)
 ; Uses: af
 ns_hcrd:call	ns_hcre
 ns_hcre:push	de
-	ld	de,0x8000
+	ld	a,0x09
+	out	(ns_nctl),a	; Turn on recv light
+	ld	de,0xFFFF
 ns_hcr0:in	a,(ns_ayda)
 	bit	0,a
 	jr	z,ns_hcr0	; Await an interrupt
@@ -337,9 +340,13 @@ ns_hcr0:in	a,(ns_ayda)
 	ld	a,e
 	or	d
 	jr	nz,ns_hcr0
+ns_hcer:ld	a,0x01
+	out	(ns_nctl),a	; Turn off recv light
 	scf
 	ret			; Timed out waiting
-ns_hcr1:in	a,(ns_hcca)
+ns_hcr1:ld	a,0x01
+	out	(ns_nctl),a	; Turn off recv light
+	in	a,(ns_hcca)
 	pop	de
 	or	a
 	ret
@@ -354,7 +361,9 @@ ns_hcr1:in	a,(ns_hcca)
 ns_hcwd:call	ns_hcwr
 ns_hcwr:push	de
 	push	af
-	ld	de,0x80
+	ld	de,0xFFFF
+	ld	a,0x21
+	out	(ns_nctl),a	; Turn on send light
 ns_hcw0:in	a,(ns_ayda)
 	bit	0,a
 	jr	z,ns_hcw0	; Await an interrupt
@@ -364,9 +373,10 @@ ns_hcw0:in	a,(ns_ayda)
 	ld	a,e
 	or	d
 	jr	nz,ns_hcw0
-	scf
-	ret			; Timed out waiting
-ns_hcw1:pop	af
+	jr	ns_hcer		; Timed out waiting
+ns_hcw1:ld	a,0x01
+	out	(ns_nctl),a	; Turn off send light
+	pop	af
 	out	(ns_hcca),a
 	pop	de
 	or	a
