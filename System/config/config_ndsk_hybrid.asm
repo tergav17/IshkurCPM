@@ -16,9 +16,9 @@
 ;
 ;   Set memory base here. 
 ;
-mem	equ	55		; CP/M image starts at mem*1024
+mem	equ	54		; CP/M image starts at mem*1024
 
-inbulen	equ	0xDC07	; Address in inbuff length byte
+inbulen	equ	0xD807	; Address in inbuff length byte
 
 ;
 ;**************************************************************
@@ -37,9 +37,10 @@ inbulen	equ	0xDC07	; Address in inbuff length byte
 ;**************************************************************
 ;
 
-dircbuf	equ	0xFA00	; 128 bytes
-tm_bss	equ	0xFA80	; 48 bytes
-nf_bss	equ	0xFAC0	; 90 bytes
+dircbuf	equ	0xF900	; 128 bytes
+tm_bss	equ	0xF980	; 48 bytes
+nd_bss	equ	0xF9B0	; 384 bytes
+nf_bss	equ	0xFB30	; 90 bytes
 nf_cach equ	0xFC00	; 1024 bytes
 
 ;
@@ -63,7 +64,7 @@ cfinit:	ld	a,0x01		; Bank out ROM
 	
 	ld	a,0x0E		; Enable clock
 	;out	(0x41),a
-	ld	a,0x10
+	ld	a,0x00
 	;out	(0x40),a
 	
 	
@@ -96,7 +97,8 @@ cfirq:	ei
 ;*     new BDOS calls, or intercept existing ones.
 ;*
 ;*     Registers 'bc' and 'e' must be preserved if a call is
-;*     going to be forwarded to the system.
+;*     going to be forwarded to the system. Register 'c' will
+;*     contain BDOS call number.
 ;*       
 ;*
 ;**************************************************************
@@ -124,21 +126,21 @@ syshook:ret
 	
 ; One of the block devices needs to have the responsibiliy
 ; of loading the CCP into memory. Define the jump vector here
-resccp:	jp	nf_ccp
+resccp:	jp	nd_ccp
 
 ; Additionally, if Ishkur is using a graphical device, that
 ; device may temporarily need to access the Graphical Resource
 ; Block (GRB) to load in fonts and such. This is up to 2k in
 ; size, and goes in the location that the CCP resides
-resgrb:	jp	nf_grb
+resgrb:	jp	nd_grb
 
 ; A device of "0" will be read as a non-existant device
 ; The 'init' signal can be sent to the same devices many 
 ; times if it has multipe entires in this table.
-bdevsw:	defw	nfddev,	0	; 'A'
-	defw	nfddev,	1	; 'B'
-	defw	0,	0	; 'C'
-	defw	0,	0	; 'D'
+bdevsw:	defw	ndkdev,	0	; 'A'
+	defw	ndkdev,	1	; 'B'
+	defw	nfddev,	0	; 'C'
+	defw	nfddev,	1	; 'D'
 	defw	0,	0	; 'E'
 	defw	0,	0	; 'F'
 	defw	0,	0	; 'G'
@@ -186,8 +188,10 @@ cdevsw:	defw	siodev,	0	; TTY device
 ;*
 ;**************************************************************
 ;
-#include "dev/nabu_fdc.asm"
+
 #include "dev/nabu_vdp.asm"
+#include "dev/nabu_ndsk.asm"
+#include "dev/nabu_fdc.asm"
 #include "dev/nabu_prt.asm"
 #include "dev/nabu_sio.asm"
 

@@ -146,7 +146,15 @@ nf_home:call	nf_wdef
 ; hl = Call argument
 ;
 ; uses; all
-nf_sel:	ld	a,l
+nf_sel:	ld	a,(nf_io)
+	or	a
+	jp	m,nf_seld
+	
+	; no FDC card
+	ld	hl,0
+	ret
+
+nf_seld:ld	a,l		; Select a disk
 	ld	b,2
 	or	a
 	jr	z,nf_sel0
@@ -155,12 +163,9 @@ nf_sel:	ld	a,l
 	jr	z,nf_sel0
 	ld	hl,0
 	ret
-nf_sel0:ld	a,(nf_curd)	
-	cp	b		; Compare to current drive
-	ret	z
 
 	; Move control of drive buffers
-	call	nf_wdef		; Write back if needed
+nf_sel0:call	nf_wdef		; Write back if needed
 	ld	a,0xFF
 	ld	(nf_sync),a	; Set sync flag
 	ld	a,b
@@ -168,7 +173,7 @@ nf_sel0:ld	a,(nf_curd)
 	ld	e,a
 	
 	; Check to make sure there is a disk
-	ld	d,255
+nf_selc	ld	d,255
 	call	nf_dvsc
 	ld	a,(nf_io)
 	ld	c,a
