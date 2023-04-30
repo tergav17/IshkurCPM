@@ -48,6 +48,9 @@ cd ..\Applications
 ..\Build\zasm init.asm -u -w -b init.com
 move init.com ..\Directory >NUL
 move init.lst ..\Output\Listings >NUL
+..\Build\zasm futil.asm -u -w -b futil.com
+move futil.com ..\Directory >NUL
+move futil.lst ..\Output\Listings >NUL
 
 REM Assemble the disk image
 cd ..\Build\cpmtools
