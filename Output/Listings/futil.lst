@@ -1,6 +1,6 @@
               	; --------------------------------------
               	; zasm: assemble "futil.asm"
-              	; date: 2023-04-29 22:20:10
+              	; date: 2023-04-30 02:13:46
               	; --------------------------------------
 
 
@@ -21,8 +21,10 @@
 0005:         	bdos	equ	0x0005
 005C:         	fcb	equ	0x005C
               	
+0001:         	b_coin	equ	0x01
 0009:         	b_print	equ	0x09
-              	
+000F:         	b_open	equ	0x0F
+0016:         	b_make	equ	0x16
               	
               	; Program start
 0100:         		org	0x0100
@@ -30,239 +32,515 @@
               		
               		; Print banner
 0100: 0E09    	start:	ld	c,b_print
-0102: 117E01  		ld	de,splash
+0102: 11FA02  		ld	de,splash
 0105: CD0500  		call	bdos
               	
+              		; Look for the FDC
+0108: 0ECF    		ld	c,0xCF
+010A: ED78    	search:	in	a,(c)
+010C: FE10    		cp	0x10
+010E: 2814    		jr	z,foundit
+0110: 0C      		inc	c
+0111: 2806    		jr	z,nofdc
+0113: 3E0F    		ld	a,0x0F
+0115: 81      		add	a,c
+0116: 4F      		ld	c,a
+0117: 18F1    		jr	search
+              		
+              		; No FDC found!
+0119: 0E09    	nofdc:	ld	c,b_print
+011B: 114A04  		ld	de,nfdcmsg
+011E: CD0500  		call	bdos
+0121: C33002  		jp	waitex
+              		
+              		; Place address in nf_io, and get the user profile
+0124: 79      	foundit:ld	a,c
+0125: D60F    		sub	15
+0127: 4F      		ld	c,a
+0128: 32F702  		ld	(nf_io),a
               	
               		; Get user profile
-0108: 0E09    	getpro: ld	c,b_print
-010A: 11B101  		ld	de,cfgmsg
-010D: CD0500  		call	bdos
-0110: CD6201  		call	getopt
+012B: 0E09    	getpro: ld	c,b_print
+012D: 112D03  		ld	de,cfgmsg
+0130: CD0500  		call	bdos
+0133: CD5A02  		call	getopt
               		
               		; Exit option
-0113: FE39    		cp	'9'
-0115: 280D    		jr	z,exit
+0136: FE39    		cp	'9'
+0138: 280D    		jr	z,exit
               		
               		; Profile 1 (5.25 SSDD)
-0117: 210004  		ld	hl,1024
-011A: 1605    		ld	d,5
-011C: 1E28    		ld	e,40
-011E: FE31    		cp	'1'
-0120: 2807    		jr	z,setpro
+013A: 210004  		ld	hl,1024
+013D: 1605    		ld	d,5
+013F: 1E28    		ld	e,40
+0141: FE31    		cp	'1'
+0143: 2807    		jr	z,setpro
               	
               	
               		; Invalid, reprompt
-0122: 18E4    		jr	getpro
+0145: 18E4    		jr	getpro
               	
               		; Soft reboot
-0124: 0E00    	exit:	ld	c,0x00
-0126: C30500  		jp	bdos
+0147: 0E00    	exit:	ld	c,0x00
+0149: C30500  		jp	bdos
               		
               		
               		; Set profile variables
-0129: 327801  	setpro:	ld	(profile),a
-012C: 227901  		ld	(seclen),hl
-012F: 7A      		ld	a,d
-0130: 327B01  		ld	(seccnt),a
-0133: 7B      		ld	a,e
-0134: 327C01  		ld	(trkcnt),a
+014C: 32F102  	setpro:	ld	(profile),a
+014F: 22F202  		ld	(seclen),hl
+0152: 7A      		ld	a,d
+0153: 32F402  		ld	(seccnt),a
+0156: 7B      		ld	a,e
+0157: 32F502  		ld	(trkcnt),a
               		
               		; Now lets get the logical drive #
-0137: 0E09    	getcurd:ld	c,b_print
-0139: 111602  		ld	de,drvmsg
-013C: CD0500  		call	bdos
-013F: CD6201  		call	getopt
+015A: 0E09    	getcurd:ld	c,b_print
+015C: 119203  		ld	de,drvmsg
+015F: CD0500  		call	bdos
+0162: CD5A02  		call	getopt
               		
-0142: 0602    		ld	b,2
-0144: FE30    		cp	'0'
-0146: 2808    		jr	z,setcurd
-0148: 0604    		ld	b,4
-014A: FE31    		cp	'1'
-014C: 2802    		jr	z,setcurd
-014E: 18E7    		jr	getcurd
+0165: 0602    		ld	b,2
+0167: FE30    		cp	'0'
+0169: 2808    		jr	z,setcurd
+016B: 0604    		ld	b,4
+016D: FE31    		cp	'1'
+016F: 2802    		jr	z,setcurd
+0171: 18E7    		jr	getcurd
               		
-0150: 78      	setcurd:ld	a,b
-0151: 327D01  		ld	(curdrv),a
+0173: 78      	setcurd:ld	a,b
+0174: 32F602  		ld	(nf_curd),a
               		
               		; Finally, we get the actual operation
-0154: 0E09    		ld	c,b_print
-0156: 113002  		ld	de,oprmsg
-0159: CD0500  		call	bdos
-015C: CD6201  		call	getopt
+0177: 0E09    	getcmd:	ld	c,b_print
+0179: 11AC03  		ld	de,cmdmsg
+017C: CD0500  		call	bdos
+017F: CD5A02  		call	getopt
               		
-015F: C32401  		jp	exit
+0182: FE52    		cp	'R'
+0184: CA8901  		jp	z,read
+              		
+0187: 18EE    		jr	getcmd
+              		
+              	; Read operation
+              	; First, the defined file be opened
+              	; Then the user will be prompted for what image type they want
+0189: 3A5D00  	read:	ld	a,(fcb+1)
+018C: FE30    		cp	'0'
+018E: DA2802  		jp	c,ferror
+              	
+              		; There is a file, try to open it
+0191: 0E0F    		ld	c,b_open
+0193: 115C00  		ld	de,fcb
+0196: CD0500  		call	bdos
+              		
+              		; Did it work?
+0199: B7      		or	a
+019A: F2A901  		jp	p,readty
+019D: 0E16    		ld	c,b_make
+019F: 115C00  		ld	de,fcb
+01A2: CD0500  		call	bdos
+01A5: B7      		or	a
+01A6: FA2802  		jp	m,ferror
+              		
+              		; Get image type for read
+01A9: 0E09    	readty:	ld	c,b_print
+01AB: 11D403  		ld	de,formsg
+01AE: CD0500  		call	bdos
+01B1: CD5A02  		call	getopt
+              		
+01B4: FE52    		cp	'R'
+01B6: 2802    		jr	z,readr
+              		
+01B8: 18EF    		jr	readty
+              		
+              		; Read raw
+              		; Make sure user is ready
+01BA: 0E09    	readr:	ld	c,b_print
+01BC: 11F503  		ld	de,readymsg
+01BF: CD0500  		call	bdos
+01C2: CD5A02  		call	getopt
+01C5: FE59    		cp	'Y'
+01C7: C22B01  		jp	nz,getpro
+              		
+              		; Alright, we are commited
+              		; Start by reading the disk
+01CA: CDF601  		call	dskrdy
+              		
+              		; Read in a track
+01CD: 3AF702  	readr0:	ld	a,(nf_io)
+01D0: 4F      		ld	c,a	; c = nf_io
+01D1: 5F      		ld	e,a	; e = nf_io
+01D2: C603    		add	a,3
+01D4: 57      		ld	d,a	; d = nf_io+3
+01D5: 3EE4    		ld	a,0xE4
+01D7: ED79    		out	(c),a 
+01D9: 218004  		ld	hl,top
+              		
+              		; Read loop
+01DC: ED78    	readr1:	in	a,(c)
+01DE: CB4F    		bit	1,a
+01E0: 200A    		jr	nz,readr2
+01E2: CB47    		bit	0,a
+01E4: 280E    		jr	z,readr3
+01E6: B7      		or	a
+01E7: C20F02  		jp	nz,nready
+01EA: 18F0    		jr	readr1
+              		
+              		; Read a bit from the disk
+01EC: 4A      	readr2:	ld	c,d
+01ED: ED78    		in	a,(c)
+01EF: 77      		ld	(hl),a
+01F0: 23      		inc	hl
+01F1: 4B      		ld	c,e
+01F2: 18E8    		jr	readr1
+              		
+              		; Operation done
+01F4: 18FE    	readr3:	jr	readr3
+              	
+              	
+              	; Gets the drive ready, this means:
+              	; 1. Force an interrupt
+              	; 2. Make sure that there is actually a disk in the drive
+              	; 3. Move the drive to track 0
+01F6: 16FF    	dskrdy:	ld	d,255
+01F8: CD3802  		call	nf_dvsc
+01FB: 3AF702  		ld	a,(nf_io)
+01FE: 4F      		ld	c,a
+01FF: 3ED0    		ld	a,0xD0
+0201: ED79    		out	(c),a		; Force FDC interrupt
+0203: CD5502  	dskrdy0:call	nf_stal
+0206: ED78    		in	a,(c)
+0208: E602    		and	0x02
+020A: 2010    		jr	nz,dskrdy1
+020C: 15      		dec	d
+020D: 20F4    		jr	nz,dskrdy0
+              		
+              		; No disk!
+020F: CD3D02  	nready:	call	nf_udsl
+              		
+0212: 0E09    		ld	c,b_print
+0214: 116304  		ld	de,nrdymsg
+0217: CD0500  		call	bdos
+021A: 1814    		jr	waitex
+              	
+              		; Found disk
+              		; Restore to track 0
+021C: 3AF702  	dskrdy1:ld	a,(nf_io)
+021F: 4F      		ld	c,a
+0220: 3E09    		ld	a,0x09
+0222: ED79    		out	(c),a 
+0224: CD4F02  		call	nf_busy
+              		
+0227: C9      		ret
+              	
+              	; "Handle" a file error
+              	; Complain to user and exit out
+0228: 0E09    	ferror:	ld	c,b_print
+022A: 110F04  		ld	de,ferrmsg
+022D: CD0500  		call	bdos
+              		
+0230: 0E01    	waitex:	ld	c,b_coin
+0232: CD0500  		call	bdos
+              		
+0235: C34701  		jp	exit
+              		
+              	; Selects or deselects a drive
+              	; a = Drive density / selection
+              	;
+              	; uses: af
+0238: 3AF602  	nf_dvsc:ld	a,(nf_curd)	; Select current drive
+023B: 1801    		jr	nf_dvsl
+023D: AF      	nf_udsl:xor	a		; Unselects a drive
+023E: C5      	nf_dvsl:push	bc
+023F: 47      		ld	b,a
+0240: 3AF702  		ld	a,(nf_io)
+0243: C60F    		add	a,0x0F
+0245: 4F      		ld	c,a
+0246: ED41    		out	(c),b
+0248: 06FF    		ld	b,0xFF
+024A: CD5502  		call	nf_stal
+024D: C1      		pop	bc
+024E: C9      		ret
+              		
+              	; Waits until FDC is not busy
+              	; c = FDC command address
+              	;
+              	; uses: af
+024F: ED78    	nf_busy:in	a,(c)
+0251: 1F      		rra
+0252: 38FB    		jr	c,nf_busy
+0254: C9      		ret
+              		
+              	; Waits a little bit
+              	;
+              	; uses: b
+0255: C5      	nf_stal:push	bc
+0256: C1      		pop	bc
+0257: 10FC    		djnz	nf_stal
+0259: C9      		ret
               		
               	; Gets a single character option from the user
               	; Letters will be converted to upper case
               	;
               	; Returns character in A
               	; uses: all
-0162: 0E0A    	getopt:	ld	c,0x0A
-0164: 119302  		ld	de,inpbuf
-0167: CD0500  		call	bdos
-016A: 3A9502  		ld	a,(inpbuf+2)
+025A: 0E0A    	getopt:	ld	c,0x0A
+025C: 117C04  		ld	de,inpbuf
+025F: CD0500  		call	bdos
+0262: 3A7E04  		ld	a,(inpbuf+2)
               		
               	; Converts lowercase to uppercase
               	; a = Character to convert
               	;
               	; Returns uppercase in A
               	; uses: af
-016D: E67F    	ltou:	and	0x7F
-016F: FE61    		cp	0x61		; 'a'
-0171: D8      		ret	c
-0172: FE7B    		cp	0x7B		; '{'
-0174: D0      		ret	nc
-0175: D620    		sub	0x20
-0177: C9      		ret
+0265: E67F    	ltou:	and	0x7F
+0267: FE61    		cp	0x61		; 'a'
+0269: D8      		ret	c
+026A: FE7B    		cp	0x7B		; '{'
+026C: D0      		ret	nc
+026D: D620    		sub	0x20
+026F: C9      		ret
               		
               	; Variables
               	
-0178:         	profile:
-0178: 00      		defb	0x00
+0270:         	iobuf:
+0270: 00000000		defw	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+0274: 00...   	
+0290: 00000000		defw	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+0294: 00...   	
+02B0: 00000000		defw	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+02B4: 00...   	
+02D0: 00000000		defw	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+02D4: 00...   	
               		
-0179:         	seclen:
-0179: 0000    		defw	0x0000
+02F0:         	iocnt:
+02F0: 00      		defb	0x00
+              	
+02F1:         	profile:
+02F1: 00      		defb	0x00
               		
-017B:         	seccnt:
-017B: 00      		defb	0x00
+02F2:         	seclen:
+02F2: 0000    		defw	0x0000
               		
-017C:         	trkcnt:
-017C: 00      		defb	0x00
+02F4:         	seccnt:
+02F4: 00      		defb	0x00
               		
-017D:         	curdrv:
-017D: 00      		defb	0x00
+02F5:         	trkcnt:
+02F5: 00      		defb	0x00
+              		
+02F6:         	nf_curd:
+02F6: 00      		defb	0x00
+              		
+02F7:         	nf_io:
+02F7: 00      		defb	0x00
+              		
+02F8:         	curtrk:
+02F8: 00      		defb	0x00
+              		
+02F9:         	cursec:
+02F9: 00      		defb	0x00
               		
               	; Strings
               		
-017E:         	splash:
-017E: 4E414255		defb	'NABU FDC Image Utility',0x0A,0x0D
-0182: 20464443	
-0186: 20496D61	
-018A: 67652055	
-018E: 74696C69	
-0192: 74790A0D	
-0196: 52657620		defb	'Rev 1a, tergav17 (Gavin)',0x0A,0x0D,'$'
-019A: 31612C20	
-019E: 74657267	
-01A2: 61763137	
-01A6: 20284761	
-01AA: 76696E29	
-01AE: 0A0D24  	
+02FA:         	splash:
+02FA: 4E414255		defb	'NABU FDC Image Utility',0x0A,0x0D
+02FE: 20464443	
+0302: 20496D61	
+0306: 67652055	
+030A: 74696C69	
+030E: 74790A0D	
+0312: 52657620		defb	'Rev 1a, tergav17 (Gavin)',0x0A,0x0D,'$'
+0316: 31612C20	
+031A: 74657267	
+031E: 61763137	
+0322: 20284761	
+0326: 76696E29	
+032A: 0A0D24  	
               	
-01B1:         	cfgmsg:
-01B1: 0A0D5365		defb	0x0A,0x0D,'Select a disk profile:',0x0A,0x0A,0x0D
-01B5: 6C656374	
-01B9: 20612064	
-01BD: 69736B20	
-01C1: 70726F66	
-01C5: 696C653A	
-01C9: 0A0A0D  	
+032D:         	cfgmsg:
+032D: 0A0D5365		defb	0x0A,0x0D,'Select a disk profile:',0x0A,0x0A,0x0D
+0331: 6C656374	
+0335: 20612064	
+0339: 69736B20	
+033D: 70726F66	
+0341: 696C653A	
+0345: 0A0A0D  	
               		
-01CC: 20202020		defb	'    1: NABU 5.25 SSDD (Len=1024, Sec=5, Track=40)',0x0A,0x0D
-01D0: 313A204E	
-01D4: 41425520	
-01D8: 352E3235	
-01DC: 20535344	
-01E0: 4420284C	
-01E4: 656E3D31	
-01E8: 3032342C	
-01EC: 20536563	
-01F0: 3D352C20	
-01F4: 54726163	
-01F8: 6B3D3430	
-01FC: 290A0D  	
-01FF: 20202020		defb	'    9: Exit',0x0A,0x0A,0x0D
-0203: 393A2045	
-0207: 7869740A	
-020B: 0A0D    	
-020D: 4F707469		defb	'Option: $'
-0211: 6F6E3A20	
-0215: 24      	
+0348: 20202020		defb	'    1: NABU 5.25 SSDD (Len=1024, Sec=5, Track=40)',0x0A,0x0D
+034C: 313A204E	
+0350: 41425520	
+0354: 352E3235	
+0358: 20535344	
+035C: 4420284C	
+0360: 656E3D31	
+0364: 3032342C	
+0368: 20536563	
+036C: 3D352C20	
+0370: 54726163	
+0374: 6B3D3430	
+0378: 290A0D  	
+037B: 20202020		defb	'    9: Exit',0x0A,0x0A,0x0D
+037F: 393A2045	
+0383: 7869740A	
+0387: 0A0D    	
+0389: 4F707469		defb	'Option: $'
+038D: 6F6E3A20	
+0391: 24      	
               		
               		
-0216:         	drvmsg:	
-0216: 0A0D4C6F		defb	0x0A,0x0D,'Logical Drive # (0,1): $'
-021A: 67696361	
-021E: 6C204472	
-0222: 69766520	
-0226: 23202830	
-022A: 2C31293A	
-022E: 2024    	
+0392:         	drvmsg:	
+0392: 0A0D4C6F		defb	0x0A,0x0D,'Logical Drive # (0,1): $'
+0396: 67696361	
+039A: 6C204472	
+039E: 69766520	
+03A2: 23202830	
+03A6: 2C31293A	
+03AA: 2024    	
               		
-0230:         	oprmsg:	
-0230: 0A0D436F		defb	0x0A,0x0D,'Command ([R]ead, [W]rite, [F]ormat): $'
-0234: 6D6D616E	
-0238: 6420285B	
-023C: 525D6561	
-0240: 642C205B	
-0244: 575D7269	
-0248: 74652C20	
-024C: 5B465D6F	
-0250: 726D6174	
-0254: 293A2024	
+03AC:         	cmdmsg:	
+03AC: 0A0D436F		defb	0x0A,0x0D,'Command ([R]ead, [W]rite, [F]ormat): $'
+03B0: 6D6D616E	
+03B4: 6420285B	
+03B8: 525D6561	
+03BC: 642C205B	
+03C0: 575D7269	
+03C4: 74652C20	
+03C8: 5B465D6F	
+03CC: 726D6174	
+03D0: 293A2024	
               		
-0258:         	formsg:	
-0258: 0A0D496D		defb	0x0A,0x0D,'Image format (.[R]AW,.[I]MG): $'
-025C: 61676520	
-0260: 666F726D	
-0264: 61742028	
-0268: 2E5B525D	
-026C: 41572C2E	
-0270: 5B495D4D	
-0274: 47293A20	
-0278: 24      	
+03D4:         	formsg:	
+03D4: 0A0D496D		defb	0x0A,0x0D,'Image format (.[R]AW,.[I]MG): $'
+03D8: 61676520	
+03DC: 666F726D	
+03E0: 61742028	
+03E4: 2E5B525D	
+03E8: 41572C2E	
+03EC: 5B495D4D	
+03F0: 47293A20	
+03F4: 24      	
               		
-0279:         	readymsg:	
-0279: 0A0D5265		defb	0x0A,0x0D,'Ready to begin? (Y,N): $'
-027D: 61647920	
-0281: 746F2062	
-0285: 6567696E	
-0289: 3F202859	
-028D: 2C4E293A	
-0291: 2024    	
+03F5:         	readymsg:	
+03F5: 0A0D5265		defb	0x0A,0x0D,'Ready to begin? (Y,N): $'
+03F9: 61647920	
+03FD: 746F2062	
+0401: 6567696E	
+0405: 3F202859	
+0409: 2C4E293A	
+040D: 2024    	
+              	
+040F:         	ferrmsg:	
+040F: 0A0D4572		defb	0x0A,0x0D,'Error! Cannot open image file'
+0413: 726F7221	
+0417: 2043616E	
+041B: 6E6F7420	
+041F: 6F70656E	
+0423: 20696D61	
+0427: 67652066	
+042B: 696C65  	
+042E: 0A0D5573		defb	0x0A,0x0D,'Usage: FUTIL [Image file]$'
+0432: 6167653A	
+0436: 20465554	
+043A: 494C205B	
+043E: 496D6167	
+0442: 65206669	
+0446: 6C655D24	
+              		
+044A:         	nfdcmsg:	
+044A: 0A0D4572		defb	0x0A,0x0D,'Error! No FDC detected$'
+044E: 726F7221	
+0452: 204E6F20	
+0456: 46444320	
+045A: 64657465	
+045E: 63746564	
+0462: 24      	
+              		
+0463:         	nrdymsg:	
+0463: 0A0D4572		defb	0x0A,0x0D,'Error! Drive Not Ready$'
+0467: 726F7221	
+046B: 20447269	
+046F: 7665204E	
+0473: 6F742052	
+0477: 65616479	
+047B: 24      	
+              	
+              	
               	
               		
               	; Input buffer
-0293: 02000000	inpbuf:	defb	0x02, 0x00, 0x00, 0x00
+047C: 02000000	inpbuf:	defb	0x02, 0x00, 0x00, 0x00
               		
               	; Top of program, use it to store stuff
-0297:         	top:
+0480:         	top:
 
 
 ; +++ segments +++
 
-#CODE          = $0100 =   256,  size = $0197 =   407
+#CODE          = $0100 =   256,  size = $0380 =   896
 
 ; +++ global symbols +++
 
-_end     = $0297 =   663          futil.asm:22 (unused)
-_size    = $0197 =   407          futil.asm:22 (unused)
-b_print  = $0009 =     9          futil.asm:18
+_end     = $0480 =  1152          futil.asm:24 (unused)
+_size    = $0380 =   896          futil.asm:24 (unused)
+b_coin   = $0001 =     1          futil.asm:18
+b_make   = $0016 =    22          futil.asm:21
+b_open   = $000F =    15          futil.asm:20
+b_print  = $0009 =     9          futil.asm:19
 bdos     = $0005 =     5          futil.asm:15
-cfgmsg   = $01B1 =   433          futil.asm:136
-curdrv   = $017D =   381          futil.asm:127
-drvmsg   = $0216 =   534          futil.asm:144
-exit     = $0124 =   292          futil.asm:53
-fcb      = $005C =    92          futil.asm:16 (unused)
-formsg   = $0258 =   600          futil.asm:150 (unused)
-getcurd  = $0137 =   311          futil.asm:66
-getopt   = $0162 =   354          futil.asm:95
-getpro   = $0108 =   264          futil.asm:32
-inpbuf   = $0293 =   659          futil.asm:158
-ltou     = $016D =   365          futil.asm:105 (unused)
-oprmsg   = $0230 =   560          futil.asm:147
-profile  = $0178 =   376          futil.asm:115
-readymsg = $0279 =   633          futil.asm:153 (unused)
-seccnt   = $017B =   379          futil.asm:121
-seclen   = $0179 =   377          futil.asm:118
-setcurd  = $0150 =   336          futil.asm:79
-setpro   = $0129 =   297          futil.asm:58
-splash   = $017E =   382          futil.asm:132
-start    = $0100 =   256          futil.asm:26 (unused)
-top      = $0297 =   663          futil.asm:161 (unused)
-trkcnt   = $017C =   380          futil.asm:124
+cfgmsg   = $032D =   813          futil.asm:340
+cmdmsg   = $03AC =   940          futil.asm:351
+cursec   = $02F9 =   761          futil.asm:331 (unused)
+curtrk   = $02F8 =   760          futil.asm:328 (unused)
+drvmsg   = $0392 =   914          futil.asm:348
+dskrdy   = $01F6 =   502          futil.asm:199
+dskrdy0  = $0203 =   515          futil.asm:205
+dskrdy1  = $021C =   540          futil.asm:222
+exit     = $0147 =   327          futil.asm:78
+fcb      = $005C =    92          futil.asm:16
+ferrmsg  = $040F =  1039          futil.asm:360
+ferror   = $0228 =   552          futil.asm:232
+formsg   = $03D4 =   980          futil.asm:354
+foundit  = $0124 =   292          futil.asm:51
+getcmd   = $0177 =   375          futil.asm:108
+getcurd  = $015A =   346          futil.asm:91
+getopt   = $025A =   602          futil.asm:281
+getpro   = $012B =   299          futil.asm:57
+inpbuf   = $047C =  1148          futil.asm:374
+iobuf    = $0270 =   624          futil.asm:301 (unused)
+iocnt    = $02F0 =   752          futil.asm:307 (unused)
+ltou     = $0265 =   613          futil.asm:291 (unused)
+nf_busy  = $024F =   591          futil.asm:263
+nf_curd  = $02F6 =   758          futil.asm:322
+nf_dvsc  = $0238 =   568          futil.asm:245
+nf_dvsl  = $023E =   574          futil.asm:248
+nf_io    = $02F7 =   759          futil.asm:325
+nf_stal  = $0255 =   597          futil.asm:271
+nf_udsl  = $023D =   573          futil.asm:247
+nfdcmsg  = $044A =  1098          futil.asm:364
+nofdc    = $0119 =   281          futil.asm:45
+nrdymsg  = $0463 =  1123          futil.asm:367
+nready   = $020F =   527          futil.asm:213
+profile  = $02F1 =   753          futil.asm:310
+read     = $0189 =   393          futil.asm:121
+readr    = $01BA =   442          futil.asm:152
+readr0   = $01CD =   461          futil.asm:164 (unused)
+readr1   = $01DC =   476          futil.asm:174
+readr2   = $01EC =   492          futil.asm:184
+readr3   = $01F4 =   500          futil.asm:192
+readty   = $01A9 =   425          futil.asm:140
+readymsg = $03F5 =  1013          futil.asm:357
+search   = $010A =   266          futil.asm:34
+seccnt   = $02F4 =   756          futil.asm:316
+seclen   = $02F2 =   754          futil.asm:313
+setcurd  = $0173 =   371          futil.asm:104
+setpro   = $014C =   332          futil.asm:83
+splash   = $02FA =   762          futil.asm:336
+start    = $0100 =   256          futil.asm:28 (unused)
+top      = $0480 =  1152          futil.asm:377
+trkcnt   = $02F5 =   757          futil.asm:319
+waitex   = $0230 =   560          futil.asm:236
 
 
-total time: 0.0022 sec.
+total time: 0.0030 sec.
 no errors
