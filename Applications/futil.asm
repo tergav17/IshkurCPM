@@ -5,8 +5,8 @@
 ;*
 ;*     This utility allows for floppy disk data to be
 ;*     directly interacted with by the user. Disks can
-;*     be imaged, formatted, or re-imaged. Both RAW track
-;*     dumps and IMG sector dumps are supported
+;*     be imaged, formatted, or re-imaged. At the moment,
+;*     only .IMG style images are supported.
 ;*
 ;**************************************************************
 ;

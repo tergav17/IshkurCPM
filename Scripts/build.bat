@@ -55,7 +55,9 @@ move futil.lst ..\Output\Listings >NUL
 REM Assemble the disk image
 cd ..\Build\cpmtools
 .\mkfs.cpm -f osborne1 -b ..\..\System\bin\boot_fdc.bin -b ..\..\System\res\licca_font.bin -b ..\..\System\bin\cpm22_fdc.bin ishkur_fdc_ssdd.img
+.\mkfs.cpm -f osborne1 ishkur_fdc_ssdd_empty.img
 move ishkur_fdc_ssdd.img ..\..\Output >NUL
+move ishkur_fdc_ssdd_empty.img ..\..\Output >NUL
 .\mkfs.cpm -f nshd8 NDSK_DEFAULT.IMG
 move NDSK_DEFAULT.IMG ..\..\Output >NUL
 
@@ -72,4 +74,5 @@ REM Resize the file
 REM If only I had to `dd` command...
 cd ..\..\Output
 python ..\Build\e5pad.py ishkur_fdc_ssdd.img 204800
+python ..\Build\e5pad.py ishkur_fdc_ssdd_empty.img 204800
 python ..\Build\e5pad.py NDSK_DEFAULT.IMG 8388608
