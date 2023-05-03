@@ -16,6 +16,7 @@ bdos	equ	0x0005
 fcb	equ	0x005C
 
 b_coin	equ	0x01
+b_cout	equ	0x02
 b_print	equ	0x09
 b_open	equ	0x0F
 b_make	equ	0x16
@@ -64,9 +65,10 @@ getpro: ld	c,b_print
 	jr	z,exit
 	
 	; Profile 1 (5.25 SSDD)
-	ld	hl,1024
-	ld	d,5
-	ld	e,40
+	ld	hl,1024	; length of sector
+	ld	c,40	; blocks per track
+	ld	d,5	; sectors per track
+	ld	e,40	; track 
 	cp	'1'
 	jr	z,setpro
 
@@ -82,6 +84,8 @@ exit:	ld	c,0x00
 	; Set profile variables
 setpro:	ld	(profile),a
 	ld	(seclen),hl
+	ld	a,c
+	ld	(blkcnt),a
 	ld	a,d
 	ld	(seccnt),a
 	ld	a,e
@@ -116,9 +120,19 @@ getcmd:	ld	c,b_print
 	jr	getcmd
 	
 ; Read operation
-; First, the defined file be opened
+; First, make sure user is ready
+; Second, the defined file will be opened
 ; Then the user will be prompted for what image type they want
-read:	ld	a,(fcb+1)
+read:	ld	c,b_print
+	ld	de,readymsg
+	call	bdos
+	call	getopt
+	cp	'Y'
+	jp	nz,getpro
+
+	; Alright, we are commited
+
+	ld	a,(fcb+1)
 	cp	'0'
 	jp	c,ferror
 
@@ -129,73 +143,128 @@ read:	ld	a,(fcb+1)
 	
 	; Did it work?
 	or	a
-	jp	p,readty
+	jp	p,readr
 	ld	c,b_make
 	ld	de,fcb
 	call	bdos
 	or	a
 	jp	m,ferror
 	
-	; Get image type for read
-readty:	ld	c,b_print
-	ld	de,formsg
+	; Read (real)
+	; Start by readying the disk
+readr:	call	dskrdy
+	
+	; Set the starting track
+	xor	a
+	ld	(curtrk),a
+	
+	; Print out current track
+readr0:	ld	c,b_print
+	ld	de,readmsg
 	call	bdos
-	call	getopt
+	ld	a,(curtrk)
+	ld	l,a
+	ld	h,0
+	call	putd
+
+	ld	a,1
+	ld	(cursec),a
 	
-	cp	'R'
-	jr	z,readr
-	
-	jr	readty
-	
-	; Read raw
-	; Make sure user is ready
-readr:	ld	c,b_print
-	ld	de,readymsg
-	call	bdos
-	call	getopt
-	cp	'Y'
-	jp	nz,getpro
-	
-	; Alright, we are commited
-	; Start by reading the disk
-	call	dskrdy
-	
-	; Read in a track
-readr0:	ld	a,(nf_io)
-	ld	c,a	; c = nf_io
-	ld	e,a	; e = nf_io
-	add	a,3
-	ld	d,a	; d = nf_io+3
-	ld	a,0xE0
-	out	(c),a 
+	; Where do we want to output?
 	ld	hl,top
 	
-	; Read loop
-readr1:	in	a,(c)
-	bit	1,a
-	jr	nz,readr2
-	bit	0,a
-	jr	z,readr3
+	; Read the sector in
+readr1:	ld	a,(nf_io)
+	ld	c,a
+	call	nf_rphy
 	or	a
 	jp	nz,nready
+	
+	; Do we need to read another in?
+	ld	a,(seccnt)
+	ld	b,a
+	ld	a,(cursec)
+	cp	b
+	jr	z,readr2
+	inc	a
+	ld	(cursec),a
 	jr	readr1
 	
-	; Read a bit from the disk
-readr2:	ld	c,d
-	in	a,(c)
-	ld	(hl),a
-	inc	hl
+	; Write track to storage and continue
+readr2: ld	c,b_print
+	ld	de,stormsg
+	call	bdos
+	
+	; TODO write to image
+	
+	; Read next track
+	ld	a,(trkcnt)
+	ld	b,a
+	ld	a,(curtrk)
+	inc	a
+	cp	b
+	jr	z,alldone	; No more tracks
+	ld	(curtrk),a
+	
+	; Step in 1 track
+	; This should be BDOS load code
+	ld	a,(nf_io)
+	ld	c,a
+	ld	a,0x59
+	out	(c),a
+	call	nf_busy
+	
+	; Read another track
+	jp	readr0
+	
+	; Reading is done
+alldone:ld	c,b_print
+	ld	de,donemsg
+	call	bdos
+	
+	jp	exit
+
+
+; Reads a physical sector
+; Track and sector should be set up
+; (cursec) = Sector to read
+; c = FDC command address
+; hl = memory location of result
+;
+; Returns a=0 if successful
+; uses: af, bc, de, hl
+nf_rphy:ld	e,c
+	inc	c
+	inc	c
+	ld	a,(cursec)
+	out	(c),a
+	inc	c
+	ld	d,c
 	ld	c,e
-	jr	readr1
 	
-	; Operation done
-readr3:	jr	readr3
+	; Read command
+	ld	a,0x88
+	out	(c),a
+nf_rph1:in	a,(c)
+	rra	
+	jr	nc,nf_rph2
+	rra
+	jr	nc,nf_rph1
+	ld	c,d
+	ini
+	ld	c,e
+	jr	nf_rph1
+nf_rph2:in	a,(c)
+	and	0xFC
+	ret
 
 
 ; Gets the drive ready, this means:
 ; 1. Force an interrupt
 ; 2. Make sure that there is actually a disk in the drive
 ; 3. Move the drive to track 0
+;
+; uses: af, bc, d
 dskrdy:	ld	d,255
 	call	nf_dvsc
 	ld	a,(nf_io)
@@ -296,13 +365,44 @@ ltou:	and	0x7F
 	sub	0x20
 	ret
 	
+; Print decimal
+; hl = value to print
+;
+; uses: all
+putd:	ld	d,'0'
+	ld	bc,0-10000
+	call	putd0
+	ld	bc,0-1000
+	call	putd0
+	ld	bc,0-100
+	call	putd0
+	ld	bc,0-10
+	call	putd0
+	ld	bc,0-1
+	dec	d
+putd0:	ld	a,'0'-1		; get character
+putd1:	inc	a
+	add	hl,bc
+	jr	c,putd1
+	sbc	hl,bc
+	ld	b,a
+	cp	d		; check for leading zeros
+	ret	z
+	dec	d
+	
+	; Actually print character out
+	push	bc
+	push	de
+	push	hl
+	ld	e,b
+	ld	c,b_cout
+	call	bdos
+	pop	hl
+	pop	de
+	pop	bc
+	ret
+	
 ; Variables
-
-iobuf:
-	defw	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-	defw	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-	defw	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-	defw	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 	
 iocnt:
 	defb	0x00
@@ -314,6 +414,9 @@ seclen:
 	defw	0x0000
 	
 seccnt:
+	defb	0x00
+	
+blkcnt:
 	defb	0x00
 	
 trkcnt:
@@ -351,9 +454,6 @@ drvmsg:
 cmdmsg:	
 	defb	0x0A,0x0D,'Command ([R]ead, [W]rite, [F]ormat): $'
 	
-formsg:	
-	defb	0x0A,0x0D,'Image format (.[R]AW,.[I]MG): $'
-	
 readymsg:	
 	defb	0x0A,0x0D,'Ready to begin? (Y,N): $'
 
@@ -367,6 +467,14 @@ nfdcmsg:
 nrdymsg:	
 	defb	0x0A,0x0D,'Error! Drive Not Ready$'
 
+readmsg:	
+	defb	0x0A,0x0D,'Reading Track $'
+	
+stormsg:	
+	defb	' Storing... $'
+	
+donemsg:	
+	defb	0x0A,0x0D,'Operation Complete!$'
 
 
 	
