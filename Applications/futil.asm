@@ -19,7 +19,11 @@ b_coin	equ	0x01
 b_cout	equ	0x02
 b_print	equ	0x09
 b_open	equ	0x0F
+b_close	equ	0x10
+b_read	equ	0x14
+b_write	equ	0x15
 b_make	equ	0x16
+b_dma	equ	0x1A
 
 ; Program start
 	org	0x0100
@@ -68,7 +72,7 @@ getpro: ld	c,b_print
 	ld	hl,1024	; length of sector
 	ld	c,40	; blocks per track
 	ld	d,5	; sectors per track
-	ld	e,40	; track 
+	ld	e,40	; tracks 
 	cp	'1'
 	jr	z,setpro
 
@@ -117,12 +121,124 @@ getcmd:	ld	c,b_print
 	cp	'R'
 	jp	z,read
 	
+	cp	'W'
+	jp	z,write
+	
 	jr	getcmd
+	
+; Write operation
+; First, make sure user is ready
+; Second, the defined file will be opened
+write:	ld	c,b_print
+	ld	de,readymsg
+	call	bdos
+	call	getopt
+	cp	'Y'
+	jp	nz,getpro
+	
+	; If there is a file, try to open it
+	ld	c,b_open
+	ld	de,fcb
+	call	bdos
+	
+	; Did it work?
+	or	a
+	jp	p,writr
+	
+	; Nope, error!
+	jp	ferror
+	
+	; Write (real)
+	; Start by readying the disk
+writr:	call	dskrdy
+
+	; Set the starting track
+	xor	a
+	ld	(curtrk),a
+	
+	; Print out the current track	
+writr1:	ld	c,b_print
+	ld	de,fetcmsg
+	call	bdos
+	ld	a,(curtrk)
+	ld	l,a
+	ld	h,0
+	call	putd
+	
+	; Get the track to write into memory
+	ld	de,top
+	ld	a,(blkcnt)
+	
+	; Loop to read from disk
+writr2:	push	af
+	push	de
+	
+	ld	c,b_dma
+	call	bdos
+	ld	c,b_read
+	ld	de,fcb
+	call	bdos
+	
+	pop	de
+	pop	af
+	ld	hl,128
+	add	hl,de
+	ex	de,hl
+	dec	a
+	jr	nz,writr2
+	
+	; Print write message
+	ld	c,b_print
+	ld	de,writmsg
+	call	bdos
+	
+	; Start at sector 1
+	ld	a,1
+	ld	(cursec),a
+	
+	; Where do we want to input?
+	ld	hl,top
+	
+	; Write the sector out
+writr3:	ld	a,(nf_io)
+	ld	c,a
+	call	nf_wphy
+	or	a
+	jp	nz,nready
+	
+	; Do we need to read another in?
+	ld	a,(seccnt)
+	ld	b,a
+	ld	a,(cursec)
+	cp	b
+	jr	z,writr4
+	inc	a
+	ld	(cursec),a
+	jr	writr3
+	
+	; All done, move on to next track
+writr4:	ld	a,(trkcnt)
+	ld	b,a
+	ld	a,(curtrk)
+	inc	a
+	cp	b
+	jp	z,alldone	; No more tracks
+	ld	(curtrk),a
+	
+	; Step in 1 track
+	; This should be BDOS load code
+	ld	a,(nf_io)
+	ld	c,a
+	ld	a,0x59
+	out	(c),a
+	call	nf_busy
+	
+	; Read another track
+	jp	writr1
 	
 ; Read operation
 ; First, make sure user is ready
-; Second, the defined file will be opened
-; Then the user will be prompted for what image type they want
+; Second, the defined file will be opened (and maybe created)
 read:	ld	c,b_print
 	ld	de,readymsg
 	call	bdos
@@ -195,7 +311,26 @@ readr2: ld	c,b_print
 	ld	de,stormsg
 	call	bdos
 	
-	; TODO write to image
+	ld	de,top
+	ld	a,(blkcnt)
+	
+	; Loop to write to disk
+readr3:	push	af
+	push	de
+	
+	ld	c,b_dma
+	call	bdos
+	ld	c,b_write
+	ld	de,fcb
+	call	bdos
+	
+	pop	de
+	pop	af
+	ld	hl,128
+	add	hl,de
+	ex	de,hl
+	dec	a
+	jr	nz,readr3
 	
 	; Read next track
 	ld	a,(trkcnt)
@@ -217,16 +352,24 @@ readr2: ld	c,b_print
 	; Read another track
 	jp	readr0
 	
-	; Reading is done
-alldone:ld	c,b_print
+	; Operation is done
+alldone:call	nf_udsl
+
+	; State all done!
+	ld	c,b_print
 	ld	de,donemsg
+	call	bdos
+	
+	; Close file
+	ld	c,b_close
+	ld	de,fcb
 	call	bdos
 	
 	jp	exit
 
 
 ; Reads a physical sector
-; Track and sector should be set up
+; Track should be set up
 ; (cursec) = Sector to read
 ; c = FDC command address
 ; hl = memory location of result
@@ -255,6 +398,39 @@ nf_rph1:in	a,(c)
 	ld	c,e
 	jr	nf_rph1
 nf_rph2:in	a,(c)
+	and	0xFC
+	ret
+	
+; Writes a physical sector
+; Track should be set up
+; (cursec) = Sector to write
+; c = FDC command address
+; hl = memory location to store
+;
+; Returns a=0 if successful
+; uses: af, bc, de, hl
+nf_wphy:ld	e,c
+	inc	c
+	inc	c
+	ld	a,(cursec)
+	out	(c),a
+	inc	c
+	ld	d,c
+	ld	c,e
+	
+	; Read command
+	ld	a,0xA8
+	out	(c),a
+nf_wph1:in	a,(c)
+	rra	
+	jr	nc,nf_wph2
+	rra
+	jr	nc,nf_wph1
+	ld	c,d
+	outi
+	ld	c,e
+	jr	nf_wph1
+nf_wph2:in	a,(c)
 	and	0xFC
 	ret
 
@@ -298,7 +474,9 @@ dskrdy1:ld	a,(nf_io)
 
 ; "Handle" a file error
 ; Complain to user and exit out
-ferror:	ld	c,b_print
+ferror:	call	nf_udsl
+
+	ld	c,b_print
 	ld	de,ferrmsg
 	call	bdos
 	
@@ -472,6 +650,12 @@ readmsg:
 	
 stormsg:	
 	defb	' Storing... $'
+	
+fetcmsg:	
+	defb	0x0A,0x0D,'Fetching Track $'
+	
+writmsg:	
+	defb	' Writing... $'
 	
 donemsg:	
 	defb	0x0A,0x0D,'Operation Complete!$'
