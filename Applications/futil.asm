@@ -124,8 +124,131 @@ getcmd:	ld	c,b_print
 	cp	'W'
 	jp	z,write
 	
+	cp	'F'
+	jp	z,format
+	
 	jr	getcmd
 	
+	
+; Format operation
+; First, make sure user is read
+; Then start formatting
+format:	ld	c,b_print
+	ld	de,readymsg
+	call	bdos
+	call	getopt
+	cp	'Y'
+	jp	nz,getpro
+	
+	; Ready the disk 
+	call	dskrdy
+
+	; Set the starting track
+	xor	a
+	ld	(curtrk),a
+	
+	; Print out the current track	
+formr0:	ld	c,b_print
+	ld	de,frmtmsg
+	call	bdos
+	ld	a,(curtrk)
+	ld	l,a
+	ld	h,0
+	call	putd
+	
+	; Set current sector to 1
+	ld	a,1
+	ld	(cursec),a
+	
+	; Set track done to false
+	ld	(trkdone),a
+	
+	; Start write track command
+	ld	a,(nf_io)
+	ld	c,a
+	ld	a,0xF0
+	out	(c),a
+	
+	; What type are we formatting?
+	ld	a,(profile)
+	cp	'1'
+	jp	z,dofm1
+	
+	
+	; All done, move on to next track
+formnx:	ld	a,(trkcnt)
+	ld	b,a
+	ld	a,(curtrk)
+	inc	a
+	cp	b
+	jp	z,alldone	; No more tracks
+	ld	(curtrk),a
+	
+	; Step in 1 track
+	; This should be BDOS load code
+	ld	a,(nf_io)
+	ld	c,a
+	ld	a,0x59
+	out	(c),a
+	call	nf_busy
+	
+	; Format another track
+	jp	formr0
+	
+; Does format for disk format 1
+dofm1:	ld	hl,fm1_pre
+	call	nf_bloc
+	
+	; Start writing a sector
+dofm10:	ld	hl,fm1_sec1
+	call	nf_bloc
+	
+	; Write track, size, sector
+	ld	a,(curtrk)
+	ld	d,a
+	call	nf_bout
+	ld	d,0
+	call	nf_bout
+	ld	a,(cursec)
+	ld	d,a
+	call	nf_bout
+	
+	ld	hl,fm1_sec2
+	call	nf_bloc
+	
+	; Write data (all E5)
+	ld	hl,(seclen)
+	ld	d,0xE5
+	
+dofm11:	call	nf_bloc
+	dec	hl
+	ld	a,l
+	or	h
+	jr	nz,dofm11
+	
+	ld	hl,fm1_sec3
+	call	nf_bloc
+
+	; Check to see if there are more sectors to write
+	ld	a,(seccnt)
+	ld	b,a
+	ld	a,(cursec)
+	cp	b
+	jr	z,dofm12
+	inc	a
+	ld	a,(cursec)
+	jr	dofm10
+	
+	; Write 4E till done
+dofm12:	ld	d,0x4E
+	call	nf_bout
+	ld	a,(trkdone)
+	or	a
+	jr	nz,dofm12
+
+
+	jp	formnx
+
 ; Write operation
 ; First, make sure user is ready
 ; Second, the defined file will be opened
@@ -433,6 +556,44 @@ nf_wph1:in	a,(c)
 nf_wph2:in	a,(c)
 	and	0xFC
 	ret
+	
+; Writes out of block of bytes during a track write operation
+; c = FDC command address
+; hl = block address
+nf_bloc:ld	a,(hl)
+	or	a
+	ret	z
+	ld	b,a
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+nf_blo0:call	nf_bout
+	djnz	nf_blo0
+	jr	nf_bloc
+	
+; Writes a byte during a track write operation
+; c = FDC command address
+; d = Byte to write
+;
+; uses: af
+nf_bout:in	a,(c)
+	rra	
+	jr	nc,nf_bou1
+	rra
+	jr	nc,nf_bout
+	inc	c
+	inc	c
+	inc	c
+	out	(c),d
+	dec	c
+	dec	c
+	dec	c
+	ret
+nf_bou1:in	a,(c)		; Operation is complete?
+	and	0xFC
+	jp	nz,nready	; Error!
+	ld	(trkdone),a
+	ret
 
 
 ; Gets the drive ready, this means:
@@ -612,6 +773,39 @@ curtrk:
 cursec:
 	defb	0x00
 	
+trkdone:
+	defb	0x00
+	
+; Disk format
+
+fm1_pre:	; Disk preamble
+	defb	80,0x4E
+	defb	12,0x00
+	defb	3,0xF6
+	defb	1,0xFC
+	defb	50,0x4E
+	defb	0
+	
+fm1_sec1:	; First part of sector
+	defb	12,0x00
+	defb	3,0xF5
+	defb	1,0xFE
+	defb	0
+	
+fm1_sec2:	; Second part of sector
+	defb	1,0x01
+	defb	1,0xF7
+	defb	22,0x4E
+	defb	12,0x00
+	defb	3,0xF5
+	defb	1,0xFB
+	defb	0
+
+fm1_sec3:	; Thrid part of sector
+	defb	1,0xF7
+	defb	54,0x4E
+	defb	0
+
 ; Strings
 	
 splash:
@@ -643,7 +837,7 @@ nfdcmsg:
 	defb	0x0A,0x0D,'Error! No FDC detected$'
 	
 nrdymsg:	
-	defb	0x0A,0x0D,'Error! Drive Not Ready$'
+	defb	0x0A,0x0D,'Error! Disk Operation Failed$'
 
 readmsg:	
 	defb	0x0A,0x0D,'Reading Track $'
@@ -656,6 +850,9 @@ fetcmsg:
 	
 writmsg:	
 	defb	' Writing... $'
+	
+frmtmsg:	
+	defb	0x0A,0x0D,'Formatting Track $'
 	
 donemsg:	
 	defb	0x0A,0x0D,'Operation Complete!$'
