@@ -3843,7 +3843,7 @@ EE48: CD64EE  		call	wbootr
               		
               		; Enable INIT to run
 EE4B: 3E06    		ld	a,6
-EE4D: 3207D8  		ld	(inbulen),a
+EE4D: 3207DC  		ld	(inbulen),a
               	
               		; Jump to CP/M
 EE50: C300D8  		jp	cbase
@@ -3873,10 +3873,10 @@ EE64: F3      	wbootr:	di
               		
               		; Zero out BSS
 EE65: AF      		xor	a
-EE66: 21C1F7  		ld	hl,imgtop
+EE66: 2185F5  		ld	hl,imgtop
 EE69: 77      		ld	(hl),a
-EE6A: 11C2F7  		ld	de,imgtop+1
-EE6D: 013E08  		ld	bc,0xFFFF-imgtop
+EE6A: 1186F5  		ld	de,imgtop+1
+EE6D: 017A0A  		ld	bc,0xFFFF-imgtop
 EE70: EDB0    		ldir
               	
               		; Send init signals to all devices
@@ -4131,7 +4131,7 @@ EF49: 0000    	biodma:	defw	0	; Block device DMA address
               	;
 0036:         	mem	equ	54		; CP/M image starts at mem*1024
               	
-D807:         	inbulen	equ	0xD807	; Address in inbuff length byte
+DC07:         	inbulen	equ	0xDC07	; Address in inbuff length byte
               	
               	;
               	;**************************************************************
@@ -4150,11 +4150,9 @@ D807:         	inbulen	equ	0xD807	; Address in inbuff length byte
               	;**************************************************************
               	;
               	
-F900:         	dircbuf	equ	0xF900	; 128 bytes
-F980:         	tm_bss	equ	0xF980	; 48 bytes
-F9B0:         	nd_bss	equ	0xF9B0	; 384 bytes
-FB30:         	nf_bss	equ	0xFB30	; 90 bytes
-FC00:         	nf_cach equ	0xFC00	; 1024 bytes
+F980:         	dircbuf	equ	0xF980	; 128 bytes
+FA00:         	tm_bss	equ	0xFA00	; 48 bytes
+FA40:         	ns_bss	equ	0xFA40	; 384 bytes
               	
               	;
               	;**************************************************************
@@ -4239,21 +4237,21 @@ EF65: C9      	syshook:ret
               		
               	; One of the block devices needs to have the responsibiliy
               	; of loading the CCP into memory. Define the jump vector here
-EF66: C35EF3  	resccp:	jp	nd_ccp
+EF66: C3F1F2  	resccp:	jp	ns_ccp
               	
               	; Additionally, if Ishkur is using a graphical device, that
               	; device may temporarily need to access the Graphical Resource
               	; Block (GRB) to load in fonts and such. This is up to 2k in
               	; size, and goes in the location that the CCP resides
-EF69: C363F3  	resgrb:	jp	nd_grb
+EF69: C3F6F2  	resgrb:	jp	ns_grb
               	
               	; A device of "0" will be read as a non-existant device
               	; The 'init' signal can be sent to the same devices many 
               	; times if it has multipe entires in this table.
-EF6C: C2F20000	bdevsw:	defw	ndkdev,	0	; 'A'
-EF70: C2F20100		defw	ndkdev,	1	; 'B'
-EF74: EAF40000		defw	nfddev,	0	; 'C'
-EF78: EAF40100		defw	nfddev,	1	; 'D'
+EF6C: B3F20000	bdevsw:	defw	nfsdev,	0	; 'A'
+EF70: B3F20100		defw	nfsdev,	1	; 'B'
+EF74: 00000000		defw	0,	0	; 'C'
+EF78: 00000000		defw	0,	0	; 'D'
 EF7C: 00000000		defw	0,	0	; 'E'
 EF80: 00000000		defw	0,	0	; 'F'
 EF84: 00000000		defw	0,	0	; 'G'
@@ -4289,9 +4287,9 @@ EFA8: 00000000		defw	0,	0	; 'P'
               	; A device of "0" will be read as a non-existant device
               	; The 'init' signal can be sent to the same devices many 
               	; times if it has multipe entires in this table.
-EFAC: 33F70000	cdevsw:	defw	siodev,	0	; TTY device
+EFAC: F7F40000	cdevsw:	defw	siodev,	0	; TTY device
 EFB0: BCEF0000		defw	vdpdev,	0	; Console device
-EFB4: 09F70000		defw	prtdev,	0	; Aux I/O device #1 (LPT)
+EFB4: CDF40000		defw	prtdev,	0	; Aux I/O device #1 (LPT)
 EFB8: 00000000		defw	0,	0	; Aux I/O device #2 (GEN)
               	
               	;
@@ -4372,17 +4370,17 @@ EFDA: C9      		ret
               	;
               	; Returns a=0xFF if there is a key to read 
               	; uses: af, bc, de, hl
-EFDB: 3A85F9  	tm_stat:ld	a,(tm_last)
+EFDB: 3A05FA  	tm_stat:ld	a,(tm_last)
 EFDE: FEE4    		cp	0xE4
 EFE0: 2843    		jr	z,tm_scri
 EFE2: FEE5    		cp	0xE5
 EFE4: 2851    		jr	z,tm_sclf
-EFE6: 3A82F9  	tm_sta0:ld	a,(tm_outc)
+EFE6: 3A02FA  	tm_sta0:ld	a,(tm_outc)
 EFE9: 3C      		inc	a
 EFEA: 3EFF    		ld	a,0xFF
 EFEC: C0      		ret	nz
 EFED: CDCCF1  		call	tm_getc
-EFF0: 3282F9  		ld	(tm_outc),a
+EFF0: 3202FA  		ld	(tm_outc),a
 EFF3: 3C      		inc	a
 EFF4: C8      		ret	z
 EFF5: 3EFF    		ld	a,0xFF
@@ -4422,22 +4420,22 @@ F01C: CD73F2  		call	tm_cls
               	;
               	; uses: af
 F01F: 3EFF    	tm_cloc:ld	a,0xFF
-F021: 3282F9  		ld	(tm_outc),a
+F021: 3202FA  		ld	(tm_outc),a
               	
 F024: C9      		ret
               		
               	; Scroll left / scroll right
               	;
               	; uses: af, bc, de, hl
-F025: 3A83F9  	tm_scri:ld	a,(tm_scro)
+F025: 3A03FA  	tm_scri:ld	a,(tm_scro)
 F028: B7      		or	a
 F029: FE28    		cp	40
 F02B: 2808    		jr	z,tm_scr1
 F02D: C604    		add	a,4
-F02F: 3283F9  	tm_scr0:ld	(tm_scro),a
+F02F: 3203FA  	tm_scr0:ld	(tm_scro),a
 F032: CD50F2  		call	tm_usco
 F035: 18AF    	tm_scr1:jr	tm_sta0
-F037: 3A83F9  	tm_sclf:ld	a,(tm_scro)
+F037: 3A03FA  	tm_sclf:ld	a,(tm_scro)
 F03A: B7      		or	a
 F03B: 28F8    		jr	z,tm_scr1
 F03D: D604    		sub	4
@@ -4473,9 +4471,9 @@ F060: C9      		ret
               	;
               	; Returns ASCII key in A
               	; uses: af, bc, de, hl
-F061: 3A80F9  	tm_read:ld	a,(tm_curx)
+F061: 3A00FA  	tm_read:ld	a,(tm_curx)
 F064: 4F      		ld	c,a
-F065: 3A81F9  		ld	a,(tm_cury)
+F065: 3A01FA  		ld	a,(tm_cury)
 F068: 57      		ld	d,a
 F069: 210010  		ld	hl,0x1000
 F06C: 3E50    		ld	a,80
@@ -4492,7 +4490,7 @@ F07C: 3C      		inc	a
 F07D: 200D    		jr	nz,tm_rea1
 F07F: 5A      		ld	e,d
 F080: CD9CF0  		call	tm_rea2
-F083: 3A82F9  		ld	a,(tm_outc)
+F083: 3A02FA  		ld	a,(tm_outc)
 F086: 47      		ld	b,a
 F087: CD1FF0  		call	tm_cloc
 F08A: 78      		ld	a,b
@@ -4509,9 +4507,9 @@ F09A: 18DB    		jr	tm_rea0
               	
               	
 F09C: D5      	tm_rea2:push	de
-F09D: 3A80F9  		ld	a,(tm_curx)
+F09D: 3A00FA  		ld	a,(tm_curx)
 F0A0: 4F      		ld	c,a
-F0A1: 3A81F9  		ld	a,(tm_cury)
+F0A1: 3A01FA  		ld	a,(tm_cury)
 F0A4: 57      		ld	d,a
 F0A5: CD08F2  		call	tm_putc
 F0A8: D1      		pop	de
@@ -4535,15 +4533,15 @@ F0B2: C9      		ret
               	; Returns c,b as next position 
               	; uses: af, bc, de, hl
 F0B3: 59      	tm_writ:ld	e,c
-F0B4: 3A80F9  		ld	a,(tm_curx)
+F0B4: 3A00FA  		ld	a,(tm_curx)
 F0B7: 4F      		ld	c,a
-F0B8: 3A81F9  		ld	a,(tm_cury)
+F0B8: 3A01FA  		ld	a,(tm_cury)
 F0BB: 57      		ld	d,a
 F0BC: CDC8F0  		call	tm_wri0
 F0BF: 78      		ld	a,b
-F0C0: 3281F9  		ld	(tm_cury),a
+F0C0: 3201FA  		ld	(tm_cury),a
 F0C3: 79      		ld	a,c
-F0C4: 3280F9  		ld	(tm_curx),a
+F0C4: 3200FA  		ld	(tm_curx),a
 F0C7: C9      		ret
               		
               	; Write helper routine
@@ -4553,7 +4551,7 @@ F0C7: C9      		ret
               	;
               	; Returns c,b as next position
 F0C8: 42      	tm_wri0:ld	b,d		; c = X, b = Y
-F0C9: 3A84F9  		ld	a,(tm_escs)
+F0C9: 3A04FA  		ld	a,(tm_escs)
 F0CC: B7      		or	a		; Process escape code
 F0CD: C235F1  		jp	nz,tm_esc
 F0D0: 3E1F    		ld	a,0x1F
@@ -4624,7 +4622,7 @@ F12A: 28D7    		jr	z,tm_home
 F12C: FE1B    		cp	0x1B	; Escape
 F12E: C0      		ret	nz
 F12F: 3E01    		ld	a,1
-F131: 3284F9  		ld	(tm_escs),a
+F131: 3204FA  		ld	(tm_escs),a
 F134: C9      		ret
               		
               		; Handle escape sequence
@@ -4635,7 +4633,7 @@ F139: 281D    		jr	z,tm_esc1
 F13B: 3D      		dec	a
 F13C: 2825    		jr	z,tm_esc2
 F13E: AF      	tm_escd:xor	a	; Escape done
-F13F: 3284F9  	tm_escr:ld	(tm_escs),a
+F13F: 3204FA  	tm_escr:ld	(tm_escs),a
 F142: C9      		ret
 F143: 3EFF    	tm_esc0:ld	a,0xFF	; Do 40-col
 F145: BB      		cp	e
@@ -4646,7 +4644,7 @@ F14B: 2853    		jr	z,tm_80c
 F14D: 3E3D    		ld	a,0x3D	; '='
 F14F: BB      		cp	e
 F150: 20EC    		jr	nz,tm_escd
-F152: 3A84F9  	tm_esci:ld	a,(tm_escs)
+F152: 3A04FA  	tm_esci:ld	a,(tm_escs)
 F155: 3C      		inc	a
 F156: 18E7    		jr	tm_escr
 F158: 7B      	tm_esc1:ld	a,e
@@ -4741,7 +4739,7 @@ F1D1: F8      		ret	m
               		
               		; Grab the key
 F1D2: DB90    		in	a,(tm_keyd)
-F1D4: 3285F9  		ld	(tm_last),a
+F1D4: 3205FA  		ld	(tm_last),a
 F1D7: CDDCF1  		call	tm_map
 F1DA: 79      		ld	a,c
 F1DB: C9      		ret
@@ -4801,7 +4799,7 @@ F20F: CD2CF2  		call	tm_chat	; Place it in the 80 col buffer
 F212: ED59    		out	(c),e
 F214: D1      		pop	de
 F215: C1      		pop	bc
-F216: 3A83F9  	tm_putf:ld	a,(tm_scro)	; Place into frame buffer
+F216: 3A03FA  	tm_putf:ld	a,(tm_scro)	; Place into frame buffer
 F219: 47      		ld	b,a
 F21A: 79      		ld	a,c
 F21B: 90      		sub	b	; If character is less than scroll...
@@ -4841,12 +4839,12 @@ F236: 18FA    		jr	tm_cha0
               	; uses: af, bc, de, hl
 F238: CD84F2  	tm_vcpy:call	tm_addh
 F23B: 0628    		ld	b,40
-F23D: 2186F9  		ld	hl,tm_cbuf
+F23D: 2106FA  		ld	hl,tm_cbuf
 F240: CDD2EF  		call	tm_inir
 F243: EB      		ex	de,hl
 F244: CD84F2  		call	tm_addh
 F247: 0628    		ld	b,40
-F249: 2186F9  		ld	hl,tm_cbuf
+F249: 2106FA  		ld	hl,tm_cbuf
 F24C: CDC9EF  		call	tm_otir
 F24F: C9      		ret
               		
@@ -4855,7 +4853,7 @@ F24F: C9      		ret
               	; uses: af, bc, de, hl
 F250: 210010  	tm_usco:ld	hl,0x1000
 F253: 110048  		ld	de,0x4800
-F256: 3A83F9  		ld	a,(tm_scro)
+F256: 3A03FA  		ld	a,(tm_scro)
 F259: 0600    		ld	b,0
 F25B: 4F      		ld	c,a
 F25C: 09      		add	hl,bc
@@ -4909,205 +4907,113 @@ F290: C9      		ret
 F291: 0200    	tm_mode:defw	0x0002
               	
               	
-F980:         	tm_curx:equ	tm_bss		; Cursor X
-F981:         	tm_cury:equ	tm_bss+1	; Cursor Y
-F982:         	tm_outc:equ	tm_bss+2	; Output character
-F983:         	tm_scro:equ	tm_bss+3	; Scroll width
-F984:         	tm_escs:equ	tm_bss+4	; Escape state
-F985:         	tm_last:equ	tm_bss+5	; Last character read
-F986:         	tm_cbuf:equ	tm_bss+6	; 40 byte character buffer
-              	#include "dev/nabu_ndsk.asm"
+FA00:         	tm_curx:equ	tm_bss		; Cursor X
+FA01:         	tm_cury:equ	tm_bss+1	; Cursor Y
+FA02:         	tm_outc:equ	tm_bss+2	; Output character
+FA03:         	tm_scro:equ	tm_bss+3	; Scroll width
+FA04:         	tm_escs:equ	tm_bss+4	; Escape state
+FA05:         	tm_last:equ	tm_bss+5	; Last character read
+FA06:         	tm_cbuf:equ	tm_bss+6	; 40 byte character buffer
+              	#include "dev/nabu_nfs.asm"
               	;
               	;**************************************************************
               	;*
-              	;*        N A B U   N H A C P   V I R T U A L   D I S K
+              	;*        N A B U   N H A C P   F I L E   S Y S T E M
               	;*
-              	;*     This driver allows for IshkurCP/M to access a virtual
-              	;*     disk using the NHACP protocol. Indiviual files are 
-              	;*     mounted as file systems and accessed like a disk
-              	;*     normally would.
+              	;*    Unlike a standard block device, the NFS driver provides
+              	;*    a CP/M filesystem by directly intercepting system calls.
+              	;*    By doing this, it can access provide access to an external
+              	;*    filesystem via NHACP.
               	;*
-              	;*     This particular driver uses the Nabu HCCA port to 
-              	;*     facilitate communication between it and an adapter
-              	;*
-              	;*     In order to service CCP and GRB requests, the 
-              	;*     following special files must exist:
-              	;*
-              	;*     '${STORAGE}/CPM22.SYS' <- For CP/M system components
-              	;*     '${STORAGE}/FONT.GRB' <- For graphical driver components
-              	;*
-              	;*
-              	;*
-              	;*
-              	;*     Device requires 384 bytes of bss space (nd_bss)
+              	;*    Virtual filesystems are directories labelled "A", "B",
+              	;*    "C", etc... on the host system. That are converted to
+              	;*    minor numbers 0, 1, 2, etc... when the driver is being
+              	;*    added to the block device switch  
               	;* 
               	;**************************************************************
               	;
               	
-0040:         	nd_ayda	equ	0x40		; AY-3-8910 data port
-0041:         	nd_atla	equ	0x41		; AY-3-8910 latch port
-0080:         	nd_hcca	equ	0x80		; Modem data port
-0000:         	nd_nctl	equ	0x00		; NABU control port
+0040:         	ns_ayda	equ	0x40		; AY-3-8910 data port
+0041:         	ns_atla	equ	0x41		; AY-3-8910 latch port
+0080:         	ns_hcca	equ	0x80		; Modem data port
+0000:         	ns_nctl	equ	0x00		; NABU control port
               	
-0080:         	nd_fild	equ	0x80		; Default file access desc
+0080:         	ns_fild	equ	0x80		; Default file access desc
               	
               	
               	;
               	;**************************************************************
               	;*
-              	;*         D I S K   D R I V E   G E O M E T R Y
+              	;*         D U M M Y   D I S K   G E O M E T R Y
               	;* 
               	;**************************************************************
               	;
               	
-              	; Disk A DPH
-F293: 00000000	nd_dpha:defw	0,0,0,0
+              	; Dummy DPH
+F293: 00000000	ns_dph:defw	0,0,0,0
 F297: 00000000	
-F29B: 00F9    		defw	dircbuf	; DIRBUF
-F29D: B3F2    		defw	nd_dpb	; DPB
+F29B: 80F9    		defw	dircbuf	; DIRBUF
+F29D: A3F2    		defw	ns_dpb	; DPB
 F29F: 0000    		defw	0	; CSV
-F2A1: FCF9    		defw	nd_asva	; ALV (129 bytes)
+F2A1: B2F2    		defw	ns_alv	; ALV 
               		
-              	; Disk B DPH
-F2A3: 00000000	nd_dphb:defw	0,0,0,0
-F2A7: 00000000	
-F2AB: 00F9    		defw	dircbuf	; DIRBUF
-F2AD: B3F2    		defw	nd_dpb	; DPB
-F2AF: 0000    		defw	0	; CSV
-F2B1: 7DFA    		defw	nd_asvb	; ALV (129 bytes)
               		
-              	; NSHD8 format
-F2B3: 4000    	nd_dpb:	defw	64	; # sectors per track
-F2B5: 06      		defb	6	; BSH
-F2B6: 3F      		defb	63	; BLM
-F2B7: 03      		defb	3	; EXM
-F2B8: FF03    		defw	1023	; DSM
-F2BA: FF00    		defw	255	; DRM
-F2BC: 80      		defb	0x80	; AL0
-F2BD: 00      		defb	0	; AL1
-F2BE: 0000    		defw	0	; Size of directory check vector
-F2C0: 0000    		defw	0	; Number of reserved tracks at the beginning of disk
+              	; Dummy format
+F2A3: 4000    	ns_dpb:	defw	64	; # sectors per track
+F2A5: 03      		defb	3	; BSH
+F2A6: 07      		defb	7	; BLM
+F2A7: 00      		defb	0	; EXM
+F2A8: 0100    		defw	1	; DSM
+F2AA: 0000    		defw	0	; DRM
+F2AC: 00      		defb	0	; AL0
+F2AD: 00      		defb	0	; AL1
+F2AE: 0000    		defw	0	; Size of directory check vector
+F2B0: 0000    		defw	0	; Number of reserved tracks at the beginning of disk
+              		
+              	; Dummy ALV
+F2B2: 00      	ns_alv: defb	0
               	
               	; Driver entry point
               	; a = Command #
               	;
               	; uses: all
-F2C2: B7      	ndkdev:	or	a
-F2C3: 2815    		jr	z,nd_init
-F2C5: 3D      		dec	a
-F2C6: 2813    		jr	z,nd_home
-F2C8: 3D      		dec	a
-F2C9: 2817    		jr	z,nd_sel
-F2CB: 3D      		dec	a
-F2CC: CA0CF3  		jp	z,nd_strk
-F2CF: 3D      		dec	a
-F2D0: CA12F3  		jp	z,nd_ssec
-F2D3: 3D      		dec	a
-F2D4: CA17F3  		jp	z,nd_read
-F2D7: C328F3  		jp	nd_writ
-              		
+F2B3: B7      	nfsdev:	or	a
+F2B4: 2807    		jr	z,ns_init
+F2B6: 3D      		dec	a
+F2B7: 3D      		dec	a
+F2B8: 2814    		jr	z,ns_sel
+F2BA: 3E01    		ld	a,1
+F2BC: C9      		ret
+              	
               	; Inits the device
-              	; Not really needed atm
+              	; Figures out which devices that the NFS driver "owns"
+              	; c = Logical device #
               	; hl = Call argument
               	;
               	; uses: none
-F2DA: C9      	nd_init:ret
+F2BD: 79      	ns_init:ld	a,c
+F2BE: CD21F3  		call	ns_domk
+F2C1: 2A80FA  		ld	hl,(ns_mask)
+F2C4: 7C      		ld	a,h
+F2C5: B0      		or	b
+F2C6: 67      		ld	h,a
+F2C7: 7D      		ld	a,l
+F2C8: B1      		or	c
+F2C9: 6F      		ld	l,a
+F2CA: 2280FA  		ld	(ns_mask),hl
+F2CD: C9      		ret
               	
-              	; Sets "track" back to zero
-              	;
-              	; uses: none
-F2DB: 210000  	nd_home:ld	hl,0
-F2DE: 22B1F9  		ld	(nd_ctrk),hl
-F2E1: C9      		ret
               	
               	; Selects the drive
               	; c = Logging status
               	; hl = Call argument
               	;
               	; uses: hl
-F2E2: E5      	nd_sel:	push	hl
-F2E3: CD49F3  		call	nd_hini
-F2E6: E1      		pop	hl
-F2E7: E5      		push	hl
-F2E8: 7D      		ld	a,l
-F2E9: C641    		add	a,0x41		; Convert to ASCII
-F2EB: 327DF4  		ld	(nd_p2im),a
-F2EE: 2178F4  		ld	hl,nd_p2
-F2F1: 118CF4  		ld	de,nd_m0na
-F2F4: 010B00  		ld	bc,11
-F2F7: EDB0    		ldir
-F2F9: CD84F3  		call	nd_open		; Open the file
-F2FC: E1      		pop	hl		; Select DPH
-F2FD: 7D      		ld	a,l
-F2FE: B7      		or	a
-F2FF: 2193F2  		ld	hl,nd_dpha
-F302: C8      		ret	z
-F303: 3D      		dec	a
-F304: 21A3F2  		ld	hl,nd_dphb
-F307: C8      		ret	z
-F308: 210000  		ld	hl,0
-F30B: C9      		ret
-              		
-              	; Sets the track of the selected block device
-              	; bc = Track, starts at 0
-              	; hl = Call argument
-              	;
-              	; uses: nonoe
-F30C: 60      	nd_strk:ld	h,b
-F30D: 69      		ld	l,c
-F30E: 22B1F9  		ld	(nd_ctrk),hl
-F311: C9      		ret
-              	
-              	; Sets the sector of the selected block device
-              	; bc = Sector, starts at 0
-              	; hl = Call argument
-              	;
-              	; uses: none
-F312: 79      	nd_ssec:ld	a,c
-F313: 32B0F9  		ld	(nd_csec),a
-F316: C9      		ret
-              	
-              	; Reads a sector and DMA transfers it to memory
-              	;
-              	; uses: af
-F317: CD49F3  	nd_read:call	nd_hini
-F31A: CD39F3  		call	nd_gbno
-F31D: 2A49EF  		ld	hl,(biodma)
-F320: CD9BF3  		call	nd_getb
-F323: 3E01    		ld	a,1
-F325: D8      		ret	c
-F326: AF      		xor	a
-F327: C9      		ret
-              		
-              	; Write a sector from DMA
-              	;
-              	; uses: af
-F328: CD49F3  	nd_writ:call	nd_hini
-F32B: CD39F3  		call	nd_gbno
-F32E: 2A49EF  		ld	hl,(biodma)
-F331: CDCEF3  		call	nd_putb
-F334: 3E01    		ld	a,1
-F336: D8      		ret	c
-F337: AF      		xor	a
-F338: C9      		ret
-              		
-              		
-              	; Gets the block # for read / write operations
-              	;
-              	; Returns block # in de
-              	; uses: af, de, hl 
-F339: 2AB1F9  	nd_gbno:ld	hl,(nd_ctrk)
-F33C: 29      		add	hl,hl
-F33D: 29      		add	hl,hl
-F33E: 29      		add	hl,hl
-F33F: 29      		add	hl,hl
-F340: 29      		add	hl,hl
-F341: 29      		add	hl,hl
-F342: 3AB0F9  		ld	a,(nd_csec)
-F345: B5      		or	l
-F346: 6F      		ld	l,a
-F347: EB      		ex	de,hl
-F348: C9      		ret
+F2CE: 11BFED  	ns_sel:	ld	de,dirbuf
+F2D1: 219BF2  		ld	hl,ns_dph+8
+F2D4: 010800  		ld	bc,8
+F2D7: EDB0    		ldir
+F2D9: C37AED  		jp	goback
               		
               	
               	; Set up the HCCA modem connection
@@ -5116,53 +5022,129 @@ F348: C9      		ret
               	; exposed
               	;
               	; uses: a
-F349: 3E07    	nd_hini:ld	a,0x07
-F34B: D341    		out	(nd_atla),a	; AY register = 7
-F34D: 3E7F    		ld	a,0x7F
-F34F: D340    		out	(nd_ayda),a	; Configure AY port I/O
+F2DC: 3E07    	ns_hini:ld	a,0x07
+F2DE: D341    		out	(ns_atla),a	; AY register = 7
+F2E0: 3E7F    		ld	a,0x7F
+F2E2: D340    		out	(ns_ayda),a	; Configure AY port I/O
               		
-F351: 3E0E    		ld	a,0x0E
-F353: D341    		out	(nd_atla),a	; AY register = 14
-F355: 3EC0    		ld	a,0xC0
-F357: D340    		out	(nd_ayda),a	; Enable HCCA receive and send
+F2E4: 3E0E    		ld	a,0x0E
+F2E6: D341    		out	(ns_atla),a	; AY register = 14
+F2E8: 3EC0    		ld	a,0xC0
+F2EA: D340    		out	(ns_ayda),a	; Enable HCCA receive and send
               		
-F359: 3E0F    		ld	a,0x0F
-F35B: D341    		out	(nd_atla),a	; AY register = 15
-F35D: C9      		ret
+F2EC: 3E0F    		ld	a,0x0F
+F2EE: D341    		out	(ns_atla),a	; AY register = 15
+F2F0: C9      		ret
               	; Loads the CCP into the CCP space
-F35E: 2164F4  	nd_ccp:	ld	hl,nd_p0
-F361: 1803    		jr	nd_grb0
+F2F1: 2181F4  	ns_ccp:	ld	hl,ns_p0
+F2F4: 1803    		jr	ns_grb0
               		
               	; Loads the GRB into the CCP space
-F363: 216EF4  	nd_grb:	ld	hl,nd_p1
-F366: 118CF4  	nd_grb0:ld	de,nd_m0na
-F369: 010A00  		ld	bc,10
-F36C: EDB0    		ldir			; Copy name to file open
-F36E: CD49F3  		call	nd_hini		; Go to HCCA mode
-F371: CD84F3  		call	nd_open		; Open the file
-F374: 110000  		ld	de,0
-F377: 2100D8  		ld	hl,cbase
-F37A: CD9BF3  	nd_grb1:call	nd_getb
-F37D: 1C      		inc	e
-F37E: 3E10    		ld	a,16
-F380: BB      		cp	e
-F381: 20F7    		jr	nz,nd_grb1
-F383: C9      		ret
+F2F6: 218BF4  	ns_grb:	ld	hl,ns_p1
+F2F9: 119EF4  	ns_grb0:ld	de,ns_m0na
+F2FC: 010A00  		ld	bc,10
+F2FF: EDB0    		ldir			; Copy name to file open
+F301: CDDCF2  		call	ns_hini		; Go to HCCA mode
+F304: CD5AF3  		call	ns_open		; Open the file
+F307: 110000  		ld	de,0
+F30A: 2100D8  		ld	hl,cbase
+F30D: CD71F3  	ns_grb1:call	ns_getb
+F310: 1C      		inc	e
+F311: 3E10    		ld	a,16
+F313: BB      		cp	e
+F314: 20F7    		jr	nz,ns_grb1
+F316: C9      		ret
               		
+              	; CP/M system hook
+              	; Used to intercept certain syscalls
+              	;
+              	; uses: af if not hooked, all otherwise
+F317: 79      	ns_sysh:ld	a,c
+F318: FE0F    		cp	15
+F31A: D8      		ret	c		; No syscalls lower than 15
+F31B: 2801    		jr	z,ns_fopn
+F31D: C9      		ret
+              		
+              	; Parses the current FCB, and opens the file if it matches
+              	; Note that for the most part this is redundent. The NFS
+              	; driver does not care if a file has been opened before it
+              	; starts reading.
+              	; de = Address of FCB
+              	;
+              	; Uses: all
+F31E: C37AED  	ns_fopn:jp	goback
+              		
+              	; Set a 16 bit mask based on a number from 0-15
+              	; a = Bit to set
+              	;
+              	; Returns bit mask in bc
+              	; uses: af, bc
+F321: 010100  	ns_domk:ld	bc,1
+F324: B7      		or	a
+F325: C8      	ns_dom0:ret	z
+F326: CB21    		sla	c
+F328: CB10    		rl	b
+F32A: 3D      		dec	a
+F32B: 18F8    		jr	ns_dom0
+              		
+              	; Check if driver owns device
+              	; Bail if it does not
+              	; If it does, get to logical NHACP device
+              	; de = Address of FCB
+              	;
+              	; Returns logical device in a
+              	; uses: af, hl
+F32D: C5      	ns_ownr:push	bc
+F32E: CD53F3  		call	ns_getd		; Get FSB device
+F331: CD21F3  		call	ns_domk		; Create bitmask
+F334: 2A80FA  		ld	hl,(ns_mask)
+F337: 7C      		ld	a,h
+F338: A0      		and	b
+F339: 2002    		jr	nz,ns_own0
+F33B: 7D      		ld	a,l
+F33C: A1      		and	c
+F33D: 2811    	ns_own0:jr	z,ns_exit	; Exit if does not own	
+F33F: 216EEF  		ld	hl,bdevsw+2
+F342: 1A      		ld	a,(de)		; Get FSB device
+F343: 010400  		ld	bc,4
+F346: B7      		or	a
+F347: 2804    	ns_own1:jr	z,ns_own2
+F349: 09      		add	hl,bc
+F34A: 3D      		dec	a
+F34B: 18FA    		jr	ns_own1
+F34D: 7E      	ns_own2:ld	a,(hl)		; a = Logical NHACP device
+F34E: C1      		pop	bc
+F34F: C9      		ret
+              	
+              	; Exit, do not return to caller
+F350: C1      	ns_exit:pop	bc
+F351: F1      		pop	af		; Throw away caller address
+F352: C9      		ret
+              	
+              	; Gets the logical device number from a FCB
+              	; de = Address of FCB
+              	; 
+              	; Logical device returns in a
+              	; uses: af
+F353: 1A      	ns_getd:ld	a,(de)
+F354: 3D      		dec	a
+F355: F0      		ret	p
+F356: 3A48E3  		ld	a,(active)
+F359: C9      		ret
               	
               	; Open the prepared file
               	; Closes the existing file too
               	;
               	; uses: af, b, hl
-F384: 219BF4  	nd_open:ld	hl,nd_m1
-F387: 0606    		ld	b,6
-F389: CD0BF4  		call	nd_send
-F38C: 2183F4  		ld	hl,nd_m0
-F38F: 0617    		ld	b,23
-F391: CD0BF4  		call	nd_send
-F394: 21B6F9  		ld	hl,nd_buff
-F397: CDF6F3  		call	nd_rece
-F39A: C9      		ret
+F35A: 21ADF4  	ns_open:ld	hl,ns_m1
+F35D: 0606    		ld	b,6
+F35F: CDE1F3  		call	ns_send
+F362: 2195F4  		ld	hl,ns_m0
+F365: 0617    		ld	b,23
+F367: CDE1F3  		call	ns_send
+F36A: 2140FA  		ld	hl,ns_buff
+F36D: CDCCF3  		call	ns_rece
+F370: C9      		ret
               		
               	; Gets a block from the currently open file
               	; and places it in (hl)
@@ -5172,34 +5154,34 @@ F39A: C9      		ret
               	; Returns location directly after in hl
               	; Carry flag set on error
               	; uses: af, b, hl
-F39B: EB      	nd_getb:ex	de,hl
-F39C: 22A9F4  		ld	(nd_m2bn),hl
-F39F: EB      		ex	de,hl
-F3A0: E5      		push	hl
-F3A1: 21A3F4  		ld	hl,nd_m2
-F3A4: 060C    		ld	b,12
-F3A6: CD0BF4  		call	nd_send
-F3A9: E1      		pop	hl
-F3AA: D8      		ret	c
-F3AB: CD14F4  		call	nd_hcrd
-F3AE: CD17F4  		call	nd_hcre
-F3B1: D8      		ret	c
-F3B2: FE84    		cp	0x84
-F3B4: 37      		scf
-F3B5: 200F    		jr	nz,nh_get1
-F3B7: CD14F4  		call	nd_hcrd
-F3BA: 0680    		ld	b,128
-F3BC: CD17F4  	nd_get0:call	nd_hcre
-F3BF: D8      		ret	c
-F3C0: 77      		ld	(hl),a
-F3C1: 23      		inc	hl
-F3C2: 10F8    		djnz	nd_get0
-F3C4: B7      		or	a
-F3C5: C9      		ret
-F3C6: CD14F4  	nh_get1:call	nd_hcrd	; Read the error message and exit
-F3C9: CD17F4  		call	nd_hcre
-F3CC: 37      		scf
-F3CD: C9      		ret
+F371: EB      	ns_getb:ex	de,hl
+F372: 22BBF4  		ld	(ns_m2bn),hl
+F375: EB      		ex	de,hl
+F376: E5      		push	hl
+F377: 21B5F4  		ld	hl,ns_m2
+F37A: 060C    		ld	b,12
+F37C: CDE1F3  		call	ns_send
+F37F: E1      		pop	hl
+F380: D8      		ret	c
+F381: CDEAF3  		call	ns_hcrd
+F384: CDEDF3  		call	ns_hcre
+F387: D8      		ret	c
+F388: FE84    		cp	0x84
+F38A: 37      		scf
+F38B: 200F    		jr	nz,ns_get1
+F38D: CDEAF3  		call	ns_hcrd
+F390: 0680    		ld	b,128
+F392: CDEDF3  	ns_get0:call	ns_hcre
+F395: D8      		ret	c
+F396: 77      		ld	(hl),a
+F397: 23      		inc	hl
+F398: 10F8    		djnz	ns_get0
+F39A: B7      		or	a
+F39B: C9      		ret
+F39C: CDEAF3  	ns_get1:call	ns_hcrd	; Read the error message and exit
+F39F: CDEDF3  		call	ns_hcre
+F3A2: 37      		scf
+F3A3: C9      		ret
               		
               	; Puts a block into the currently open file
               	; from that location (hl)
@@ -5208,48 +5190,48 @@ F3CD: C9      		ret
               	;
               	; Carry flag set on error
               	; uses: af, b, hl
-F3CE: EB      	nd_putb:ex	de,hl
-F3CF: 22B5F4  		ld	(nd_m3bn),hl
-F3D2: EB      		ex	de,hl
-F3D3: E5      		push	hl
-F3D4: 21AFF4  		ld	hl,nd_m3
-F3D7: 060C    		ld	b,12
-F3D9: CD0BF4  		call	nd_send		; Send message precursor
-F3DC: E1      		pop	hl
-F3DD: D8      		ret	c
-F3DE: 0680    		ld	b,128
-F3E0: 7E      	nd_put0:ld	a,(hl)		; Send the block
-F3E1: CD40F4  		call	nd_hcwr
-F3E4: D8      		ret	c
-F3E5: 23      		inc	hl
-F3E6: 10F8    		djnz	nd_put0
-F3E8: 21B6F9  		ld	hl,nd_buff
-F3EB: CDF6F3  		call	nd_rece
-F3EE: 3AB6F9  		ld	a,(nd_buff)
-F3F1: FE81    		cp	0x81
-F3F3: C8      		ret	z
-F3F4: 37      		scf
-F3F5: C9      		ret
+F3A4: EB      	ns_putb:ex	de,hl
+F3A5: 22C7F4  		ld	(ns_m3bn),hl
+F3A8: EB      		ex	de,hl
+F3A9: E5      		push	hl
+F3AA: 21C1F4  		ld	hl,ns_m3
+F3AD: 060C    		ld	b,12
+F3AF: CDE1F3  		call	ns_send		; Send message precursor
+F3B2: E1      		pop	hl
+F3B3: D8      		ret	c
+F3B4: 0680    		ld	b,128
+F3B6: 7E      	ns_put0:ld	a,(hl)		; Send the block
+F3B7: CD16F4  		call	ns_hcwr
+F3BA: D8      		ret	c
+F3BB: 23      		inc	hl
+F3BC: 10F8    		djnz	ns_put0
+F3BE: 2140FA  		ld	hl,ns_buff
+F3C1: CDCCF3  		call	ns_rece
+F3C4: 3A40FA  		ld	a,(ns_buff)
+F3C7: FE81    		cp	0x81
+F3C9: C8      		ret	z
+F3CA: 37      		scf
+F3CB: C9      		ret
               		
               	; Receives a general response from the NHACP server
               	; hl = Destination of message
               	;
               	; Carry flag set on error
               	; uses: af, b, hl
-F3F6: CD17F4  	nd_rece:call	nd_hcre
-F3F9: D8      		ret	c		; Existing error
-F3FA: 47      		ld	b,a
-F3FB: CD17F4  		call	nd_hcre
-F3FE: D8      		ret	c		; Existing error
-F3FF: 37      		scf
-F400: C0      		ret	nz		; Message too big!
-F401: CD17F4  	nd_rec0:call	nd_hcre
-F404: D8      		ret	c		; Error!
-F405: 77      		ld	(hl),a
-F406: 23      		inc	hl
-F407: 10F8    		djnz	nd_rec0
-F409: B7      		or	a
-F40A: C9      		ret
+F3CC: CDEDF3  	ns_rece:call	ns_hcre
+F3CF: D8      		ret	c		; Existing error
+F3D0: 47      		ld	b,a
+F3D1: CDEDF3  		call	ns_hcre
+F3D4: D8      		ret	c		; Existing error
+F3D5: 37      		scf
+F3D6: C0      		ret	nz		; Message too big!
+F3D7: CDEDF3  	ns_rec0:call	ns_hcre
+F3DA: D8      		ret	c		; Error!
+F3DB: 77      		ld	(hl),a
+F3DC: 23      		inc	hl
+F3DD: 10F8    		djnz	ns_rec0
+F3DF: B7      		or	a
+F3E0: C9      		ret
               		
               	; Write a number of bytes to the HCCA port
               	; b = Bytes to write
@@ -5257,12 +5239,12 @@ F40A: C9      		ret
               	;
               	; Carry flag set on error
               	; uses: af, b, hl
-F40B: 7E      	nd_send:ld	a,(hl)
-F40C: 23      		inc	hl
-F40D: CD40F4  		call	nd_hcwr
-F410: D8      		ret	c		; Error!
-F411: 10F8    		djnz	nd_send
-F413: C9      		ret
+F3E1: 7E      	ns_send:ld	a,(hl)
+F3E2: 23      		inc	hl
+F3E3: CD16F4  		call	ns_hcwr
+F3E6: D8      		ret	c		; Error!
+F3E7: 10F8    		djnz	ns_send
+F3E9: C9      		ret
               		
               	; Read from the HCCA port
               	; Assumes AY is set to reg 15
@@ -5271,30 +5253,30 @@ F413: C9      		ret
               	; Returns return in a
               	; Carry flag set on error
               	; Uses: af
-F414: CD17F4  	nd_hcrd:call	nd_hcre
-F417: D5      	nd_hcre:push	de
-F418: 3E09    		ld	a,0x09
-F41A: D300    		out	(nd_nctl),a	; Turn on recv light
-F41C: 11FFFF  		ld	de,0xFFFF
-F41F: DB40    	nd_hcr0:in	a,(nd_ayda)
-F421: CB47    		bit	0,a
-F423: 28FA    		jr	z,nd_hcr0	; Await an interrupt
-F425: CB4F    		bit	1,a
-F427: 280B    		jr	z,nd_hcr1
-F429: 1B      		dec	de
-F42A: 7B      		ld	a,e
-F42B: B2      		or	d
-F42C: 20F1    		jr	nz,nd_hcr0
-F42E: 3E01    	nd_hcer:ld	a,0x01
-F430: D300    		out	(nd_nctl),a	; Turn off recv light
-F432: 37      		scf
-F433: C9      		ret			; Timed out waiting
-F434: 3E01    	nd_hcr1:ld	a,0x01
-F436: D300    		out	(nd_nctl),a	; Turn off recv light
-F438: DB80    		in	a,(nd_hcca)
-F43A: D1      		pop	de
-F43B: B7      		or	a
-F43C: C9      		ret
+F3EA: CDEDF3  	ns_hcrd:call	ns_hcre
+F3ED: D5      	ns_hcre:push	de
+F3EE: 3E09    		ld	a,0x09
+F3F0: D300    		out	(ns_nctl),a	; Turn on recv light
+F3F2: 11FFFF  		ld	de,0xFFFF
+F3F5: DB40    	ns_hcr0:in	a,(ns_ayda)
+F3F7: CB47    		bit	0,a
+F3F9: 28FA    		jr	z,ns_hcr0	; Await an interrupt
+F3FB: CB4F    		bit	1,a
+F3FD: 280B    		jr	z,ns_hcr1
+F3FF: 1B      		dec	de
+F400: 7B      		ld	a,e
+F401: B2      		or	d
+F402: 20F1    		jr	nz,ns_hcr0
+F404: 3E01    	ns_hcer:ld	a,0x01
+F406: D300    		out	(ns_nctl),a	; Turn off recv light
+F408: 37      		scf
+F409: C9      		ret			; Timed out waiting
+F40A: 3E01    	ns_hcr1:ld	a,0x01
+F40C: D300    		out	(ns_nctl),a	; Turn off recv light
+F40E: DB80    		in	a,(ns_hcca)
+F410: D1      		pop	de
+F411: B7      		or	a
+F412: C9      		ret
               		
               	; Write to the HCCA port
               	; Assumes AY is set to reg 15
@@ -5303,631 +5285,137 @@ F43C: C9      		ret
               	;
               	; Carry flag set on error
               	; Uses: f
-F43D: CD40F4  	nd_hcwd:call	nd_hcwr
-F440: D5      	nd_hcwr:push	de
-F441: F5      		push	af
-F442: 11FFFF  		ld	de,0xFFFF
-F445: 3E21    		ld	a,0x21
-F447: D300    		out	(nd_nctl),a	; Turn on send light
-F449: DB40    	nd_hcw0:in	a,(nd_ayda)
-F44B: CB47    		bit	0,a
-F44D: 28FA    		jr	z,nd_hcw0	; Await an interrupt
-F44F: CB4F    		bit	1,a
-F451: 2007    		jr	nz,nd_hcw1
-F453: 1B      		dec	de
-F454: 7B      		ld	a,e
-F455: B2      		or	d
-F456: 20F1    		jr	nz,nd_hcw0
-F458: 18D4    		jr	nd_hcer		; Timed out waiting
-F45A: 3E01    	nd_hcw1:ld	a,0x01
-F45C: D300    		out	(nd_nctl),a	; Turn off send light
-F45E: F1      		pop	af
-F45F: D380    		out	(nd_hcca),a
-F461: D1      		pop	de
-F462: B7      		or	a
-F463: C9      		ret
+F413: CD16F4  	ns_hcwd:call	ns_hcwr
+F416: D5      	ns_hcwr:push	de
+F417: F5      		push	af
+F418: 11FFFF  		ld	de,0xFFFF
+F41B: 3E21    		ld	a,0x21
+F41D: D300    		out	(ns_nctl),a	; Turn on send light
+F41F: DB40    	ns_hcw0:in	a,(ns_ayda)
+F421: CB47    		bit	0,a
+F423: 28FA    		jr	z,ns_hcw0	; Await an interrupt
+F425: CB4F    		bit	1,a
+F427: 2007    		jr	nz,ns_hcw1
+F429: 1B      		dec	de
+F42A: 7B      		ld	a,e
+F42B: B2      		or	d
+F42C: 20F1    		jr	nz,ns_hcw0
+F42E: 18D4    		jr	ns_hcer		; Timed out waiting
+F430: 3E01    	ns_hcw1:ld	a,0x01
+F432: D300    		out	(ns_nctl),a	; Turn off send light
+F434: F1      		pop	af
+F435: D380    		out	(ns_hcca),a
+F437: D1      		pop	de
+F438: B7      		or	a
+F439: C9      		ret
+              		
+              	; Takes a FCB-style name and formats it to standard notation
+              	; a = Logical NHACP device
+              	; de = Desintation for formatted name
+              	; hl = Source FCB file name
+              	;
+              	; uses: all
+F43A: C641    	ns_form:add	a,'A'
+F43C: CD6AF4  		call	ns_for4
+F43F: 3E2F    		ld	a,'/'
+F441: CD6AF4  	ns_for0:call	ns_for4
+F444: 0608    		ld	b,8		; Look at all 8 possible name chars
+F446: 7E      	ns_for1:ld	a,(hl)
+F447: CD76F4  		call	ns_ltou
+F44A: FE21    		cp	0x21
+F44C: 3806    		jr	c,ns_for2
+F44E: CD6AF4  		call	ns_for4
+F451: 23      		inc	hl
+F452: 10F2    		djnz	ns_for1
+F454: 3E2E    	ns_for2:ld	a,0x2E		; '.'
+F456: CD6AF4  		call	ns_for4
+F459: 48      		ld	c,b
+F45A: 0600    		ld	b,0
+F45C: 09      		add	hl,bc		; Fast forward to extenstion
+F45D: 0603    		ld	b,3		; Copy over extension
+F45F: 7E      	ns_for3:ld	a,(hl)
+F460: CD76F4  		call	ns_ltou
+F463: CD6AF4  		call	ns_for4
+F466: 23      		inc	hl
+F467: 10F6    		djnz	ns_for3
+F469: AF      		xor	a		; Zero terminate
+F46A: EB      	ns_for4:ex	de,hl
+F46B: BE      		cp	(hl)
+F46C: EB      		ex	de,hl
+F46D: 12      		ld	(de),a
+F46E: 13      		inc	de
+F46F: C8      		ret	z
+F470: 3E01    		ld	a,1
+F472: 3282FA  		ld	(ns_dore),a
+F475: C9      		ret
+              		
+              	; Converts lowercase to uppercase
+              	; a = Character to convert
+              	;
+              	; Returns uppercase in A
+              	; uses: af
+F476: E67F    	ns_ltou:and	0x7F
+F478: FE61    		cp	0x61		; 'a'
+F47A: D8      		ret	c
+F47B: FE7B    		cp	0x7B		; '{'
+F47D: D0      		ret	nc
+F47E: D620    		sub	0x20
+F480: C9      		ret
               		
               	; Path to CP/M image
               	; Total length: 10 bytes
-F464: 43504D32	nd_p0:	defb	'CPM22.SYS',0
-F468: 322E5359	
-F46C: 5300    	
+F481: 43504D32	ns_p0:	defb	'CPM22.SYS',0
+F485: 322E5359	
+F489: 5300    	
               	
               	; Path to GRB image
               	; Total length: 10 bytes
-F46E: 464F4E54	nd_p1:	defb	'FONT.GRB',0,0
-F472: 2E475242	
-F476: 0000    	
-              	
-              	; Path to a generic disk image
-              	; Total length: 11
-F478: 4E44534B	nd_p2:	defb	'NDSK_'
-F47C: 5F      	
-F47D: 3F      	nd_p2im:defb	'?'		; Disk image name
-F47E: 2E494D47		defb	'.IMG',0
-F482: 00      	
+F48B: 464F4E54	ns_p1:	defb	'FONT.GRB',0,0
+F48F: 2E475242	
+F493: 0000    	
               	
               	; Message prototype to open a file
               	; Total length: 23 bytes
-F483: 8F00    	nd_m0:	defb	0x8F,0x00
-F485: 1300    		defw	19		; Message length
-F487: 01      		defb	0x01		; Cmd: STORAGE-OPEN
-F488: 80      		defb	nd_fild		; Default file descriptor
-F489: 0100    	nd_m0fl:defw	0x01		; Read/Write flags
-F48B: 0E      		defb	0x0E		; Message length
-F48C: 58585858	nd_m0na:defb	'XXXXXXXXXXXXXX'; File name field
-F490: 58...   	
-F49A: 00      		defb	0x00		; Padding
+F495: 8F00    	ns_m0:	defb	0x8F,0x00
+F497: 1300    		defw	19		; Message length
+F499: 01      		defb	0x01		; Cmd: STORAGE-OPEN
+F49A: 80      		defb	ns_fild		; Default file descriptor
+F49B: 0000    	ns_m0fl:defw	0x00		; Read/Write flags
+F49D: 0E      		defb	0x0E		; Message length
+F49E: 58585858	ns_m0na:defb	'XXXXXXXXXXXXXX'; File name field
+F4A2: 58...   	
+F4AC: 00      		defb	0x00		; Padding
               		
               	; Message prototype to close a file
               	; Total length: 6 bytes
-F49B: 8F00    	nd_m1:	defb	0x8F,0x00
-F49D: 0200    		defw	2		; Message length
-F49F: 05      		defb	0x05		; Cmd: FILE-CLOSE
-F4A0: 80      		defb	nd_fild		; Default file descriptor
-F4A1: 0000    		defw	0x00		; Magic bytes
+F4AD: 8F00    	ns_m1:	defb	0x8F,0x00
+F4AF: 0200    		defw	2		; Message length
+F4B1: 05      		defb	0x05		; Cmd: FILE-CLOSE
+F4B2: 80      		defb	ns_fild		; Default file descriptor
+F4B3: 0000    		defw	0x00		; Magic bytes
               		
               	; Message prototype to read a block
               	; Total length: 12 bytes
-F4A3: 8F00    	nd_m2:	defb	0x8F,0x00
-F4A5: 0800    		defw	8		; Message length
-F4A7: 07      		defb	0x07		; Cmd: STORAGE-GET-BLOCK
-F4A8: 80      		defb	nd_fild		; Default file descritor
-F4A9: 00000000	nd_m2bn:defw	0x00,0x00	; Block number
-F4AD: 8000    		defw	128		; Block length
+F4B5: 8F00    	ns_m2:	defb	0x8F,0x00
+F4B7: 0800    		defw	8		; Message length
+F4B9: 07      		defb	0x07		; Cmd: STORAGE-GET-BLOCK
+F4BA: 80      		defb	ns_fild		; Default file descritor
+F4BB: 00000000	ns_m2bn:defw	0x00,0x00	; Block number
+F4BF: 8000    		defw	128		; Block length
               		
               	; Message prototype to write a block
               	; Total length: 12 bytes
-F4AF: 8F00    	nd_m3:	defb	0x8F,0x00
-F4B1: 8800    		defw	136		; Message length
-F4B3: 08      		defb	0x08		; Cmd: STORAGE-PUT-BLOCK
-F4B4: 80      		defb	nd_fild		; Default file descritor
-F4B5: 00000000	nd_m3bn:defw	0x00,0x00	; Block number
-F4B9: 8000    		defw	128		; Block length
+F4C1: 8F00    	ns_m3:	defb	0x8F,0x00
+F4C3: 8800    		defw	136		; Message length
+F4C5: 08      		defb	0x08		; Cmd: STORAGE-PUT-BLOCK
+F4C6: 80      		defb	ns_fild		; Default file descritor
+F4C7: 00000000	ns_m3bn:defw	0x00,0x00	; Block number
+F4CB: 8000    		defw	128		; Block length
               	
               	; Variables
-F9B0:         	nd_csec	equ	nd_bss		; Current sector (1b)
-F9B1:         	nd_ctrk	equ	nd_bss+1	; Current track (2b)
-F9B6:         	nd_buff	equ	nd_bss+6	; Buffer (64b)
-F9FC:         	nd_asva	equ	nd_buff+70	; ASV #1 (129b)
-FA7D:         	nd_asvb	equ	nd_buff+199	; ASV #1 (129b)
-              	#include "dev/nabu_fdc.asm"
-              	;
-              	;**************************************************************
-              	;*
-              	;*      N A B U   F D 1 7 9 7   F L O P P Y   D R I V E R
-              	;*
-              	;*      This driver interfaces the NABU FDC for use as a
-              	;*      CP/M file system, graphical source, and boot device.
-              	;*      The driver only supports double-density disks of 
-              	;*      Osborne 1 format at the time, but this could be
-              	;*      updated if it is needed. The directory table starts
-              	;*      on track 2, the system sectors are as follows:
-              	;*
-              	;*      Track 0 Sector 1:	Boot Sector
-              	;*      Track 0 Sector 2-3:	Graphical Resource Block
-              	;*	Track 0 Sector 4-5:	CCP
-              	;*	Track 1 Sector 1-5:	BDOS + BIOS Image
-              	;*
-              	;*	Device requires 90 bytes of bss space (nf_bss)
-              	;*	Device requires 1024 byte buffer space (nf_cach)
-              	;* 
-              	;**************************************************************
-              	;
-              	
-0002:         	nf_rdsk	equ	2	; Defines which drives contains system
-              				; resources (2 = A, 4 = B)
-              	
-              	;
-              	;**************************************************************
-              	;*
-              	;*         D I S K   D R I V E   G E O M E T R Y
-              	;* 
-              	;**************************************************************
-              	;
-              	
-              	; Disk A DPH
-F4BB:         	nf_dpha:
-F4BB: 00000000		defw	0,0,0,0
-F4BF: 00000000	
-F4C3: 00F9    		defw	dircbuf	; DIRBUF
-F4C5: DBF4    		defw	nf_dpb	; DPB
-F4C7: 69FB    		defw	nf_csva	; CSV
-F4C9: 37FB    		defw	nf_asva	; ALV
-              	
-              	; Disk B DPH
-F4CB:         	nf_dphb:
-F4CB: 00000000		defw	0,0,0,0
-F4CF: 00000000	
-F4D3: 00F9    		defw	dircbuf	; DIRBUF
-F4D5: DBF4    		defw	nf_dpb	; DPB
-F4D7: 79FB    		defw	nf_csvb	; CSV
-F4D9: 50FB    		defw	nf_asvb	; ALV
-              	
-              	; Osborne 1 format
-F4DB:         	nf_dpb:
-F4DB: 2800    		defw	40	; # sectors per track
-F4DD: 03      		defb	3	; BSH
-F4DE: 07      		defb	7	; BLM
-F4DF: 00      		defb	0	; EXM
-F4E0: B800    		defw	184	; DSM
-F4E2: 3F00    		defw	63	; DRM
-F4E4: C0      		defb	0xC0	; AL0
-F4E5: 00      		defb	0	; AL1
-F4E6: 1000    		defw	16	; Size of directory check vector
-F4E8: 0300    		defw	3	; Number of reserved tracks at the beginning of disk
-              	
-              	
-              	; Driver entry point
-              	; a = Command #
-              	;
-              	; uses: all
-F4EA: B7      	nfddev:	or	a
-F4EB: 2815    		jr	z,nf_init
-F4ED: 3D      		dec	a
-F4EE: 283D    		jr	z,nf_home
-F4F0: 3D      		dec	a
-F4F1: 2852    		jr	z,nf_sel
-F4F3: 3D      		dec	a
-F4F4: CA99F5  		jp	z,nf_strk
-F4F7: 3D      		dec	a
-F4F8: CACFF5  		jp	z,nf_ssec
-F4FB: 3D      		dec	a
-F4FC: CA20F6  		jp	z,nf_read
-F4FF: C328F6  		jp	nf_writ
-              		
-              	; Initialize device
-              	; Sets the current track to 0
-F502: AF      	nf_init:xor	a
-F503: 3230FB  		ld	(nf_io),a
-              	
-              		; Look for the FDC
-F506: 0ECF    		ld	c,0xCF
-F508: ED78    	nf_ini1:in	a,(c)
-F50A: FE10    		cp	0x10
-F50C: 2808    		jr	z,nf_ini2
-F50E: 0C      		inc	c
-F50F: C8      		ret	z	; Should not be possible!
-F510: 3E0F    		ld	a,0x0F
-F512: 81      		add	a,c
-F513: 4F      		ld	c,a
-F514: 18F2    		jr	nf_ini1
-              		
-              		; Get command register
-F516: 79      	nf_ini2:ld	a,c
-F517: D60F    		sub	15
-F519: 4F      		ld	c,a
-F51A: 3230FB  		ld	(nf_io),a
-              		
-              		; Select drive defined by hl
-F51D: CB25    		sla	l
-F51F: 3E02    		ld	a,2
-F521: 85      		add	l
-F522: 3232FB  		ld	(nf_curd),a
-              		
-              		; Force FDC interrupt
-F525: 3ED0    		ld	a,0xD0
-F527: ED79    		out	(c),a
-              		
-              		; Re-home drive
-F529: CD2DF5  		call	nf_home
-              		
-              		; De-select drive
-              		
-F52C: C9      		ret
-              	
-              	; Sends the drive to track 0, and syncs the drive
-              	;
-              	; uses : af, c
-F52D: CD40F6  	nf_home:call	nf_wdef
-F530: CDE7F6  		call	nf_dvsc
-              	
-F533: 3A30FB  		ld	a,(nf_io)
-F536: 4F      		ld	c,a
-              		
-              		; Restore to track 0
-F537: 3E09    		ld	a,0x09
-F539: ED79    		out	(c),a 
-F53B: CDFEF6  		call	nf_busy
-              		
-              		; Reset sync flag
-F53E: AF      		xor	a
-F53F: 3234FB  		ld	(nf_sync),a
-              		
-              		; De-select drive
-F542: C3ECF6  		jp	nf_udsl
-              		
-              	; Selects the drive
-              	; c = Logging status
-              	; hl = Call argument
-              	;
-              	; uses; all
-F545: 3A30FB  	nf_sel:	ld	a,(nf_io)
-F548: B7      		or	a
-F549: FA50F5  		jp	m,nf_seld
-              		
-              		; no FDC card
-F54C: 210000  		ld	hl,0
-F54F: C9      		ret
-              	
-F550: 7D      	nf_seld:ld	a,l		; Select a disk
-F551: 0602    		ld	b,2
-F553: B7      		or	a
-F554: 2809    		jr	z,nf_sel0
-F556: 3D      		dec	a
-F557: 0604    		ld	b,4
-F559: 2804    		jr	z,nf_sel0
-F55B: 210000  		ld	hl,0
-F55E: C9      		ret
-              	
-              		; Move control of drive buffers
-F55F: CD40F6  	nf_sel0:call	nf_wdef		; Write back if needed
-F562: 3EFF    		ld	a,0xFF
-F564: 3234FB  		ld	(nf_sync),a	; Set sync flag
-F567: 78      		ld	a,b
-F568: 3232FB  		ld	(nf_curd),a	; Set current drive
-F56B: 5F      		ld	e,a
-              		
-              		; Check to make sure there is a disk
-F56C: 16FF    	nf_selc	ld	d,255
-F56E: CDE7F6  		call	nf_dvsc
-F571: 3A30FB  		ld	a,(nf_io)
-F574: 4F      		ld	c,a
-F575: 3ED0    		ld	a,0xD0
-F577: ED79    		out	(c),a		; Force FDC interrupt
-F579: CD04F7  	nf_sel1:call	nf_stal
-F57C: ED78    		in	a,(c)
-F57E: E602    		and	0x02
-F580: 2009    		jr	nz,nf_sel2
-F582: 15      		dec	d
-F583: 20F4    		jr	nz,nf_sel1
-              		
-              		; No disk!
-F585: 210000  		ld	hl,0
-F588: C3ECF6  		jp	nf_udsl
-              		
-              		
-              		; Output DPH
-F58B: CDECF6  	nf_sel2:call	nf_udsl
-F58E: 21BBF4  		ld	hl,nf_dpha
-F591: 3E02    		ld	a,2
-F593: BB      		cp	e
-F594: C8      		ret	z
-F595: 21CBF4  		ld	hl,nf_dphb
-F598: C9      		ret
-              	
-              	; Sets the track of the selected block device
-              	; bc = Track, starts at 0
-              	; hl = Call argument
-              	;
-              	; uses: all
-F599: 51      	nf_strk:ld	d,c		; Track = d
-F59A: 3A30FB  		ld	a,(nf_io)
-F59D: 4F      		ld	c,a
-F59E: 3A34FB  		ld	a,(nf_sync)
-F5A1: B7      		or	a
-F5A2: 280E    		jr	z,nf_str0	; Check if disk direct
-              		
-F5A4: CDE7F6  		call	nf_dvsc
-              		
-              		; Restore to track 0
-F5A7: 3E09    		ld	a,0x09
-F5A9: ED79    		out	(c),a 
-F5AB: CDFEF6  		call	nf_busy
-              		
-              		; Reset sync flag
-F5AE: AF      		xor	a
-F5AF: 3234FB  		ld	(nf_sync),a
-              		
-              		; Check to see if tracks match
-F5B2: 59      	nf_str0:ld	e,c
-F5B3: 0C      		inc	c
-F5B4: ED78    		in	a,(c)
-F5B6: BA      		cp	d
-F5B7: CAECF6  		jp	z,nf_udsl	; They match, do nothing
-              	
-              		; Write a deferred block
-F5BA: CD40F6  		call	nf_wdef
-              	
-              		; Seek to track
-F5BD: CDE7F6  		call	nf_dvsc
-F5C0: 0C      		inc	c
-F5C1: 0C      		inc	c
-F5C2: ED51    		out	(c),d
-F5C4: 3E19    		ld	a,0x19
-F5C6: 4B      		ld	c,e
-F5C7: ED79    		out	(c),a 
-F5C9: CDFEF6  		call	nf_busy	
-              		
-F5CC: C3ECF6  		jp	nf_udsl
-              	
-              	; Sets the sector of the selected block device
-              	; bc = Sector, starts at 0
-              	; hl = Call argument
-              	;
-              	; uses: all
-F5CF: 79      	nf_ssec:ld	a,c
-F5D0: E607    		and	0x07
-F5D2: 3233FB  		ld	(nf_subs),a
-F5D5: 79      		ld	a,c
-              		
-              		; Compute physical sector
-F5D6: CB3F    		srl	a
-F5D8: CB3F    		srl	a
-F5DA: CB3F    		srl	a
-F5DC: 3C      		inc	a
-F5DD: 47      		ld	b,a	; b = Physical sector
-F5DE: 3A30FB  		ld	a,(nf_io)
-F5E1: 3C      		inc	a
-F5E2: 3C      		inc	a
-F5E3: 4F      		ld	c,a
-F5E4: ED78    		in	a,(c)
-F5E6: B8      		cp	b
-F5E7: C8      		ret	z	; Return if the same
-              		
-              		; Set FDC sector, after writing back if needed
-F5E8: CD40F6  		call	nf_wdef
-F5EB: ED41    		out	(c),b
-F5ED: C9      		ret
-              		
-              	; Ensure sector is in core, and set up for DMA transfer
-              	;
-              	; uses: all
-F5EE: 3A35FB  	nf_rdwr:ld	a,(nf_inco)
-F5F1: B7      		or	a
-F5F2: 2019    		jr	nz,nf_rdw0
-              		
-              		; Read in to cache
-F5F4: CDE7F6  		call	nf_dvsc
-F5F7: 3A30FB  		ld	a,(nf_io)
-F5FA: 4F      		ld	c,a
-F5FB: 2100FC  		ld	hl,nf_cach
-F5FE: CDCBF6  		call	nf_rphy
-F601: 47      		ld	b,a
-F602: CDECF6  		call	nf_udsl
-F605: 78      		ld	a,b
-              		
-              		; Error checking
-F606: B7      		or	a
-F607: 3E01    		ld	a,1
-F609: C0      		ret	nz
-F60A: 3235FB  		ld	(nf_inco),a
-              		
-              		; DMA subsector
-F60D: 2A49EF  	nf_rdw0:ld	hl,(biodma)
-F610: EB      		ex	de,hl
-              	
-F611: 3A33FB  		ld	a,(nf_subs)
-F614: 2180FB  		ld	hl,nf_cach-128
-F617: 018000  		ld	bc,128
-F61A: 3C      		inc	a
-F61B: 09      	nf_rdw1:add	hl,bc
-F61C: 3D      		dec	a
-F61D: 20FC    		jr	nz,nf_rdw1
-F61F: C9      		ret
-              	
-              	; Reads a sector and DMA transfers it to memory
-F620: CDEEF5  	nf_read:call	nf_rdwr
-F623: B7      		or	a
-F624: C0      		ret	nz
-F625: EDB0    		ldir
-F627: C9      		ret
-              	
-              	
-              	; Write a sector from DMA, and defer it if possible
-F628: C5      	nf_writ:push	bc
-F629: CDEEF5  		call	nf_rdwr
-F62C: B7      		or	a
-F62D: C1      		pop	bc
-F62E: C0      		ret	nz
-F62F: 3E01    		ld	a,1
-F631: 3236FB  		ld	(nf_dirt),a
-F634: 79      		ld	a,c
-F635: 018000  		ld	bc,128
-F638: EB      		ex	de,hl
-F639: EDB0    		ldir
-F63B: FE01    		cp	1
-F63D: 3E00    		ld	a,0
-F63F: C0      		ret	nz
-              		
-              		; Drop down to defer read
-              	
-              	
-              	; Checks to see if the cache needs to be written back
-              	; after a deferred write.
-              	;
-              	; uses, af
-F640: 3A36FB  	nf_wdef:ld	a,(nf_dirt)
-F643: B7      		or	a
-F644: 2837    		jr	z,nf_wde4
-              	
-F646: C5      		push	bc
-F647: D5      		push	de
-F648: E5      		push	hl
-              		
-              		; Write physical sector
-F649: CDE7F6  		call	nf_dvsc
-F64C: 3A30FB  		ld	a,(nf_io)
-F64F: 4F      		ld	c,a
-F650: C603    		add	a,3
-F652: 57      		ld	d,a
-F653: 59      		ld	e,c
-F654: 3EA8    		ld	a,0xA8		; Write command
-F656: ED79    		out	(c),a
-F658: 2100FC  		ld	hl,nf_cach
-F65B: ED78    	nf_wde1:in	a,(c)
-F65D: 1F      		rra	
-F65E: 3009    		jr	nc,nf_wde2
-F660: 1F      		rra
-F661: 30F8    		jr	nc,nf_wde1
-F663: 4A      		ld	c,d
-F664: EDA3    		outi 
-F666: 4B      		ld	c,e
-F667: 18F2    		jr	nf_wde1
-F669: ED78    	nf_wde2:in	a,(c)
-              		
-              		; Deselect drive
-F66B: 47      		ld	b,a
-F66C: CDECF6  		call	nf_udsl
-F66F: 78      		ld	a,b
-              		
-F670: E1      		pop	hl
-F671: D1      		pop	de
-F672: C1      		pop	bc
-              		
-              		; Error checking
-F673: E6FC    		and	0xFC
-F675: 2803    		jr	z,nf_wde3
-              		
-F677: 3E01    		ld	a,1
-F679: C9      		ret
-              		
-              		; Cache is no longer dirty
-F67A: 3236FB  	nf_wde3:ld	(nf_dirt),a
-              		
-              		; Data no longer in core
-F67D: AF      	nf_wde4:xor	a
-F67E: 3235FB  		ld	(nf_inco),a
-              		
-F681: C9      		ret
-              		
-              	; Loads the GRB into memory from sector 2-3
-F682: 3E02    	nf_grb:	ld	a,2
-F684: 3231FB  		ld	(nf_r2ks),a
-F687: 1805    		jr	nf_r2k
-              		
-              	; Loads the CCP into memory from sectors 4-5
-F689: 3E04    	nf_ccp:	ld	a,4
-F68B: 3231FB  		ld	(nf_r2ks),a
-              	
-              	; Reads in a 2K bytes, starting at track 0, sector (nf_r2ks)
-              	; This is placed into the cbase
-F68E: 3E02    	nf_r2k: ld	a,nf_rdsk
-F690: CDEDF6  		call	nf_dvsl
-              		
-              		; Restore to track 0
-F693: 3A30FB  		ld	a,(nf_io)
-F696: 4F      		ld	c,a
-F697: 3E09    		ld	a,0x09
-F699: ED79    		out	(c),a 
-F69B: CDFEF6  		call	nf_busy
-              		
-              		; Set sector # to 4
-F69E: 3A31FB  		ld	a,(nf_r2ks)
-F6A1: 0C      		inc	c
-F6A2: 0C      		inc	c
-F6A3: ED79    		out	(c),a
-F6A5: C5      		push	bc
-F6A6: 0D      		dec	c
-F6A7: 0D      		dec	c
-              		
-              		; Read into memory
-F6A8: 2100D8  		ld	hl,cbase
-F6AB: CDCBF6  		call	nf_rphy
-F6AE: C1      		pop	bc
-F6AF: B7      		or	a
-F6B0: 2805    		jr	z,nf_r2k0
-F6B2: CD02F5  		call	nf_init		; Error!
-F6B5: 18D7    		jr	nf_r2k
-              		
-              		; Increment sector
-F6B7: ED78    	nf_r2k0:in	a,(c)
-F6B9: 3C      		inc	a
-F6BA: ED79    		out	(c),a
-F6BC: 0D      		dec	c
-F6BD: 0D      		dec	c
-              		
-              		; Read into memory again
-F6BE: CDCBF6  		call	nf_rphy
-F6C1: B7      		or	a
-F6C2: C8      		ret	z
-F6C3: CD02F5  		call	nf_init		; Error!
-F6C6: 18C6    		jr	nf_r2k
-              		
-              		; De-select drive
-F6C8: C3ECF6  		jp	nf_udsl
-              	
-              	; Reads a physical sector
-              	; Track and sector should be set up
-              	; c = FDC command address
-              	; hl = memory location of result
-              	;
-              	; Returns a=0 if successful
-              	; uses: af, bc, de, hl
-F6CB: 51      	nf_rphy:ld	d,c
-F6CC: 59      		ld	e,c
-F6CD: 14      		inc	d
-F6CE: 14      		inc	d
-F6CF: 14      		inc	d
-              		
-              		; Read command
-F6D0: 3E88    		ld	a,0x88
-F6D2: ED79    		out	(c),a
-F6D4: ED78    	nf_rph1:in	a,(c)
-F6D6: 1F      		rra	
-F6D7: 3009    		jr	nc,nf_rph2
-F6D9: 1F      		rra
-F6DA: 30F8    		jr	nc,nf_rph1
-F6DC: 4A      		ld	c,d
-F6DD: EDA2    		ini
-F6DF: 4B      		ld	c,e
-F6E0: 18F2    		jr	nf_rph1
-F6E2: ED78    	nf_rph2:in	a,(c)
-F6E4: E6FC    		and	0xFC
-F6E6: C9      		ret
-              	
-              	; Selects or deselects a drive
-              	; a = Drive density / selection
-              	;
-              	; uses: af
-F6E7: 3A32FB  	nf_dvsc:ld	a,(nf_curd)	; Select current drive
-F6EA: 1801    		jr	nf_dvsl
-F6EC: AF      	nf_udsl:xor	a		; Unselects a drive
-F6ED: C5      	nf_dvsl:push	bc
-F6EE: 47      		ld	b,a
-F6EF: 3A30FB  		ld	a,(nf_io)
-F6F2: C60F    		add	a,0x0F
-F6F4: 4F      		ld	c,a
-F6F5: ED41    		out	(c),b
-F6F7: 06FF    		ld	b,0xFF
-F6F9: CD04F7  		call	nf_stal
-F6FC: C1      		pop	bc
-F6FD: C9      		ret
-              		
-              	
-              	; Waits until FDC is not busy
-              	; c = FDC command address
-              	;
-              	; uses: af
-F6FE: ED78    	nf_busy:in	a,(c)
-F700: 1F      		rra
-F701: 38FB    		jr	c,nf_busy
-F703: C9      		ret
-              		
-              	; Waits a little bit
-              	;
-              	; uses: b
-F704: C5      	nf_stal:push	bc
-F705: C1      		pop	bc
-F706: 10FC    		djnz	nf_stal
-F708: C9      		ret
-              	
-              	
-              	; Variables
-FB30:         	nf_io:	equ	nf_bss	; FDC address
-FB31:         	nf_r2ks:equ	nf_bss+1; Temp storaged used in nf_r2k
-              	
-FB32:         	nf_curd:equ	nf_bss+2; Currently selected disk
-FB33:         	nf_subs:equ	nf_bss+3; Current subsector
-FB34:         	nf_sync:equ	nf_bss+4; Set if disk needs to be rehomed
-FB35:         	nf_inco:equ	nf_bss+5; Set if sector is in core already
-FB36:         	nf_dirt:equ	nf_bss+6; Set if cache is dirty
-              	
-              	; Misc CP/M buffer
-FB37:         	nf_asva:equ	nf_bss+7
-FB50:         	nf_asvb:equ	nf_bss+32
-FB69:         	nf_csva:equ	nf_bss+57
-FB79:         	nf_csvb:equ	nf_bss+73
+FA40:         	ns_buff	equ	ns_bss		; Buffer (64b)
+FA80:         	ns_mask equ	ns_bss+64	; Ownership mask (2b)
+FA82:         	ns_dore	equ	ns_bss+66	; Do reopen?
               	#include "dev/nabu_prt.asm"
               	;
               	;**************************************************************
@@ -5946,60 +5434,60 @@ FB79:         	nf_csvb:equ	nf_bss+73
 0000:         	pr_ctrl	equ	0x00		; Device control register
               	
               	; Driver jump table 
-F709: B7      	prtdev:	or	a
-F70A: 2808    		jr	z,pr_init
-F70C: 3D      		dec	a
-F70D: 2806    		jr	z,pr_stat
-F70F: 3D      		dec	a
-F710: 2805    		jr	z,pr_read
-F712: 1805    		jr	pr_writ
+F4CD: B7      	prtdev:	or	a
+F4CE: 2808    		jr	z,pr_init
+F4D0: 3D      		dec	a
+F4D1: 2806    		jr	z,pr_stat
+F4D3: 3D      		dec	a
+F4D4: 2805    		jr	z,pr_read
+F4D6: 1805    		jr	pr_writ
               		
               	; Device init
               	; Does nothing
               	;
               	; uses: none
-F714: C9      	pr_init:ret
+F4D8: C9      	pr_init:ret
               	
               	; Device status 
               	; There are never any characters to read
               	;
               	; Returns a=0xFF if there is a character to read
               	; uses: af
-F715: AF      	pr_stat:xor	a
-F716: C9      		ret
+F4D9: AF      	pr_stat:xor	a
+F4DA: C9      		ret
               		
               	; Waits for a character to come in and returns it
               	; No characters to read, returns 0
               	;
               	; Returns ASCII key in A
               	; uses: af
-F717: AF      	pr_read:xor	a
-F718: C9      		ret
+F4DB: AF      	pr_read:xor	a
+F4DC: C9      		ret
               		
               	; Writes a character to the device
               	; c = Character to write
               	;
               	; uses: af, bc
-F719: 3E0F    	pr_writ:ld	a,0x0F
-F71B: D341    		out	(pr_atla),a	; AY register = 15
+F4DD: 3E0F    	pr_writ:ld	a,0x0F
+F4DF: D341    		out	(pr_atla),a	; AY register = 15
               		
-F71D: DB40    	pr_wri0:in	a,(pr_ayda)	; Wait for not busy
-F71F: E610    		and	0x10
-F721: 20FA    		jr	nz,pr_wri0
+F4E1: DB40    	pr_wri0:in	a,(pr_ayda)	; Wait for not busy
+F4E3: E610    		and	0x10
+F4E5: 20FA    		jr	nz,pr_wri0
               		
-F723: 79      		ld	a,c
-F724: D3B0    		out	(pr_prnt),a	; Write data
+F4E7: 79      		ld	a,c
+F4E8: D3B0    		out	(pr_prnt),a	; Write data
               		
-F726: 3E05    		ld	a,0x05		; Strobe
-F728: D300    		out	(pr_ctrl),a
+F4EA: 3E05    		ld	a,0x05		; Strobe
+F4EC: D300    		out	(pr_ctrl),a
               		
-F72A: 0620    		ld	b,32		
-F72C: 10FE    	pr_wri1:djnz	pr_wri1		; Wait a few cycles
+F4EE: 0620    		ld	b,32		
+F4F0: 10FE    	pr_wri1:djnz	pr_wri1		; Wait a few cycles
               		
-F72E: 3E01    		ld	a,0x01		; Strobe off
-F730: D300    		out	(pr_ctrl),a
+F4F2: 3E01    		ld	a,0x01		; Strobe off
+F4F4: D300    		out	(pr_ctrl),a
               		
-F732: C9      		ret
+F4F6: C9      		ret
               		
               	#include "dev/nabu_sio.asm"
               	;
@@ -6020,74 +5508,74 @@ F732: C9      		ret
               	
               	
               	; Driver jump table 
-F733: B7      	siodev:	or	a
-F734: 2808    		jr	z,so_init
-F736: 3D      		dec	a
-F737: 2833    		jr	z,so_stat
-F739: 3D      		dec	a
-F73A: 2841    		jr	z,so_read
-F73C: 1851    		jr	so_writ
+F4F7: B7      	siodev:	or	a
+F4F8: 2808    		jr	z,so_init
+F4FA: 3D      		dec	a
+F4FB: 2833    		jr	z,so_stat
+F4FD: 3D      		dec	a
+F4FE: 2841    		jr	z,so_read
+F500: 1851    		jr	so_writ
               		
               	; Device init
               	; Tries to find the option card if it is installed
               	; hl = Device options
               	;
               	; uses: none
-F73E: 11A3F7  	so_init:ld	de,so_atab
-F741: 45      		ld	b,l
-F742: 04      		inc	b		; Slot 1,2,3,...
-F743: 19      		add	hl,de 		; Get address table entry
-F744: 0ECF    		ld	c,0xCF		; First slot
+F502: 1167F5  	so_init:ld	de,so_atab
+F505: 45      		ld	b,l
+F506: 04      		inc	b		; Slot 1,2,3,...
+F507: 19      		add	hl,de 		; Get address table entry
+F508: 0ECF    		ld	c,0xCF		; First slot
               		
-F746: ED78    	so_ini0:in	a,(c)
-F748: FE08    		cp	0x08
-F74A: 2807    		jr	z,so_ini2
+F50A: ED78    	so_ini0:in	a,(c)
+F50C: FE08    		cp	0x08
+F50E: 2807    		jr	z,so_ini2
               		
-F74C: 3E10    	so_ini1:ld	a,0x10
-F74E: 81      		add	c
-F74F: F0      		ret	p		; Can't find, failure
-F750: 4F      		ld	c,a
-F751: 18F3    		jr	so_ini0
+F510: 3E10    	so_ini1:ld	a,0x10
+F512: 81      		add	c
+F513: F0      		ret	p		; Can't find, failure
+F514: 4F      		ld	c,a
+F515: 18F3    		jr	so_ini0
               		
-F753: 10F7    	so_ini2:djnz	so_ini1		; Repeat if looking for next card
-F755: 79      		ld	a,c
-F756: D60F    		sub	0x0F
-F758: 4F      		ld	c,a
-F759: 71      		ld	(hl),c
-F75A: 11A7F7  		ld	de,so_conf
-F75D: 060D    		ld	b,13
+F517: 10F7    	so_ini2:djnz	so_ini1		; Repeat if looking for next card
+F519: 79      		ld	a,c
+F51A: D60F    		sub	0x0F
+F51C: 4F      		ld	c,a
+F51D: 71      		ld	(hl),c
+F51E: 116BF5  		ld	de,so_conf
+F521: 060D    		ld	b,13
               		
               		; Lets set up the serial card for 9600 8N1
               		; First we set up the 8253, then the 8251
-F75F: 1A      	so_ini3:ld	a,(de)
-F760: 13      		inc	de
-F761: 86      		add	a,(hl)
-F762: 4F      		ld	c,a
-F763: 1A      		ld	a,(de)
-F764: 13      		inc	de
-F765: ED79    		out	(c),a
-F767: E5      		push	hl
-F768: E1      		pop	hl	; Small delay
-F769: 10F4    		djnz	so_ini3
-F76B: C9      		ret
+F523: 1A      	so_ini3:ld	a,(de)
+F524: 13      		inc	de
+F525: 86      		add	a,(hl)
+F526: 4F      		ld	c,a
+F527: 1A      		ld	a,(de)
+F528: 13      		inc	de
+F529: ED79    		out	(c),a
+F52B: E5      		push	hl
+F52C: E1      		pop	hl	; Small delay
+F52D: 10F4    		djnz	so_ini3
+F52F: C9      		ret
               	
               	; Device status 
               	; hl = Device options
               	;
               	; Returns a=0xFF if there is a character to read
               	; uses: af
-F76C: 11A3F7  	so_stat:ld	de,so_atab
-F76F: 19      		add	hl,de
-F770: AF      		xor	a
-F771: BE      		cp	(hl)
-F772: C8      		ret	z	; No device, return 0
-F773: 4E      		ld	c,(hl)
-F774: 0C      		inc	c
-F775: ED78    	so_sta0:in	a,(c)	; Check status register
-F777: E602    		and	0x02
-F779: C8      		ret	z
-F77A: 3EFF    		ld	a,0xFF
-F77C: C9      		ret
+F530: 1167F5  	so_stat:ld	de,so_atab
+F533: 19      		add	hl,de
+F534: AF      		xor	a
+F535: BE      		cp	(hl)
+F536: C8      		ret	z	; No device, return 0
+F537: 4E      		ld	c,(hl)
+F538: 0C      		inc	c
+F539: ED78    	so_sta0:in	a,(c)	; Check status register
+F53B: E602    		and	0x02
+F53D: C8      		ret	z
+F53E: 3EFF    		ld	a,0xFF
+F540: C9      		ret
               		
               		
               	; Waits for a character to come in and returns it
@@ -6095,63 +5583,63 @@ F77C: C9      		ret
               	;
               	; Returns ASCII key in A
               	; uses: af
-F77D: 11A3F7  	so_read:ld	de,so_atab
-F780: 19      		add	hl,de
-F781: AF      		xor	a
-F782: BE      		cp	(hl)
-F783: C8      		ret	z	; No device, return 0
-F784: 4E      		ld	c,(hl)
-F785: 0C      		inc	c
-F786: CD75F7  	so_rea0:call	so_sta0	; Wait for a character
-F789: 28FB    		jr	z,so_rea0
-F78B: 0D      		dec	c
-F78C: ED78    		in	a,(c)
-F78E: C9      		ret
+F541: 1167F5  	so_read:ld	de,so_atab
+F544: 19      		add	hl,de
+F545: AF      		xor	a
+F546: BE      		cp	(hl)
+F547: C8      		ret	z	; No device, return 0
+F548: 4E      		ld	c,(hl)
+F549: 0C      		inc	c
+F54A: CD39F5  	so_rea0:call	so_sta0	; Wait for a character
+F54D: 28FB    		jr	z,so_rea0
+F54F: 0D      		dec	c
+F550: ED78    		in	a,(c)
+F552: C9      		ret
               		
               	; Writes a character to the device
               	; c = Character to write
               	; hl = Device options
               	;
               	; uses: af, bc
-F78F: 41      	so_writ:ld	b,c
-F790: 11A3F7  		ld	de,so_atab
-F793: 19      		add	hl,de
-F794: AF      		xor	a
-F795: BE      		cp	(hl)
-F796: C8      		ret	z	; No device, return 0
-F797: 4E      		ld	c,(hl)
-F798: 0C      		inc	c
-F799: ED78    	so_wri0:in	a,(c)
-F79B: E601    		and	0x01
-F79D: 28FA    		jr	z,so_wri0
-F79F: 0D      		dec	c
-F7A0: ED41    		out	(c),b
-F7A2: C9      		ret
+F553: 41      	so_writ:ld	b,c
+F554: 1167F5  		ld	de,so_atab
+F557: 19      		add	hl,de
+F558: AF      		xor	a
+F559: BE      		cp	(hl)
+F55A: C8      		ret	z	; No device, return 0
+F55B: 4E      		ld	c,(hl)
+F55C: 0C      		inc	c
+F55D: ED78    	so_wri0:in	a,(c)
+F55F: E601    		and	0x01
+F561: 28FA    		jr	z,so_wri0
+F563: 0D      		dec	c
+F564: ED41    		out	(c),b
+F566: C9      		ret
               		
               		
               	; Variables
               	; 4 possible slots
-F7A3: 00000000	so_atab:defb	0x00,0x00,0x00,0x00
+F567: 00000000	so_atab:defb	0x00,0x00,0x00,0x00
               	
               	; Configuration string
               	; Sets up counters 1 and 2 on the 8523 timer
-F7A7: 0737    	so_conf:defb	0x07,0x37	; Counter 1 setup
-F7A9: 0412    		defb	0x04,0x12
-F7AB: 0400    		defb	0x04,0x00
-F7AD: 0777    		defb	0x07,0x77	; Counter 2 setup
-F7AF: 0512    		defb	0x05,0x12
-F7B1: 0500    		defb	0x05,0x00
+F56B: 0737    	so_conf:defb	0x07,0x37	; Counter 1 setup
+F56D: 0412    		defb	0x04,0x12
+F56F: 0400    		defb	0x04,0x00
+F571: 0777    		defb	0x07,0x77	; Counter 2 setup
+F573: 0512    		defb	0x05,0x12
+F575: 0500    		defb	0x05,0x00
               		
-F7B3: 0100    		defb	0x01,0x00	; 8251 setup
-F7B5: 0100    		defb	0x01,0x00
-F7B7: 0100    		defb	0x01,0x00
-F7B9: 0100    		defb	0x01,0x00
-F7BB: 0140    		defb	0x01,0x40
-F7BD: 014E    		defb	0x01,0x4E
-F7BF: 0137    		defb	0x01,0x37
+F577: 0100    		defb	0x01,0x00	; 8251 setup
+F579: 0100    		defb	0x01,0x00
+F57B: 0100    		defb	0x01,0x00
+F57D: 0100    		defb	0x01,0x00
+F57F: 0140    		defb	0x01,0x40
+F581: 014E    		defb	0x01,0x4E
+F583: 0137    		defb	0x01,0x37
               	
               	; Image top, no more code after this
-F7C1:         	imgtop:
+F585:         	imgtop:
               	;
               	;*
               	;******************   E N D   O F   C P / M   *****************
@@ -6161,12 +5649,12 @@ F7C1:         	imgtop:
 
 ; +++ segments +++
 
-#CODE          = $D800 = 55296,  size = $1FC1 =  8129
+#CODE          = $D800 = 55296,  size = $1D85 =  7557
 
 ; +++ global symbols +++
 
-_end     = $F7C1 = 63425          cpm22.asm:42 (unused)
-_size    = $1FC1 =  8129          cpm22.asm:42 (unused)
+_end     = $F585 = 62853          cpm22.asm:42 (unused)
+_size    = $1D85 =  7557          cpm22.asm:42 (unused)
 active   = $E348 = 58184          cpm22.asm:1709
 adda2hl  = $E56A = 58730          cpm22.asm:2138
 addhl    = $DA59 = 55897          cpm22.asm:432
@@ -6186,7 +5674,7 @@ badsel   = $E0DB = 57563          cpm22.asm:1325
 badslct  = $E00E = 57358          cpm22.asm:1253
 batch    = $DFB8 = 57272          cpm22.asm:1224
 batchfcb = $DFB9 = 57273          cpm22.asm:1225
-bdevsw   = $EF6C = 61292          config.asm:140
+bdevsw   = $EF6C = 61292          config.asm:138
 bdosdrv  = $E0CC = 57548          cpm22.asm:1323
 bdoserr  = $E0C0 = 57536          cpm22.asm:1322
 bigdisk  = $EDE3 = 60899          cpm22.asm:3700
@@ -6204,13 +5692,13 @@ callbd   = $EEF8 = 61176          bios.asm:213
 callmj   = $EF46 = 61254          bios.asm:308
 cbase    = $D800 = 55296          cpm22.asm:44
 ccpstack = $DFB8 = 57272          cpm22.asm:1220
-cdevsw   = $EFAC = 61356          config.asm:179
+cdevsw   = $EFAC = 61356          config.asm:177
 cdindi0  = $EF1E = 61214          bios.asm:273
 cdindi1  = $EF24 = 61220          bios.asm:277
 cdindir  = $EF1A = 61210          bios.asm:271
 cdrive   = $DFFC = 57340          cpm22.asm:1231
-cfinit   = $EF4B = 61259          config.asm:57
-cfirq    = $EF62 = 61282          config.asm:87
+cfinit   = $EF4B = 61259          config.asm:55
+cfirq    = $EF62 = 61282          config.asm:85
 charbuf  = $E314 = 58132          cpm22.asm:1698
 check    = $DA30 = 55856          cpm22.asm:398
 checkdir = $E5A4 = 58788          cpm22.asm:2211
@@ -6298,7 +5786,7 @@ delete   = $D8EF = 55535          cpm22.asm:159
 delfile  = $ECDD = 60637          cpm22.asm:3494
 dirbuf   = $EDBF = 60863          cpm22.asm:3673
 dirc1    = $E2E6 = 58086          cpm22.asm:1654
-dircbuf  = $F900 = 63744          config.asm:40
+dircbuf  = $F980 = 63872          config.asm:40
 dircio   = $E2DA = 58074          cpm22.asm:1648
 dirdma   = $E5E6 = 58854          cpm22.asm:2254
 dirdma1  = $E5E9 = 58857          cpm22.asm:2259
@@ -6427,9 +5915,9 @@ halt     = $DBDC = 56284          cpm22.asm:685
 hl2de    = $DC4F = 56399          cpm22.asm:754
 home     = $EEDB = 61147          bios.asm:187
 homedrv  = $E3A7 = 58279          cpm22.asm:1784
-imgtop   = $F7C1 = 63425          config.asm:199
+imgtop   = $F585 = 62853          config.asm:196
 inbuff   = $D806 = 55302          cpm22.asm:51
-inbulen  = $D807 = 55303          config.asm:21
+inbulen  = $DC07 = 56327          config.asm:21
 inpoint  = $D888 = 55432          cpm22.asm:60
 iobyte   = $0003 =     3          cpm22.asm:16
 ioerr1   = $E30B = 58123          cpm22.asm:1691
@@ -6452,124 +5940,78 @@ movedir  = $E5EF = 58863          cpm22.asm:2266
 moveword = $E89A = 59546          cpm22.asm:2792
 namepnt  = $D88A = 55434          cpm22.asm:61
 nbytes   = $DFFE = 57342          cpm22.asm:1233
-nd_asva  = $F9FC = 63996          nabu_ndsk.asm:464
-nd_asvb  = $FA7D = 64125          nabu_ndsk.asm:465
-nd_atla  = $0041 =    65          nabu_ndsk.asm:29
-nd_ayda  = $0040 =    64          nabu_ndsk.asm:28
-nd_bss   = $F9B0 = 63920          config.asm:42
-nd_buff  = $F9B6 = 63926          nabu_ndsk.asm:463
-nd_ccp   = $F35E = 62302          nabu_ndsk.asm:212
-nd_csec  = $F9B0 = 63920          nabu_ndsk.asm:461
-nd_ctrk  = $F9B1 = 63921          nabu_ndsk.asm:462
-nd_dpb   = $F2B3 = 62131          nabu_ndsk.asm:59
-nd_dpha  = $F293 = 62099          nabu_ndsk.asm:45
-nd_dphb  = $F2A3 = 62115          nabu_ndsk.asm:52
-nd_fild  = $0080 =   128          nabu_ndsk.asm:33
-nd_gbno  = $F339 = 62265          nabu_ndsk.asm:178
-nd_get0  = $F3BC = 62396          nabu_ndsk.asm:271
-nd_getb  = $F39B = 62363          nabu_ndsk.asm:254
-nd_grb   = $F363 = 62307          nabu_ndsk.asm:216
-nd_grb0  = $F366 = 62310          nabu_ndsk.asm:217
-nd_grb1  = $F37A = 62330          nabu_ndsk.asm:224
-nd_hcca  = $0080 =   128          nabu_ndsk.asm:30
-nd_hcer  = $F42E = 62510          nabu_ndsk.asm:367
-nd_hcr0  = $F41F = 62495          nabu_ndsk.asm:358
-nd_hcr1  = $F434 = 62516          nabu_ndsk.asm:371
-nd_hcrd  = $F414 = 62484          nabu_ndsk.asm:353
-nd_hcre  = $F417 = 62487          nabu_ndsk.asm:354
-nd_hcw0  = $F449 = 62537          nabu_ndsk.asm:391
-nd_hcw1  = $F45A = 62554          nabu_ndsk.asm:401
-nd_hcwd  = $F43D = 62525          nabu_ndsk.asm:385 (unused)
-nd_hcwr  = $F440 = 62528          nabu_ndsk.asm:386
-nd_hini  = $F349 = 62281          nabu_ndsk.asm:198
-nd_home  = $F2DB = 62171          nabu_ndsk.asm:98
-nd_init  = $F2DA = 62170          nabu_ndsk.asm:93
-nd_m0    = $F483 = 62595          nabu_ndsk.asm:425
-nd_m0fl  = $F489 = 62601          nabu_ndsk.asm:429 (unused)
-nd_m0na  = $F48C = 62604          nabu_ndsk.asm:431
-nd_m1    = $F49B = 62619          nabu_ndsk.asm:436
-nd_m2    = $F4A3 = 62627          nabu_ndsk.asm:444
-nd_m2bn  = $F4A9 = 62633          nabu_ndsk.asm:448
-nd_m3    = $F4AF = 62639          nabu_ndsk.asm:453
-nd_m3bn  = $F4B5 = 62645          nabu_ndsk.asm:457
-nd_nctl  = $0000 =     0          nabu_ndsk.asm:31
-nd_open  = $F384 = 62340          nabu_ndsk.asm:236
-nd_p0    = $F464 = 62564          nabu_ndsk.asm:411
-nd_p1    = $F46E = 62574          nabu_ndsk.asm:415
-nd_p2    = $F478 = 62584          nabu_ndsk.asm:419
-nd_p2im  = $F47D = 62589          nabu_ndsk.asm:420
-nd_put0  = $F3E0 = 62432          nabu_ndsk.asm:300
-nd_putb  = $F3CE = 62414          nabu_ndsk.asm:290
-nd_read  = $F317 = 62231          nabu_ndsk.asm:152
-nd_rec0  = $F401 = 62465          nabu_ndsk.asm:325
-nd_rece  = $F3F6 = 62454          nabu_ndsk.asm:318
-nd_sel   = $F2E2 = 62178          nabu_ndsk.asm:107
-nd_send  = $F40B = 62475          nabu_ndsk.asm:339
-nd_ssec  = $F312 = 62226          nabu_ndsk.asm:145
-nd_strk  = $F30C = 62220          nabu_ndsk.asm:135
-nd_writ  = $F328 = 62248          nabu_ndsk.asm:164
-ndkdev   = $F2C2 = 62146          nabu_ndsk.asm:74
 newline  = $E1B7 = 57783          cpm22.asm:1478
 newln1   = $E1BF = 57791          cpm22.asm:1481
-nf_asva  = $FB37 = 64311          nabu_fdc.asm:531
-nf_asvb  = $FB50 = 64336          nabu_fdc.asm:532
-nf_bss   = $FB30 = 64304          config.asm:43
-nf_busy  = $F6FE = 63230          nabu_fdc.asm:506
-nf_cach  = $FC00 = 64512          config.asm:44
-nf_ccp   = $F689 = 63113          nabu_fdc.asm:404 (unused)
-nf_csva  = $FB69 = 64361          nabu_fdc.asm:533
-nf_csvb  = $FB79 = 64377          nabu_fdc.asm:534
-nf_curd  = $FB32 = 64306          nabu_fdc.asm:524
-nf_dirt  = $FB36 = 64310          nabu_fdc.asm:528
-nf_dpb   = $F4DB = 62683          nabu_fdc.asm:52
-nf_dpha  = $F4BB = 62651          nabu_fdc.asm:36
-nf_dphb  = $F4CB = 62667          nabu_fdc.asm:44
-nf_dvsc  = $F6E7 = 63207          nabu_fdc.asm:487
-nf_dvsl  = $F6ED = 63213          nabu_fdc.asm:490
-nf_grb   = $F682 = 63106          nabu_fdc.asm:399 (unused)
-nf_home  = $F52D = 62765          nabu_fdc.asm:126
-nf_inco  = $FB35 = 64309          nabu_fdc.asm:527
-nf_ini1  = $F508 = 62728          nabu_fdc.asm:90
-nf_ini2  = $F516 = 62742          nabu_fdc.asm:101
-nf_init  = $F502 = 62722          nabu_fdc.asm:85
-nf_io    = $FB30 = 64304          nabu_fdc.asm:521
-nf_r2k   = $F68E = 63118          nabu_fdc.asm:409
-nf_r2k0  = $F6B7 = 63159          nabu_fdc.asm:438
-nf_r2ks  = $FB31 = 64305          nabu_fdc.asm:522
-nf_rdsk  = $0002 =     2          nabu_fdc.asm:24
-nf_rdw0  = $F60D = 62989          nabu_fdc.asm:301
-nf_rdw1  = $F61B = 63003          nabu_fdc.asm:308
-nf_rdwr  = $F5EE = 62958          nabu_fdc.asm:280
-nf_read  = $F620 = 63008          nabu_fdc.asm:314
-nf_rph1  = $F6D4 = 63188          nabu_fdc.asm:470
-nf_rph2  = $F6E2 = 63202          nabu_fdc.asm:479
-nf_rphy  = $F6CB = 63179          nabu_fdc.asm:461
-nf_sel   = $F545 = 62789          nabu_fdc.asm:149
-nf_sel0  = $F55F = 62815          nabu_fdc.asm:168
-nf_sel1  = $F579 = 62841          nabu_fdc.asm:182
-nf_sel2  = $F58B = 62859          nabu_fdc.asm:195
-nf_selc  = $F56C = 62828          nabu_fdc.asm:176 (unused)
-nf_seld  = $F550 = 62800          nabu_fdc.asm:157
-nf_ssec  = $F5CF = 62927          nabu_fdc.asm:253
-nf_stal  = $F704 = 63236          nabu_fdc.asm:514
-nf_str0  = $F5B2 = 62898          nabu_fdc.asm:227
-nf_strk  = $F599 = 62873          nabu_fdc.asm:208
-nf_subs  = $FB33 = 64307          nabu_fdc.asm:525
-nf_sync  = $FB34 = 64308          nabu_fdc.asm:526
-nf_udsl  = $F6EC = 63212          nabu_fdc.asm:489
-nf_wde1  = $F65B = 63067          nabu_fdc.asm:362
-nf_wde2  = $F669 = 63081          nabu_fdc.asm:371
-nf_wde3  = $F67A = 63098          nabu_fdc.asm:390
-nf_wde4  = $F67D = 63101          nabu_fdc.asm:393
-nf_wdef  = $F640 = 63040          nabu_fdc.asm:344
-nf_writ  = $F628 = 63016          nabu_fdc.asm:322
-nfddev   = $F4EA = 62698          nabu_fdc.asm:69
+nfsdev   = $F2B3 = 62131          nabu_nfs.asm:62
 nfuncts  = $0029 =    41          cpm22.asm:1294
-nh_get1  = $F3C6 = 62406          nabu_ndsk.asm:278
 nofile   = $DBFD = 56317          cpm22.asm:700
 nonblank = $DA4F = 55887          cpm22.asm:422
 none     = $DBF7 = 56311          cpm22.asm:698
 nospace  = $DE14 = 56852          cpm22.asm:1008
+ns_alv   = $F2B2 = 62130          nabu_nfs.asm:56
+ns_atla  = $0041 =    65          nabu_nfs.asm:20
+ns_ayda  = $0040 =    64          nabu_nfs.asm:19
+ns_bss   = $FA40 = 64064          config.asm:42
+ns_buff  = $FA40 = 64064          nabu_nfs.asm:493
+ns_ccp   = $F2F1 = 62193          nabu_nfs.asm:121
+ns_dom0  = $F325 = 62245          nabu_nfs.asm:166
+ns_domk  = $F321 = 62241          nabu_nfs.asm:164
+ns_dore  = $FA82 = 64130          nabu_nfs.asm:495
+ns_dpb   = $F2A3 = 62115          nabu_nfs.asm:44
+ns_dph   = $F293 = 62099          nabu_nfs.asm:36
+ns_exit  = $F350 = 62288          nabu_nfs.asm:202
+ns_fild  = $0080 =   128          nabu_nfs.asm:24
+ns_fopn  = $F31E = 62238          nabu_nfs.asm:157
+ns_for0  = $F441 = 62529          nabu_nfs.asm:403 (unused)
+ns_for1  = $F446 = 62534          nabu_nfs.asm:405
+ns_for2  = $F454 = 62548          nabu_nfs.asm:412
+ns_for3  = $F45F = 62559          nabu_nfs.asm:418
+ns_for4  = $F46A = 62570          nabu_nfs.asm:424
+ns_form  = $F43A = 62522          nabu_nfs.asm:400 (unused)
+ns_get0  = $F392 = 62354          nabu_nfs.asm:256
+ns_get1  = $F39C = 62364          nabu_nfs.asm:263
+ns_getb  = $F371 = 62321          nabu_nfs.asm:239
+ns_getd  = $F353 = 62291          nabu_nfs.asm:211
+ns_grb   = $F2F6 = 62198          nabu_nfs.asm:125
+ns_grb0  = $F2F9 = 62201          nabu_nfs.asm:126
+ns_grb1  = $F30D = 62221          nabu_nfs.asm:133
+ns_hcca  = $0080 =   128          nabu_nfs.asm:21
+ns_hcer  = $F404 = 62468          nabu_nfs.asm:352
+ns_hcr0  = $F3F5 = 62453          nabu_nfs.asm:343
+ns_hcr1  = $F40A = 62474          nabu_nfs.asm:356
+ns_hcrd  = $F3EA = 62442          nabu_nfs.asm:338
+ns_hcre  = $F3ED = 62445          nabu_nfs.asm:339
+ns_hcw0  = $F41F = 62495          nabu_nfs.asm:376
+ns_hcw1  = $F430 = 62512          nabu_nfs.asm:386
+ns_hcwd  = $F413 = 62483          nabu_nfs.asm:370 (unused)
+ns_hcwr  = $F416 = 62486          nabu_nfs.asm:371
+ns_hini  = $F2DC = 62172          nabu_nfs.asm:107
+ns_init  = $F2BD = 62141          nabu_nfs.asm:76
+ns_ltou  = $F476 = 62582          nabu_nfs.asm:439
+ns_m0    = $F495 = 62613          nabu_nfs.asm:457
+ns_m0fl  = $F49B = 62619          nabu_nfs.asm:461 (unused)
+ns_m0na  = $F49E = 62622          nabu_nfs.asm:463
+ns_m1    = $F4AD = 62637          nabu_nfs.asm:468
+ns_m2    = $F4B5 = 62645          nabu_nfs.asm:476
+ns_m2bn  = $F4BB = 62651          nabu_nfs.asm:480
+ns_m3    = $F4C1 = 62657          nabu_nfs.asm:485
+ns_m3bn  = $F4C7 = 62663          nabu_nfs.asm:489
+ns_mask  = $FA80 = 64128          nabu_nfs.asm:494
+ns_nctl  = $0000 =     0          nabu_nfs.asm:22
+ns_open  = $F35A = 62298          nabu_nfs.asm:221
+ns_own0  = $F33D = 62269          nabu_nfs.asm:188
+ns_own1  = $F347 = 62279          nabu_nfs.asm:193
+ns_own2  = $F34D = 62285          nabu_nfs.asm:197
+ns_ownr  = $F32D = 62253          nabu_nfs.asm:179 (unused)
+ns_p0    = $F481 = 62593          nabu_nfs.asm:449
+ns_p1    = $F48B = 62603          nabu_nfs.asm:453
+ns_put0  = $F3B6 = 62390          nabu_nfs.asm:285
+ns_putb  = $F3A4 = 62372          nabu_nfs.asm:275 (unused)
+ns_rec0  = $F3D7 = 62423          nabu_nfs.asm:310
+ns_rece  = $F3CC = 62412          nabu_nfs.asm:303
+ns_sel   = $F2CE = 62158          nabu_nfs.asm:94
+ns_send  = $F3E1 = 62433          nabu_nfs.asm:324
+ns_sysh  = $F317 = 62231          nabu_nfs.asm:144 (unused)
 nulldev  = $EF45 = 61253          bios.asm:305 (unused)
 numcmds  = $0006 =     6          cpm22.asm:551
 nxent1   = $E61F = 58911          cpm22.asm:2304
@@ -6604,18 +6046,18 @@ positn5  = $EB91 = 60305          cpm22.asm:3255
 pr_atla  = $0041 =    65          nabu_prt.asm:13
 pr_ayda  = $0040 =    64          nabu_prt.asm:12
 pr_ctrl  = $0000 =     0          nabu_prt.asm:15
-pr_init  = $F714 = 63252          nabu_prt.asm:30
+pr_init  = $F4D8 = 62680          nabu_prt.asm:30
 pr_prnt  = $00B0 =   176          nabu_prt.asm:14
-pr_read  = $F717 = 63255          nabu_prt.asm:45
-pr_stat  = $F715 = 63253          nabu_prt.asm:37
-pr_wri0  = $F71D = 63261          nabu_prt.asm:55
-pr_wri1  = $F72C = 63276          nabu_prt.asm:66
-pr_writ  = $F719 = 63257          nabu_prt.asm:52
+pr_read  = $F4DB = 62683          nabu_prt.asm:45
+pr_stat  = $F4D9 = 62681          nabu_prt.asm:37
+pr_wri0  = $F4E1 = 62689          nabu_prt.asm:55
+pr_wri1  = $F4F0 = 62704          nabu_prt.asm:66
+pr_writ  = $F4DD = 62685          nabu_prt.asm:52
 print    = $D88C = 55436          cpm22.asm:66
 printb   = $D892 = 55442          cpm22.asm:72
 printdc  = $EE02 = 60930          cpm22.asm:3718
 prstat   = $EF14 = 61204          bios.asm:259
-prtdev   = $F709 = 63241          nabu_prt.asm:18
+prtdev   = $F4CD = 62669          nabu_prt.asm:18
 prterr   = $E0EB = 57579          cpm22.asm:1331
 prtflag  = $E313 = 58131          cpm22.asm:1697
 prtmesg  = $E1D9 = 57817          cpm22.asm:1498
@@ -6668,10 +6110,10 @@ rename4  = $DE7A = 56954          cpm22.asm:1059
 rename5  = $DE80 = 56960          cpm22.asm:1061
 rename6  = $DE86 = 56966          cpm22.asm:1063
 renfile  = $ECFB = 60667          cpm22.asm:3517
-resccp   = $EF66 = 61286          config.asm:129
+resccp   = $EF66 = 61286          config.asm:127
 resdsk   = $D8B8 = 55480          cpm22.asm:107
 resetdr  = $DC73 = 56435          cpm22.asm:788
-resgrb   = $EF69 = 61289          config.asm:135
+resgrb   = $EF69 = 61289          config.asm:133
 rodisk   = $E010 = 57360          cpm22.asm:1254
 rofile   = $E012 = 57362          cpm22.asm:1255
 rstdsk   = $EC89 = 60553          cpm22.asm:3445
@@ -6728,21 +6170,21 @@ shiftl1  = $E50B = 58635          cpm22.asm:2062
 shiftr   = $E4F0 = 58608          cpm22.asm:2035
 shiftr1  = $E4F1 = 58609          cpm22.asm:2036
 showit   = $E185 = 57733          cpm22.asm:1442
-siodev   = $F733 = 63283          nabu_sio.asm:19
+siodev   = $F4F7 = 62711          nabu_sio.asm:19
 slcterr  = $E34D = 58189          cpm22.asm:1715
-so_atab  = $F7A3 = 63395          nabu_sio.asm:130
-so_conf  = $F7A7 = 63399          nabu_sio.asm:134
-so_ini0  = $F746 = 63302          nabu_sio.asm:38
-so_ini1  = $F74C = 63308          nabu_sio.asm:42
-so_ini2  = $F753 = 63315          nabu_sio.asm:48
-so_ini3  = $F75F = 63327          nabu_sio.asm:58
-so_init  = $F73E = 63294          nabu_sio.asm:32
-so_rea0  = $F786 = 63366          nabu_sio.asm:101
-so_read  = $F77D = 63357          nabu_sio.asm:94
-so_sta0  = $F775 = 63349          nabu_sio.asm:82
-so_stat  = $F76C = 63340          nabu_sio.asm:75
-so_wri0  = $F799 = 63385          nabu_sio.asm:120
-so_writ  = $F78F = 63375          nabu_sio.asm:112
+so_atab  = $F567 = 62823          nabu_sio.asm:130
+so_conf  = $F56B = 62827          nabu_sio.asm:134
+so_ini0  = $F50A = 62730          nabu_sio.asm:38
+so_ini1  = $F510 = 62736          nabu_sio.asm:42
+so_ini2  = $F517 = 62743          nabu_sio.asm:48
+so_ini3  = $F523 = 62755          nabu_sio.asm:58
+so_init  = $F502 = 62722          nabu_sio.asm:32
+so_rea0  = $F54A = 62794          nabu_sio.asm:101
+so_read  = $F541 = 62785          nabu_sio.asm:94
+so_sta0  = $F539 = 62777          nabu_sio.asm:82
+so_stat  = $F530 = 62768          nabu_sio.asm:75
+so_wri0  = $F55D = 62813          nabu_sio.asm:120
+so_writ  = $F553 = 62803          nabu_sio.asm:112
 space    = $D8A2 = 55458          cpm22.asm:87
 srchfcb  = $D8E9 = 55529          cpm22.asm:154
 srchfst  = $D8DF = 55519          cpm22.asm:144
@@ -6764,7 +6206,7 @@ swindir  = $EF29 = 61225          bios.asm:286
 synerr   = $DA09 = 55817          cpm22.asm:377
 synerr1  = $DA0F = 55823          cpm22.asm:379
 synerr2  = $DA22 = 55842          cpm22.asm:389
-syshook  = $EF65 = 61285          config.asm:107
+syshook  = $EF65 = 61285          config.asm:105
 tab      = $0009 =     9          cpm22.asm:28
 tbase    = $0100 =   256          cpm22.asm:21
 tbuff    = $0080 =   128          cpm22.asm:20
@@ -6775,8 +6217,8 @@ tm_80c   = $F1A0 = 61856          nabu_vdp.asm:396
 tm_addh  = $F284 = 62084          nabu_vdp.asm:593
 tm_addr  = $F286 = 62086          nabu_vdp.asm:595
 tm_bs    = $F0F1 = 61681          nabu_vdp.asm:280
-tm_bss   = $F980 = 63872          config.asm:41
-tm_cbuf  = $F986 = 63878          nabu_vdp.asm:613
+tm_bss   = $FA00 = 64000          config.asm:41
+tm_cbuf  = $FA06 = 64006          nabu_vdp.asm:613
 tm_cha0  = $F232 = 62002          nabu_vdp.asm:525
 tm_chat  = $F22C = 61996          nabu_vdp.asm:520
 tm_cle0  = $F17F = 61823          nabu_vdp.asm:374
@@ -6788,8 +6230,8 @@ tm_cls0  = $F27C = 62076          nabu_vdp.asm:582
 tm_cr    = $F0EE = 61678          nabu_vdp.asm:277
 tm_cshm  = $F100 = 61696          nabu_vdp.asm:294
 tm_cupd  = $F197 = 61847          nabu_vdp.asm:391
-tm_curx  = $F980 = 63872          nabu_vdp.asm:607
-tm_cury  = $F981 = 63873          nabu_vdp.asm:608
+tm_curx  = $FA00 = 64000          nabu_vdp.asm:607
+tm_cury  = $FA01 = 64001          nabu_vdp.asm:608
 tm_data  = $00A0 =   160          nabu_vdp.asm:22
 tm_dsc0  = $F1B9 = 61881          nabu_vdp.asm:411
 tm_dsco  = $F1A6 = 61862          nabu_vdp.asm:404
@@ -6800,7 +6242,7 @@ tm_esc2  = $F163 = 61795          nabu_vdp.asm:354
 tm_escd  = $F13E = 61758          nabu_vdp.asm:332
 tm_esci  = $F152 = 61778          nabu_vdp.asm:344
 tm_escr  = $F13F = 61759          nabu_vdp.asm:333
-tm_escs  = $F984 = 63876          nabu_vdp.asm:611
+tm_escs  = $FA04 = 64004          nabu_vdp.asm:611
 tm_getc  = $F1CC = 61900          nabu_vdp.asm:432
 tm_home  = $F103 = 61699          nabu_vdp.asm:295
 tm_ini0  = $F014 = 61460          nabu_vdp.asm:106
@@ -6809,7 +6251,7 @@ tm_init  = $EFF8 = 61432          nabu_vdp.asm:88
 tm_inr0  = $EFD3 = 61395          nabu_vdp.asm:58
 tm_keyd  = $0090 =   144          nabu_vdp.asm:25
 tm_keys  = $0091 =   145          nabu_vdp.asm:26
-tm_last  = $F985 = 63877          nabu_vdp.asm:612
+tm_last  = $FA05 = 64005          nabu_vdp.asm:612
 tm_latc  = $00A1 =   161          nabu_vdp.asm:23
 tm_lf    = $F0E2 = 61666          nabu_vdp.asm:268
 tm_map   = $F1DC = 61916          nabu_vdp.asm:449
@@ -6819,7 +6261,7 @@ tm_mapt  = $F1F3 = 61939          nabu_vdp.asm:473
 tm_mode  = $F291 = 62097          nabu_vdp.asm:604
 tm_oti0  = $EFCA = 61386          nabu_vdp.asm:44
 tm_otir  = $EFC9 = 61385          nabu_vdp.asm:43
-tm_outc  = $F982 = 63874          nabu_vdp.asm:609
+tm_outc  = $FA02 = 64002          nabu_vdp.asm:609
 tm_putc  = $F208 = 61960          nabu_vdp.asm:491
 tm_putf  = $F216 = 61974          nabu_vdp.asm:499 (unused)
 tm_rea0  = $F077 = 61559          nabu_vdp.asm:183
@@ -6831,7 +6273,7 @@ tm_sclf  = $F037 = 61495          nabu_vdp.asm:135
 tm_scr0  = $F02F = 61487          nabu_vdp.asm:132
 tm_scr1  = $F035 = 61493          nabu_vdp.asm:134
 tm_scri  = $F025 = 61477          nabu_vdp.asm:127
-tm_scro  = $F983 = 63875          nabu_vdp.asm:610
+tm_scro  = $FA03 = 64003          nabu_vdp.asm:610
 tm_setp  = $F041 = 61505          nabu_vdp.asm:145
 tm_sta0  = $EFE6 = 61414          nabu_vdp.asm:75
 tm_sta1  = $F0AD = 61613          nabu_vdp.asm:220
@@ -6906,5 +6348,5 @@ xlate    = $EDD6 = 60886          cpm22.asm:3689
 yesno    = $DD5F = 56671          cpm22.asm:910
 
 
-total time: 0.0408 sec.
+total time: 0.0354 sec.
 no errors

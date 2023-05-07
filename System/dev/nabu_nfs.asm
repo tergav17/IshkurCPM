@@ -68,7 +68,7 @@ nfsdev:	or	a
 	ret
 
 ; Inits the device
-; Not really needed atm
+; Figures out which devices that the NFS driver "owns"
 ; c = Logical device #
 ; hl = Call argument
 ;
@@ -147,11 +147,20 @@ ns_sysh:ld	a,c
 	jr	z,ns_fopn
 	ret
 	
+; Parses the current FCB, and opens the file if it matches
+; Note that for the most part this is redundent. The NFS
+; driver does not care if a file has been opened before it
+; starts reading.
+; de = Address of FCB
+;
+; Uses: all
+ns_fopn:jp	goback
+	
 ; Set a 16 bit mask based on a number from 0-15
 ; a = Bit to set
 ;
 ; Returns bit mask in bc
-; Uses, af, bc
+; uses: af, bc
 ns_domk:ld	bc,1
 	or	a
 ns_dom0:ret	z
@@ -427,7 +436,7 @@ ns_for4:ex	de,hl
 ;
 ; Returns uppercase in A
 ; uses: af
-nS_ltou:and	0x7F
+ns_ltou:and	0x7F
 	cp	0x61		; 'a'
 	ret	c
 	cp	0x7B		; '{'

@@ -22,6 +22,13 @@ copy config\config_ndsk_hybrid.asm config.asm >NUL
 move cpm22.bin ..\Output\NDSK_HYBRID_CPM22.SYS >NUL
 move cpm22.lst ..\Output\Listings\cpm22_hybrid_ndsk.lst >NUL
 
+REM NFS kernel
+copy config\config_nfs.asm config.asm >NUL
+..\Build\zasm cpm22.asm -u -w -b cpm22.bin
+move cpm22.bin ..\Output\NFS_CPM22.SYS >NUL
+move cpm22.lst ..\Output\Listings\cpm22_nfs.lst >NUL
+
+
 REM Delete temp config file
 del /Q config.asm >NUL
 
@@ -42,6 +49,12 @@ move boot\boot_ndsk.lst ..\Output\Listings >NUL
 copy boot_ndsk_hybrid.bin ..\Output\NDSK_HYBRID_BOOT.nabu >NUL
 move boot_ndsk_hybrid.bin bin >NUL
 move boot\boot_ndsk_hybrid.lst ..\Output\Listings >NUL
+
+..\Build\zasm boot\boot_nfs.asm -u -w -b boot_nfs.bin
+copy boot_nfs.bin ..\Output\NFS_BOOT.nabu >NUL
+move boot_nfs.bin bin >NUL
+move boot\boot_nfs.lst ..\Output\Listings >NUL
+
 
 REM Build Ishkur-specific applications
 cd ..\Applications
