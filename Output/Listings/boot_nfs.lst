@@ -1,6 +1,6 @@
               	; --------------------------------------
               	; zasm: assemble "boot\boot_nfs.asm"
-              	; date: 2023-05-06 23:34:20
+              	; date: 2023-05-07 00:17:59
               	; --------------------------------------
 
 
@@ -45,7 +45,7 @@ C00E: 2A0130  		ld hl, (scratch + 1)           ; Load return address from stack,
 C011: 111300  		ld de, code_start-$ + 3        ; DE = address of bootloader relative to the call 0 return address
 C014: 19      		add hl, de                     ; HL = absolute address where bootloader is currently residing
 C015: 1100C0  		ld de, entry                   ; DE = address to copy bootloader to.
-C018: 012301  		ld bc, code_length             ; BC = length of bootloader
+C018: 012601  		ld bc, code_length             ; BC = length of bootloader
 C01B: EDB0    		ldir                           ; Relocate ourselves to known address
 C01D: 2100C0  		ld hl, entry                   ; HL = entry point of bootloader
 C020: E9      		jp (hl)                        ; Jump to bootloader
@@ -100,7 +100,7 @@ C059: C207C0  		jp	nz,panic
               	
               		; Open the file
 C05C: 2108C1  		ld	hl,m_open
-C05F: 060E    		ld	b,14
+C05F: 0611    		ld	b,17
 C061: CD9CC0  		call	modsend
               		
               		; Get file descriptor
@@ -110,12 +110,12 @@ C067: 3A0080  		ld	a,(buffer)
 C06A: FE83    		cp	0x83		; File opened?
 C06C: C207C0  		jp	nz,panic
 C06F: 3A0180  		ld	a,(buffer+1)
-C072: 3217C1  		ld	(rfdesc),a
-C075: 321FC1  		ld	(cfdesc),a
+C072: 321AC1  		ld	(rfdesc),a
+C075: 3222C1  		ld	(cfdesc),a
               		
 C078: 2100E0  		ld	hl,1024*(mem+2)	; Set base for loading data
 C07B: EB      	readsec:ex	de,hl
-C07C: 2116C1  		ld	hl,m_read
+C07C: 2119C1  		ld	hl,m_read
 C07F: 0608    		ld	b,8
 C081: CD9CC0  		call	modsend
               		
@@ -138,19 +138,19 @@ C09D: B3      		or	e
 C09E: 20F6    		jr	nz,readse0
               		
               		; See if we need to load another sector
-C0A0: 3A22C1  		ld	a,(nsecle)
+C0A0: 3A25C1  		ld	a,(nsecle)
 C0A3: 3D      		dec	a
 C0A4: 280C    		jr	z,exec
-C0A6: 3222C1  		ld	(nsecle),a
+C0A6: 3225C1  		ld	(nsecle),a
               		
               		; Increment address
-C0A9: 3A18C1  		ld	a,(rfaddr)
+C0A9: 3A1BC1  		ld	a,(rfaddr)
 C0AC: 3C      		inc	a
-C0AD: 3218C1  		ld	(rfaddr),a
+C0AD: 321BC1  		ld	(rfaddr),a
 C0B0: 18C9    		jr	readsec
               		
               		; Execute BDOS
-C0B2: 211EC1  	exec:	ld	hl,m_close
+C0B2: 2121C1  	exec:	ld	hl,m_close
 C0B5: 0602    		ld	b,2
 C0B7: CD9CC0  		call	modsend
               		
@@ -246,44 +246,45 @@ C121: 00414350	m_start:defb	0x00,'ACP',0x01,0x00,0x00,0x00
 C125: 01000000	
               	
               	; NHACP open CP/M 2.2 image
-C129: 01FF0000	m_open:	defb	0x01,0xFF,0x00,0x00,0x09,'CPM22.SYS'
-C12D: 0943504D	
-C131: 32322E53	
-C135: 5953    	
+C129: 01FF0000	m_open:	defb	0x01,0xFF,0x00,0x00,0x0C,'A0/CPM22.SYS'
+C12D: 0C41302F	
+C131: 43504D32	
+C135: 322E5359	
+C139: 53      	
               	
               	; NHACP read block from open file
-C137: 07      	m_read:	defb	0x07
-C138: 00      	rfdesc:	defb	0x00		; Read command file descriptor
-C139: 02      	rfaddr:	defb	0x02		; Read command start offset
-C13A: 000000  		defb	0x00,0x00,0x00
-C13D: 0004    		defb	0x00,0x04
+C13A: 07      	m_read:	defb	0x07
+C13B: 00      	rfdesc:	defb	0x00		; Read command file descriptor
+C13C: 02      	rfaddr:	defb	0x02		; Read command start offset
+C13D: 000000  		defb	0x00,0x00,0x00
+C140: 0004    		defb	0x00,0x04
               		
               	; NHACP close file
-C13F: 05      	m_close:defb	0x05
-C140: 00      	cfdesc:	defb	0x00		; Close command file descriptor
-C141: 0000    		defw	0x00		; Fucking magic
+C142: 05      	m_close:defb	0x05
+C143: 00      	cfdesc:	defb	0x00		; Close command file descriptor
+C144: 0000    		defw	0x00		; Fucking magic
               	
               	; Variables
-C143: 06      	nsecle:	defb	nsec
+C146: 06      	nsecle:	defb	nsec
               	
-0123:         	code_length: equ $$-code_start
+0126:         	code_length: equ $$-code_start
               	.DEPHASE
 
 
 ; +++ segments +++
 
-#CODE          = $C000 = 49152,  size = $0144 =   324
+#CODE          = $C000 = 49152,  size = $0147 =   327
 
 ; +++ global symbols +++
 
-_end        = $C144 = 49476          boot\boot_nfs.asm:28 (unused)
-_size       = $0144 =   324          boot\boot_nfs.asm:28 (unused)
+_end        = $C147 = 49479          boot\boot_nfs.asm:28 (unused)
+_size       = $0147 =   327          boot\boot_nfs.asm:28 (unused)
 aydata      = $0040 =    64          boot\boot_nfs.asm:14
 aylatc      = $0041 =    65          boot\boot_nfs.asm:15
 base        = $C000 = 49152          boot\boot_nfs.asm:51
 buffer      = $8000 = 32768          boot\boot_nfs.asm:20
-cfdesc      = $C11F = 49439          boot\boot_nfs.asm:253
-code_length = $0123 =   291          boot\boot_nfs.asm:259
+cfdesc      = $C122 = 49442          boot\boot_nfs.asm:253
+code_length = $0126 =   294          boot\boot_nfs.asm:259
 code_start  = $C021 = 49185          boot\boot_nfs.asm:48
 entry       = $C000 = 49152          boot\boot_nfs.asm:24
 exec        = $C091 = 49297          boot\boot_nfs.asm:147
@@ -295,9 +296,9 @@ hccared     = $C0C7 = 49351          boot\boot_nfs.asm:196
 hccawr0     = $C0E9 = 49385          boot\boot_nfs.asm:222
 hccawr1     = $C0FB = 49403          boot\boot_nfs.asm:232
 hccawri     = $C0E4 = 49380          boot\boot_nfs.asm:219
-m_close     = $C11E = 49438          boot\boot_nfs.asm:252
+m_close     = $C121 = 49441          boot\boot_nfs.asm:252
 m_open      = $C108 = 49416          boot\boot_nfs.asm:242
-m_read      = $C116 = 49430          boot\boot_nfs.asm:245
+m_read      = $C119 = 49433          boot\boot_nfs.asm:245
 m_start     = $C100 = 49408          boot\boot_nfs.asm:239
 mem         = $0036 =    54          boot\boot_nfs.asm:11
 modrec0     = $C0BF = 49343          boot\boot_nfs.asm:183
@@ -306,12 +307,12 @@ modrece     = $C0B8 = 49336          boot\boot_nfs.asm:180 (unused)
 modsen0     = $C0AD = 49325          boot\boot_nfs.asm:169
 modsend     = $C09C = 49308          boot\boot_nfs.asm:161
 nsec        = $0006 =     6          boot\boot_nfs.asm:9
-nsecle      = $C122 = 49442          boot\boot_nfs.asm:257
+nsecle      = $C125 = 49445          boot\boot_nfs.asm:257
 panic       = $C007 = 49159          boot\boot_nfs.asm:59
 readse0     = $C075 = 49269          boot\boot_nfs.asm:126
 readsec     = $C05A = 49242          boot\boot_nfs.asm:111
-rfaddr      = $C118 = 49432          boot\boot_nfs.asm:247
-rfdesc      = $C117 = 49431          boot\boot_nfs.asm:246
+rfaddr      = $C11B = 49435          boot\boot_nfs.asm:247
+rfdesc      = $C11A = 49434          boot\boot_nfs.asm:246
 scratch     = $3000 = 12288          boot\boot_nfs.asm:22
 start       = $C003 = 49155          boot\boot_nfs.asm:33 (unused)
 tmdata      = $00A0 =   160          boot\boot_nfs.asm:17 (unused)

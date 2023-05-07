@@ -124,7 +124,7 @@ ns_ccp:	ld	hl,ns_p0
 ; Loads the GRB into the CCP space
 ns_grb:	ld	hl,ns_p1
 ns_grb0:ld	de,ns_m0na
-	ld	bc,10
+	ld	bc,13
 	ldir			; Copy name to file open
 	call	ns_hini		; Go to HCCA mode
 	call	ns_open		; Open the file
@@ -154,7 +154,8 @@ ns_sysh:ld	a,c
 ; de = Address of FCB
 ;
 ; Uses: all
-ns_fopn:jp	goback
+ns_fopn:jr	ns_fopn
+	;jp	goback
 	
 ; Set a 16 bit mask based on a number from 0-15
 ; a = Bit to set
@@ -445,12 +446,12 @@ ns_ltou:and	0x7F
 	ret
 	
 ; Path to CP/M image
-; Total length: 10 bytes
-ns_p0:	defb	'CPM22.SYS',0
+; Total length: 13 bytes
+ns_p0:	defb	'A0/CPM22.SYS',0
 
 ; Path to GRB image
-; Total length: 10 bytes
-ns_p1:	defb	'FONT.GRB',0,0
+; Total length: 13 bytes
+ns_p1:	defb	'A0/FONT.GRB',0,0
 
 ; Message prototype to open a file
 ; Total length: 23 bytes

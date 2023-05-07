@@ -94,7 +94,7 @@ tmsini:	in	a,(tmlatc)
 
 	; Open the file
 	ld	hl,m_open
-	ld	b,14
+	ld	b,17
 	call	modsend
 	
 	; Get file descriptor
@@ -239,7 +239,7 @@ hccawr1:pop	af
 m_start:defb	0x00,'ACP',0x01,0x00,0x00,0x00
 
 ; NHACP open CP/M 2.2 image
-m_open:	defb	0x01,0xFF,0x00,0x00,0x09,'CPM22.SYS'
+m_open:	defb	0x01,0xFF,0x00,0x00,0x0C,'A0/CPM22.SYS'
 
 ; NHACP read block from open file
 m_read:	defb	0x07
