@@ -175,7 +175,9 @@ ns_fcls:call	ns_ownr
 ; de = Address of FCB
 ;
 ; Uses: all
-ns_sfir:call	ns_ownr
+ns_sfir:xor	a
+	ld	(ns_isls),a
+	call	ns_ownr
 	push	de		; Save de
 	ld	hl,ns_m0na
 	ex	de,hl
@@ -200,12 +202,16 @@ ns_sfir:call	ns_ownr
 	cp	0x81
 	jp	nz,goback
 	
-	; Copy the file pattern end of the input buffer
+	; Copy the file pattern to the end of the buffer
 	pop	hl		; Get the FCB back
 	inc	hl
 	ld	de,ns_buff+53
 	ld	bc,11
 	ldir
+	
+	; Set isls flag
+	ld	a,1
+	ld	(ns_isls),a
 	
 	; Move into ns_snxt
 	jr	ns_snx0
@@ -232,7 +238,9 @@ ns_ffm0:inc	hl
 ; de = Address of FCB
 ;
 ; Uses: all
-ns_snxt:call	ns_ownr
+ns_snxt:ld	a,(ns_isls)
+	or	a
+	ret	z
 	ld	hl,0x00FF
 	ld	(status),hl	; Set status
 
@@ -275,6 +283,22 @@ ns_snx3:ld	a,(hl)
 	; Now the last part
 	ld	b,3
 	call	ns_ffmt
+	
+	; Back dir entry against pattern
+	ld	de,ns_buff+53
+	ld	hl,(biodma)
+	inc	hl
+	ld	b,11
+
+ns_snx4:ld	a,(de)
+	ld	c,(hl)
+	inc	hl
+	inc	de
+	cp	'?'
+	jr	z,ns_snx5
+	cp	c
+	jr	nz,ns_snx0
+ns_snx5:djnz	ns_snx4
 	
 	; Set status to 0
 	ld	hl,0
@@ -655,3 +679,4 @@ ns_m5:	defb	0x8F,0x00
 ns_buff	equ	ns_bss		; Buffer (64b)
 ns_mask equ	ns_bss+64	; Ownership mask (2b)
 ns_dore	equ	ns_bss+66	; Do reopen?
+ns_isls	equ	ns_bss+67	; Is listing dir?
