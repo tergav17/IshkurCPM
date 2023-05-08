@@ -18,7 +18,7 @@
 ;
 mem	equ	54		; CP/M image starts at mem*1024
 
-inbulen	equ	0xDC07	; Address in inbuff length byte
+inbulen	equ	0x0100		; Address in inbuff length byte (disabled)
 
 ;
 ;**************************************************************
@@ -102,7 +102,7 @@ cfirq:	ei
 ;**************************************************************
 ;
 
-syshook:ret
+syshook:jp	ns_sysh
 
 
 ;**************************************************************

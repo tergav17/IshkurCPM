@@ -48,6 +48,7 @@ boot:	ld	sp,cbase
 	ld	(inbulen),a
 
 	; Jump to CP/M
+	ld	c,0
 	jp	cbase
 
 
@@ -66,6 +67,7 @@ wboot:	ld	sp,cbase
 	pop	af
 	ld	(iobyte),a
 	
+	ld	c,0
 	jp	cbase
 
 ; Warm boot routine

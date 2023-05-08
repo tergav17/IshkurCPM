@@ -69,11 +69,11 @@ nfsdev:	or	a
 
 ; Inits the device
 ; Figures out which devices that the NFS driver "owns"
-; c = Logical device #
+; b = Logical CP/M device #
 ; hl = Call argument
 ;
 ; uses: none
-ns_init:ld	a,c
+ns_init:ld	a,b
 	call	ns_domk
 	ld	hl,(ns_mask)
 	ld	a,h
@@ -142,9 +142,15 @@ ns_grb1:call	ns_getb
 ;
 ; uses: af if not hooked, all otherwise
 ns_sysh:ld	a,c
-	cp	15
+	sub	15
 	ret	c		; No syscalls lower than 15
-	jr	z,ns_fopn
+	jr	z,ns_fopn	; Open syscall
+	dec	a
+	jp	z,ns_fcls	; Close syscall (ignored)
+	dec	a
+	jp	z,ns_sfir	; Search for first syscall
+	dec	a
+	jp	z,ns_snxt	; Search for next syscall
 	ret
 	
 ; Parses the current FCB, and opens the file if it matches
@@ -154,8 +160,127 @@ ns_sysh:ld	a,c
 ; de = Address of FCB
 ;
 ; Uses: all
-ns_fopn:jr	ns_fopn
-	;jp	goback
+ns_fopn:call	ns_ownr
+	jp	goback
+	
+; Stub for file close syscall
+; Make sure BDOS does not attempt to close a file owned by the driver
+;
+; Uses: does not matter
+ns_fcls:call	ns_ownr
+	jp	goback
+	
+; Search for first file
+; Opens up a directory, then skips to routines that read the first dir entry
+; de = Address of FCB
+;
+; Uses: all
+ns_sfir:call	ns_ownr
+	push	de		; Save de
+	ld	hl,ns_m0na
+	ex	de,hl
+	call	ns_sdir 
+	xor	a
+	ld	(de),a		; Zero terminate string
+	ld	a,1
+	ld	(ns_dore),a	; The existing file will be closed unconditionally
+	ld	hl,0x0008	; Set flag type to directory
+	call	ns_opef		; Call ns_open, but don't set flag
+	ld	hl,0x00FF
+	ld	(status),hl	; Set status
+	jp	nz,goback	; Error if cannot open file
+	
+	; Send LIST-DIR
+	ld	hl,ns_m4
+	ld	b,7
+	call	ns_send		; Start list-dir command
+	ld	hl,ns_buff
+	call	ns_rece
+	ld	a,(ns_buff)	; Check for errors
+	cp	0x81
+	jp	nz,goback
+	
+	; Copy the file pattern end of the input buffer
+	pop	hl		; Get the FCB back
+	inc	hl
+	ld	de,ns_buff+53
+	ld	bc,11
+	ldir
+	
+	; Move into ns_snxt
+	jr	ns_snx0
+	
+; Format incoming files into a dir entry
+; Will copy over characters until a '.' is reached
+; Any remaining characters will be filled out with spaces
+; b = Number of characters
+; de = Destination of data
+; hl = Source of data
+ns_ffmt:ld	a,(hl)
+	cp	'.'
+	jr	nz,ns_ffm0
+	dec	hl
+	ld	a,' '		; Turn it into a space
+ns_ffm0:inc	hl
+	ld	(de),a
+	inc	de
+	djnz	ns_ffmt
+	ret
+	
+; Search for next file
+; Takes the open directory and gets the next file
+; de = Address of FCB
+;
+; Uses: all
+ns_snxt:call	ns_ownr
+	ld	hl,0x00FF
+	ld	(status),hl	; Set status
+
+	
+ns_snx0:ld	hl,ns_buff	; Clear out the first 53 bytes of the buffer
+	ld	a,'.'		; This is to emulate zero termination, due
+	ld	(hl),a		; To the fact that NHACP does not zero-terminate
+				; strings coming back from the adapter...
+	ld	de,ns_buff+1	; I could ask for that to be changed, but I don't 
+	ld	bc,52		; want to annoy adapter devs further.
+	ldir			; Why am I even saying this, nobody reads this shit anyways...
+
+	; Lets read a directory now
+	ld	hl,ns_m5	; Entry point from ns_sfir
+	ld	b,7
+	call	ns_send		; Get the next file
+	ld	hl,ns_buff
+	call	ns_rece	
+	ld	a,(ns_buff)	; Ensure we got FILE-INFO
+	cp	0x86
+	jp	nz,goback
+	
+	; Ok, time to format a directory entry
+	ld	hl,ns_buff+22
+	ld	de,(biodma)
+	ld	a,(userno)
+	ld	(de),a		; Set user number
+	inc	de
+	ld	b,8
+	
+	; Format first part of file
+	call	ns_ffmt
+	
+	; Now we must skip till we either find a '.'
+ns_snx3:ld	a,(hl)
+	inc	hl
+	cp	'.'
+	jr	nz,ns_snx3
+	
+	; Now the last part
+	ld	b,3
+	call	ns_ffmt
+	
+	; Set status to 0
+	ld	hl,0
+	ld	(status),hl
+	jp	goback
+	
 	
 ; Set a 16 bit mask based on a number from 0-15
 ; a = Bit to set
@@ -172,13 +297,13 @@ ns_dom0:ret	z
 	
 ; Check if driver owns device
 ; Bail if it does not
-; If it does, get to logical NHACP device
+; If it does, get the logical NHACP device
 ; de = Address of FCB
 ;
 ; Returns logical device in a
 ; uses: af, hl
 ns_ownr:push	bc
-	call	ns_getd		; Get FSB device
+	call	ns_getd		; Get FCB device
 	call	ns_domk		; Create bitmask
 	ld	hl,(ns_mask)
 	ld	a,h
@@ -188,7 +313,7 @@ ns_ownr:push	bc
 	and	c
 ns_own0:jr	z,ns_exit	; Exit if does not own	
 	ld	hl,bdevsw+2
-	ld	a,(de)		; Get FSB device
+	call	ns_getd		; Get FCB device
 	ld	bc,4
 	or	a
 ns_own1:jr	z,ns_own2
@@ -217,16 +342,22 @@ ns_getd:ld	a,(de)
 
 ; Open the prepared file
 ; Closes the existing file too
+; ns_opef can be called to set custom flag
 ;
+; Flag z cleared on error
 ; uses: af, b, hl
-ns_open:ld	hl,ns_m1
+ns_open:ld	hl,0x0001	; Read/Write flag
+ns_opef:ld	(ns_m0fl),hl
+	ld	hl,ns_m1
 	ld	b,6
 	call	ns_send
 	ld	hl,ns_m0
-	ld	b,23
+	ld	b,24
 	call	ns_send
 	ld	hl,ns_buff
 	call	ns_rece
+	ld	a,(ns_buff)
+	cp	0x83
 	ret
 	
 ; Gets a block from the currently open file
@@ -398,10 +529,9 @@ ns_hcw1:ld	a,0x01
 ; hl = Source FCB file name
 ;
 ; uses: all
-ns_form:add	a,'A'
-	call	ns_for4
+ns_form:call	ns_sdir
 	ld	a,'/'
-ns_for0:call	ns_for4
+	jp	ns_for4
 	ld	b,8		; Look at all 8 possible name chars
 ns_for1:ld	a,(hl)
 	call	ns_ltou
@@ -432,6 +562,21 @@ ns_for4:ex	de,hl
 	ld	(ns_dore),a
 	ret
 	
+; Part of ns_form, but sometimes is called independently
+; Sets the directory to access files from
+; a = Logical NHACP device
+; de = Desintation for formatted name
+;
+; uses: af, de
+ns_sdir:add	a,'A'
+	call	ns_for4
+	ld	a,(userno)
+	add	a,'0'
+	cp	':'
+	jr	c,ns_for4
+	add	a,7
+	jr	ns_for4
+	
 ; Converts lowercase to uppercase
 ; a = Character to convert
 ;
@@ -454,14 +599,14 @@ ns_p0:	defb	'A0/CPM22.SYS',0
 ns_p1:	defb	'A0/FONT.GRB',0,0
 
 ; Message prototype to open a file
-; Total length: 23 bytes
+; Total length: 24 bytes
 ns_m0:	defb	0x8F,0x00
-	defw	19		; Message length
+	defw	20		; Message length
 	defb	0x01		; Cmd: STORAGE-OPEN
 	defb	ns_fild		; Default file descriptor
 ns_m0fl:defw	0x00		; Read/Write flags
 	defb	0x0E		; Message length
-ns_m0na:defb	'XXXXXXXXXXXXXX'; File name field
+ns_m0na:defb	'XXXXXXXXXXXXXXX'; File name field
 	defb	0x00		; Padding
 	
 ; Message prototype to close a file
@@ -470,7 +615,6 @@ ns_m1:	defb	0x8F,0x00
 	defw	2		; Message length
 	defb	0x05		; Cmd: FILE-CLOSE
 	defb	ns_fild		; Default file descriptor
-	defw	0x00		; Magic bytes
 	
 ; Message prototype to read a block
 ; Total length: 12 bytes
@@ -489,6 +633,23 @@ ns_m3:	defb	0x8F,0x00
 	defb	ns_fild		; Default file descritor
 ns_m3bn:defw	0x00,0x00	; Block number
 	defw	128		; Block length
+	
+; Message prototype to start a list-dir
+; Total length: 7 bytes
+ns_m4:	defb	0x8F,0x00
+	defw	3		; Message length
+	defb	0x0E		; Cmd: LIST-DIR
+	defb	ns_fild		; Default file descriptor
+	defb	0x00		; Null string
+	
+; Message prototype to get the next dir entry
+; Total length: 7 bytes
+ns_m5:	defb	0x8F,0x00
+	defw	3		; Message length
+	defb	0x0F		; Cmd: GET-DIR-ENTRY
+	defb	ns_fild		; Default file descriptor
+	defb	28		; Max length of file
+
 
 ; Variables
 ns_buff	equ	ns_bss		; Buffer (64b)
