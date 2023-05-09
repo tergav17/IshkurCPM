@@ -555,36 +555,27 @@ ns_hcw1:ld	a,0x01
 ; uses: all
 ns_form:call	ns_sdir
 	ld	a,'/'
-	jp	ns_for4
+	jp	ns_wchd
 	ld	b,8		; Look at all 8 possible name chars
 ns_for1:ld	a,(hl)
 	call	ns_ltou
 	cp	0x21
 	jr	c,ns_for2
-	call	ns_for4
+	call	ns_wchd
 	inc	hl
 	djnz	ns_for1
 ns_for2:ld	a,0x2E		; '.'
-	call	ns_for4
+	call	ns_wchd
 	ld	c,b
 	ld	b,0
 	add	hl,bc		; Fast forward to extenstion
 	ld	b,3		; Copy over extension
 ns_for3:ld	a,(hl)
 	call	ns_ltou
-	call	ns_for4
+	call	ns_wchd
 	inc	hl
 	djnz	ns_for3
 	xor	a		; Zero terminate
-ns_for4:ex	de,hl
-	cp	(hl)
-	ex	de,hl
-	ld	(de),a
-	inc	de
-	ret	z
-	ld	a,1
-	ld	(ns_dore),a
-	ret
 	
 ; Part of ns_form, but sometimes is called independently
 ; Sets the directory to access files from
@@ -593,14 +584,33 @@ ns_for4:ex	de,hl
 ;
 ; uses: af, de
 ns_sdir:add	a,'A'
-	call	ns_for4
+	call	ns_wchd
 	ld	a,(userno)
 	add	a,'0'
 	cp	':'
-	jr	c,ns_for4
+	jr	c,ns_wchd
 	add	a,7
-	jr	ns_for4
 	
+	; Fall to ns_wchd
+	
+; Writes a byte to (de), then increments de
+; ns_dore is set to 1 if a character ends up
+; being changed
+; a = Character to write
+; de = Destination for character
+;
+; Returns de=de+1
+; uses: af, de
+ns_wchd:ex	de,hl
+	cp	(hl)
+	ex	de,hl
+	ld	(de),a
+	inc	de
+	ret	z
+	ld	a,1
+	ld	(ns_dore),a
+	ret
+
 ; Converts lowercase to uppercase
 ; a = Character to convert
 ;
