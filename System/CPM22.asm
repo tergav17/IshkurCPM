@@ -11,7 +11,13 @@
 ;*         Custom CCP prompt by NabuNetwork.com
 ;*
 ;**************************************************************
-
+;
+;   set origin for cp/m
+;
+	org	(mem)*1024
+;
+#target BIN
+#code _TEXT			; start of the code segment
 
 iobyte	equ	3		;i/o definition byte.
 tdrive	equ	4		;current drive name and user number.
@@ -36,11 +42,7 @@ cntrlu	equ	15h		;control-u
 cntrlx	equ	18h		;control-x
 cntrlz	equ	1ah		;control-z (end-of-file mark)
 del	equ	7fh		;rubout
-;
-;   set origin for cp/m
-;
-	org	(mem)*1024
-;
+
 cbase:	jp	command		;execute command processor (ccp).
 	jp	clearbuf	;entry to empty input buffer before starting ccp.
 
