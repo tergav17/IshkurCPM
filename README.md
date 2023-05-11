@@ -35,6 +35,9 @@ In order to boot NDSK from NHACP, the following files must be setup from the `Ou
 3. `NDSK_DEFAULT.IMG` must be renamed to `NDSK_A.IMG` and moved to the NHACP root directory
 4. `NDSK_BOOT.nabu` must be renamed to `000001.nabu` and moved to your adapter homebrew directory
 
+### NHACP NDSK + FDC (Hybrid)
+This build works extactly like the standard NHACP NDSK build, but has added support for the floppy drives. Logical drives C: and D: are mapped to floppy drive 0 and 1 respectively. 
+
 ## Building
 ### Windows
 In order to build on Windows, ensure the following programs are installed:
