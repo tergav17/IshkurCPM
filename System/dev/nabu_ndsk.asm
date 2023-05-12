@@ -24,6 +24,14 @@
 ;* 
 ;**************************************************************
 ;
+; BSS Segment Variables
+.area	_BSS
+nd_csec:defs	1	; Current sector (1b)
+nd_ctrk:defs	2	; Current track (2b)
+nd_buff:defs	64	; Buffer (64b)
+nd_asva:defs	129	; ASV #1 (129b)
+nd_asvb:defs	129	; ASV #1 (129b)
+.area	_TEXT
 
 nd_ayda	equ	0x40		; AY-3-8910 data port
 nd_atla	equ	0x41		; AY-3-8910 latch port
@@ -456,10 +464,3 @@ nd_m3:	defb	0x8F,0x00
 	defb	nd_fild		; Default file descritor
 nd_m3bn:defw	0x00,0x00	; Block number
 	defw	128		; Block length
-
-; Variables
-nd_csec	equ	nd_bss		; Current sector (1b)
-nd_ctrk	equ	nd_bss+1	; Current track (2b)
-nd_buff	equ	nd_bss+6	; Buffer (64b)
-nd_asva	equ	nd_buff+70	; ASV #1 (129b)
-nd_asvb	equ	nd_buff+199	; ASV #1 (129b)

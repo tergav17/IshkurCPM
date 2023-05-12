@@ -8,6 +8,7 @@
 ;* 
 ;**************************************************************
 ;
+.area	_TEXT
 
 pr_ayda	equ	0x40		; AY-3-8910 data port
 pr_atla	equ	0x41		; AY-3-8910 latch port

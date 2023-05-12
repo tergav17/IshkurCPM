@@ -14,32 +14,38 @@
 ;**************************************************************
 ;
 ;
+;**************************************************************
+;*
+;*                M E M O R Y   C O N F I G
+;*
+;*        CP/M memory will start at mem*1024. For example,
+;*        if memory is configured to be 40, then the image
+;*        will start at 40kb. The higher memory is configured
+;*        to, the more memory user programs will have. If memory
+;*        is configured to be too high, then the core image and
+;*        BSS space will not fit.
+;*
+;**************************************************************
+;
+;
 ;   Set memory base here. 
 ;
-mem	equ	54		; CP/M image starts at mem*1024
+mem	equ	55		; CP/M image starts at mem*1024
+
+
+
+#target	BIN			; Set up memory segments
+#code	_TEXT,(mem)*1024
+#data	_BSS,_TEXT_end
+dircbuf:defs	128
+.area	_TEXT
+
+; Include CP/M and BIOS
+#include "CPM22.asm"
+#include "bios.asm"
 
 inbulen	equ	0x0100		; Address in inbuff length byte (disabled)
 
-;
-;**************************************************************
-;*
-;*              D E V I C E   B S S   B A S E S
-;*
-;*        Many devices need a section of uninitialized
-;*        memory space to hold buffers. This will not
-;*        be included in the system image to reduce space
-;*        so their location must be defined here.
-;*       
-;*        This memory is usually found above the system image.
-;*        All memory that is in this area will be automatically
-;*        zeroed on a warm boot.
-;*
-;**************************************************************
-;
-
-dircbuf	equ	0xF980	; 128 bytes
-tm_bss	equ	0xFA00	; 48 bytes
-ns_bss	equ	0xFA40	; 384 bytes
 
 ;
 ;**************************************************************
@@ -191,6 +197,3 @@ cdevsw:	defw	siodev,	0	; TTY device
 #include "dev/nabu_nfs.asm"
 #include "dev/nabu_prt.asm"
 #include "dev/nabu_sio.asm"
-
-; Image top, no more code after this
-imgtop:

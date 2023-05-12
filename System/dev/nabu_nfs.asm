@@ -15,6 +15,13 @@
 ;* 
 ;**************************************************************
 ;
+; BSS Segment Variables
+.area	_BSS
+ns_buff:defs	64	; Buffer (64b)
+ns_mask:defs	2	; Ownership mask (2b)
+ns_dore:defs	1	; Do reopen?
+ns_isls:defs	1	; Is listing dir?
+.area	_TEXT
 
 ns_ayda	equ	0x40		; AY-3-8910 data port
 ns_atla	equ	0x41		; AY-3-8910 latch port
@@ -683,10 +690,3 @@ ns_m5:	defb	0x8F,0x00
 	defb	0x0F		; Cmd: GET-DIR-ENTRY
 	defb	ns_fild		; Default file descriptor
 	defb	28		; Max length of file
-
-
-; Variables
-ns_buff	equ	ns_bss		; Buffer (64b)
-ns_mask equ	ns_bss+64	; Ownership mask (2b)
-ns_dore	equ	ns_bss+66	; Do reopen?
-ns_isls	equ	ns_bss+67	; Is listing dir?

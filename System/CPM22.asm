@@ -14,10 +14,8 @@
 ;
 ;   set origin for cp/m
 ;
-	org	(mem)*1024
+;	org	(mem)*1024
 ;
-#target BIN
-#code _TEXT			; start of the code segment
 
 iobyte	equ	3		;i/o definition byte.
 tdrive	equ	4		;current drive name and user number.
@@ -3725,9 +3723,7 @@ printdc:cp	':'
 	call	print
 	pop	af
 	jr	printdc
-	
-#include "bios.asm"
-#include "config.asm"
+
 ;
 ;*
 ;******************   E N D   O F   C P / M   *****************

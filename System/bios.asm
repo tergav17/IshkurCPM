@@ -77,10 +77,10 @@ wbootr:	di
 	
 	; Zero out BSS
 	xor	a
-	ld	hl,imgtop
+	ld	hl,_TEXT_end
 	ld	(hl),a
-	ld	de,imgtop+1
-	ld	bc,0xFFFF-imgtop
+	ld	de,_TEXT_end+1
+	ld	bc,0xFFFF-_TEXT_end
 	ldir
 
 	; Send init signals to all devices

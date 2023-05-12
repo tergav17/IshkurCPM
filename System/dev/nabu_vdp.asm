@@ -17,6 +17,16 @@
 ;* 
 ;**************************************************************
 ;
+; BSS Segment Variables
+.area	_BSS
+tm_curx:defs	1	; Cursor X
+tm_cury:defs	1	; Cursor Y
+tm_outc:defs	1	; Output character
+tm_scro:defs	1	; Scroll width
+tm_escs:defs	1	; Escape state
+tm_last:defs	1	; Last character read
+tm_cbuf:defs	40	; 40 byte character buffer
+.area	_TEXT
 
 ; TMS9918 Configuration
 tm_data	equ	0xA0	; TMS9918 data register (mode=0)
@@ -602,12 +612,3 @@ tm_addr:in	a,(tm_latc)
 	
 ; Variables
 tm_mode:defw	0x0002
-
-
-tm_curx:equ	tm_bss		; Cursor X
-tm_cury:equ	tm_bss+1	; Cursor Y
-tm_outc:equ	tm_bss+2	; Output character
-tm_scro:equ	tm_bss+3	; Scroll width
-tm_escs:equ	tm_bss+4	; Escape state
-tm_last:equ	tm_bss+5	; Last character read
-tm_cbuf:equ	tm_bss+6	; 40 byte character buffer

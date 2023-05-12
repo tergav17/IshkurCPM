@@ -5,32 +5,26 @@ REM Assemble the CP/M system into a binary image
 REM Then move to outputs folder
 
 REM Floppy kernel
-copy config\config_fdc.asm config.asm >NUL
-..\Build\zasm cpm22.asm -u -w -b cpm22.bin
+..\Build\zasm config\config_fdc.asm -u -w -b cpm22.bin
 move cpm22.bin bin\cpm22_fdc.bin >NUL
-move cpm22.lst ..\Output\Listings\cpm22_fdc.lst >NUL
+move config\*.lst ..\Output\Listings >NUL
 
 REM NDSK kernel
-copy config\config_ndsk.asm config.asm >NUL
-..\Build\zasm cpm22.asm -u -w -b cpm22.bin
+..\Build\zasm config\config_ndsk.asm -u -w -b cpm22.bin
 move cpm22.bin ..\Output\NDSK_CPM22.SYS >NUL
-move cpm22.lst ..\Output\Listings\cpm22_ndsk.lst >NUL
+move config\*.lst ..\Output\Listings >NUL
 
 REM NDSK hybrid kernel
-copy config\config_ndsk_hybrid.asm config.asm >NUL
-..\Build\zasm cpm22.asm -u -w -b cpm22.bin
+..\Build\zasm config\config_ndsk_hybrid.asm -u -w -b cpm22.bin
 move cpm22.bin ..\Output\NDSK_HYBRID_CPM22.SYS >NUL
-move cpm22.lst ..\Output\Listings\cpm22_hybrid_ndsk.lst >NUL
+move config\*.lst ..\Output\Listings >NUL
 
 REM NFS kernel
-copy config\config_nfs.asm config.asm >NUL
-..\Build\zasm cpm22.asm -u -w -b cpm22.bin
+..\Build\zasm config\config_nfs.asm -u -w -b cpm22.bin
 move cpm22.bin ..\Output\NFS_CPM22.SYS >NUL
-move cpm22.lst ..\Output\Listings\cpm22_nfs.lst >NUL
+move config\*.lst ..\Output\Listings >NUL
 
 
-REM Delete temp config file
-del /Q config.asm >NUL
 
 REM Move resource into outputs
 copy res\licca_font.bin ..\Output\FONT.GRB >NUL

@@ -20,6 +20,24 @@
 ;* 
 ;**************************************************************
 ;
+; BSS Segment Variables
+.area	_BSS
+nf_io:	defs	1	; FDC address
+nf_r2ks:defs	1	; Temp storaged used in nf_r2k
+
+nf_curd:defs	1	; Currently selected disk
+nf_subs:defs	1	; Current subsector
+nf_sync:defs	1	; Set if disk needs to be rehomed
+nf_inco:defs	1	; Set if sector is in core already
+nf_dirt:defs	1	; Set if cache is dirty
+
+nf_asva:defs	26	; Misc CP/M buffer
+nf_asvb:defs	26
+nf_csva:defs	15
+nf_csvb:defs	15
+
+nf_cach:defs	1024	; Sector cache
+.area	_TEXT
 
 nf_rdsk	equ	2	; Defines which drives contains system
 			; resources (2 = A, 4 = B)
@@ -515,20 +533,3 @@ nf_stal:push	bc
 	pop	bc
 	djnz	nf_stal
 	ret
-
-
-; Variables
-nf_io:	equ	nf_bss	; FDC address
-nf_r2ks:equ	nf_bss+1; Temp storaged used in nf_r2k
-
-nf_curd:equ	nf_bss+2; Currently selected disk
-nf_subs:equ	nf_bss+3; Current subsector
-nf_sync:equ	nf_bss+4; Set if disk needs to be rehomed
-nf_inco:equ	nf_bss+5; Set if sector is in core already
-nf_dirt:equ	nf_bss+6; Set if cache is dirty
-
-; Misc CP/M buffer
-nf_asva:equ	nf_bss+7
-nf_asvb:equ	nf_bss+32
-nf_csva:equ	nf_bss+57
-nf_csvb:equ	nf_bss+73
