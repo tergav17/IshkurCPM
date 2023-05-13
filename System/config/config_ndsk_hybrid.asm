@@ -44,8 +44,6 @@ dircbuf:defs	128
 #include "CPM22.asm"
 #include "bios.asm"
 
-inbulen	equ	0xD807	; Address in inbuff length byte
-
 ;
 ;**************************************************************
 ;*
@@ -57,7 +55,7 @@ inbulen	equ	0xD807	; Address in inbuff length byte
 ;**************************************************************
 ;
 
-cfinit:	ld	a,0x01		; Bank out ROM
+wbinit:	ld	a,0x01		; Bank out ROM
 	out	(0x00),a
 	
 	ld	a,0xC3		; Set up IRQ handler
@@ -73,6 +71,22 @@ cfinit:	ld	a,0x01		; Bank out ROM
 	
 	im	1		; Start interrupts
 	di
+	ret
+
+;
+;**************************************************************
+;*
+;*        C O L D   B O O T   C O N F I G   H O O K
+;*
+;*    This function will run once during the intial cold
+;*    boot. It is the last task to run before control is
+;*    given to the CCP. This function is run after wbinit
+;*
+;**************************************************************
+;
+
+cbinit:	ld	a,6	; Enable INIT to run
+	ld	(inbuff+1),a
 	ret
 
 ;

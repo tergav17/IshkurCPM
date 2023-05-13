@@ -41,11 +41,11 @@ wbootin:jp	wboot	; Indirection to wboot, used by MBASIC
 ; program to run on CP/M startup.
 boot:	ld	sp,cbase
 
+	; Run the warm boot common code
 	call	wbootr
 	
-	; Enable INIT to run
-	ld	a,6
-	ld	(inbulen),a
+	; Special conditions for a cold boot
+	call	cbinit
 
 	; Jump to CP/M
 	ld	c,0
@@ -99,7 +99,7 @@ wboot0:	push	bc
 	jr	nz,wboot0
 
 	; Call config init
-	call	cfinit
+	call	wbinit
 
 	; Load the CCP
 	call	resccp
