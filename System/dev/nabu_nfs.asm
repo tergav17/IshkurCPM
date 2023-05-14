@@ -18,6 +18,8 @@
 ; BSS Segment Variables
 .area	_BSS
 ns_buff:defs	64	; Buffer (64b)
+ns_ptrn:defs	11	; Pattern buffer (11b)
+ns_name:defs	11	; Name bufffer (11b)
 ns_mask:defs	2	; Ownership mask (2b)
 ns_dore:defs	1	; Do reopen?
 ns_isls:defs	1	; Is listing dir?
@@ -40,7 +42,7 @@ ns_fild	equ	0x80		; Default file access desc
 ;
 
 ; Dummy DPH
-ns_dph:defw	0,0,0,0
+ns_dph:	defw	0,0,0,0
 	defw	dircbuf	; DIRBUF
 	defw	ns_dpb	; DPB
 	defw	0	; CSV
@@ -160,32 +162,27 @@ ns_sysh:ld	a,c
 	jp	z,ns_snxt	; Search for next syscall
 	ret
 	
-; Parses the current FCB, and opens the file if it matches
-; Note that for the most part this is redundent. The NFS
-; driver does not care if a file has been opened before it
-; starts reading.
+; Parses the current FCB, and searches for a file that matches
+; the pattern.
 ; de = Address of FCB
 ;
-; Uses: all
+; uses: all
 ns_fopn:call	ns_ownr
 	jp	goback
 	
 ; Stub for file close syscall
 ; Make sure BDOS does not attempt to close a file owned by the driver
 ;
-; Uses: does not matter
+; uses: does not matter
 ns_fcls:call	ns_ownr
 	jp	goback
 	
-; Search for first file
-; Opens up a directory, then skips to routines that read the first dir entry
+; Function call to start a list-dir operation
+; Must be called before a file search
 ; de = Address of FCB
 ;
-; Uses: all
-ns_sfir:xor	a
-	ld	(ns_isls),a
-	call	ns_ownr
-	push	de		; Save de
+; uses: af, bc, de, hl
+ns_slst:push	de		; Save de
 	ld	hl,ns_m0na
 	ex	de,hl
 	call	ns_sdir 
@@ -209,12 +206,86 @@ ns_sfir:xor	a
 	cp	0x81
 	jp	nz,goback
 	
-	; Copy the file pattern to the end of the buffer
+	; Copy the file pattern to the pattern buffer
 	pop	hl		; Get the FCB back
 	inc	hl
-	ld	de,ns_buff+53
+	ld	de,ns_ptrn
 	ld	bc,11
-	ldir
+	ldir 
+	ret
+	
+; Put the next found file name into the name buffer
+; If no more names are found, exit with status of 0x00FF
+; ns_slst must have been run to set up state, no more disk operations
+; should be been run in the meantime.
+;
+; uses: af, bc, de, hl
+ns_list:ld	hl,0x00FF
+	ld	(status),hl	; Set status
+
+	
+ns_lis0:ld	hl,ns_buff	; Clear out the first 40 bytes of the buffer
+	ld	a,'.'		; This is to emulate zero termination, due
+	ld	(hl),a		; To the fact that NHACP does not zero-terminate
+	ld	de,ns_buff+1	; strings coming back from the adapter...
+	ld	bc,40		
+	ldir			
+
+	; Lets read a directory now
+	ld	hl,ns_m5	; Entry point from ns_sfir
+	ld	b,7
+	call	ns_send		; Get the next file
+	ld	hl,ns_buff
+	call	ns_rece	
+	ld	a,(ns_buff)	; Ensure we got FILE-INFO
+	cp	0x86
+	jp	nz,goback
+	
+	; Ok, time to format a directory entry
+	ld	hl,ns_buff+22
+	ld	de,ns_name
+	ld	b,8
+	
+	; Format first part of file
+	call	ns_ffmt
+	
+	; Now we must skip till we either find a '.'
+ns_lis1:ld	a,(hl)
+	inc	hl
+	cp	'.'
+	jr	nz,ns_lis1
+	
+	; Now the last part
+	ld	b,3
+	call	ns_ffmt
+	
+	; Back dir entry against pattern
+	ld	de,ns_ptrn
+	ld	hl,ns_name
+	ld	b,11
+
+ns_lis2:ld	a,(de)
+	ld	c,(hl)
+	inc	hl
+	inc	de
+	cp	'?'
+	jr	z,ns_lis3
+	cp	c
+	jr	nz,ns_lis0
+ns_lis3:djnz	ns_lis2
+	ret
+	
+; Search for first file
+; Opens up a directory, then skips to routines that read the first dir entry
+; de = Address of FCB
+;
+; uses: all
+ns_sfir:xor	a
+	ld	(ns_isls),a	; Clear "isls" flag
+	call	ns_ownr
+	
+	; Start the list-dir function
+	call	ns_slst
 	
 	; Set isls flag
 	ld	a,1
@@ -242,70 +313,23 @@ ns_ffm0:inc	hl
 	
 ; Search for next file
 ; Takes the open directory and gets the next file
-; de = Address of FCB
 ;
 ; Uses: all
 ns_snxt:ld	a,(ns_isls)
 	or	a
 	ret	z
-	ld	hl,0x00FF
-	ld	(status),hl	; Set status
-
 	
-ns_snx0:ld	hl,ns_buff	; Clear out the first 53 bytes of the buffer
-	ld	a,'.'		; This is to emulate zero termination, due
-	ld	(hl),a		; To the fact that NHACP does not zero-terminate
-				; strings coming back from the adapter...
-	ld	de,ns_buff+1	; I could ask for that to be changed, but I don't 
-	ld	bc,52		; want to annoy adapter devs further.
-	ldir			; Why am I even saying this, nobody reads this shit anyways...
-
-	; Lets read a directory now
-	ld	hl,ns_m5	; Entry point from ns_sfir
-	ld	b,7
-	call	ns_send		; Get the next file
-	ld	hl,ns_buff
-	call	ns_rece	
-	ld	a,(ns_buff)	; Ensure we got FILE-INFO
-	cp	0x86
-	jp	nz,goback
+	; Find the next entry
+ns_snx0:call	ns_list
 	
-	; Ok, time to format a directory entry
-	ld	hl,ns_buff+22
+	; Copy to directory entry
 	ld	de,(biodma)
 	ld	a,(userno)
-	ld	(de),a		; Set user number
+	ld	(de),a
 	inc	de
-	ld	b,8
-	
-	; Format first part of file
-	call	ns_ffmt
-	
-	; Now we must skip till we either find a '.'
-ns_snx3:ld	a,(hl)
-	inc	hl
-	cp	'.'
-	jr	nz,ns_snx3
-	
-	; Now the last part
-	ld	b,3
-	call	ns_ffmt
-	
-	; Back dir entry against pattern
-	ld	de,ns_buff+53
-	ld	hl,(biodma)
-	inc	hl
-	ld	b,11
-
-ns_snx4:ld	a,(de)
-	ld	c,(hl)
-	inc	hl
-	inc	de
-	cp	'?'
-	jr	z,ns_snx5
-	cp	c
-	jr	nz,ns_snx0
-ns_snx5:djnz	ns_snx4
+	ld	hl,ns_name
+	ld	bc,11
+	ldir
 	
 	; Set status to 0
 	ld	hl,0
@@ -383,7 +407,7 @@ ns_opef:ld	(ns_m0fl),hl
 	ld	b,6
 	call	ns_send
 	ld	hl,ns_m0
-	ld	b,24
+	ld	b,28
 	call	ns_send
 	ld	hl,ns_buff
 	call	ns_rece
@@ -640,14 +664,14 @@ ns_p0:	defb	'A0/CPM22.SYS',0
 ns_p1:	defb	'A0/FONT.GRB',0,0
 
 ; Message prototype to open a file
-; Total length: 24 bytes
+; Total length: 28 bytes
 ns_m0:	defb	0x8F,0x00
-	defw	20		; Message length
+	defw	24		; Message length
 	defb	0x01		; Cmd: STORAGE-OPEN
 	defb	ns_fild		; Default file descriptor
 ns_m0fl:defw	0x00		; Read/Write flags
-	defb	0x0E		; Message length
-ns_m0na:defb	'XXXXXXXXXXXXXXX'; File name field
+	defb	19		; Message length
+ns_m0na:defs	19,'X'		; File name field
 	defb	0x00		; Padding
 	
 ; Message prototype to close a file
@@ -689,4 +713,4 @@ ns_m5:	defb	0x8F,0x00
 	defw	3		; Message length
 	defb	0x0F		; Cmd: GET-DIR-ENTRY
 	defb	ns_fild		; Default file descriptor
-	defb	28		; Max length of file
+	defb	16		; Max length of file
