@@ -17,7 +17,7 @@
 ;
 ; BSS Segment Variables
 .area	_BSS
-ns_buff:defs	64	; Buffer (64b)
+ns_buff:defs	48	; Buffer (48b)
 ns_ptrn:defs	11	; Pattern buffer (11b)
 ns_name:defs	11	; Name bufffer (11b)
 ns_mask:defs	2	; Ownership mask (2b)
@@ -164,10 +164,19 @@ ns_sysh:ld	a,c
 	
 ; Parses the current FCB, and searches for a file that matches
 ; the pattern.
+; The point here is to insert the "true" name of the file into
+; the FCB so it can be accessed later
 ; de = Address of FCB
 ;
 ; uses: all
 ns_fopn:call	ns_ownr
+
+	; Go find the file
+	call	ns_slst	
+	call	ns_list
+	
+	; uhh, todo
+	
 	jp	goback
 	
 ; Stub for file close syscall
@@ -225,7 +234,7 @@ ns_list:ld	hl,0x00FF
 
 	
 ns_lis0:ld	hl,ns_buff	; Clear out the first 40 bytes of the buffer
-	ld	a,'.'		; This is to emulate zero termination, due
+	xor	a		; This is to emulate zero termination, due
 	ld	(hl),a		; To the fact that NHACP does not zero-terminate
 	ld	de,ns_buff+1	; strings coming back from the adapter...
 	ld	bc,40		
@@ -249,14 +258,16 @@ ns_lis0:ld	hl,ns_buff	; Clear out the first 40 bytes of the buffer
 	; Format first part of file
 	call	ns_ffmt
 	
-	; Now we must skip till we either find a '.'
+	; Now we must skip till we either find a '.' or a '\0'
 ns_lis1:ld	a,(hl)
+	or	a
+	jr	z,ns_lis2
 	inc	hl
 	cp	'.'
 	jr	nz,ns_lis1
 	
 	; Now the last part
-	ld	b,3
+ns_lis2:ld	b,3
 	call	ns_ffmt
 	
 	; Back dir entry against pattern
@@ -264,15 +275,15 @@ ns_lis1:ld	a,(hl)
 	ld	hl,ns_name
 	ld	b,11
 
-ns_lis2:ld	a,(de)
+ns_lis3:ld	a,(de)
 	ld	c,(hl)
 	inc	hl
 	inc	de
 	cp	'?'
-	jr	z,ns_lis3
+	jr	z,ns_lis4
 	cp	c
 	jr	nz,ns_lis0
-ns_lis3:djnz	ns_lis2
+ns_lis4:djnz	ns_lis3
 	ret
 	
 ; Search for first file
@@ -295,17 +306,20 @@ ns_sfir:xor	a
 	jr	ns_snx0
 	
 ; Format incoming files into a dir entry
-; Will copy over characters until a '.' is reached
+; Will copy over characters until a '.' or '\0' is reached
 ; Any remaining characters will be filled out with spaces
 ; b = Number of characters
 ; de = Destination of data
 ; hl = Source of data
 ns_ffmt:ld	a,(hl)
+	call	ns_ltou
+	or	a
+	jr	z,ns_ffm0
 	cp	'.'
-	jr	nz,ns_ffm0
-	dec	hl
+	jr	nz,ns_ffm1
+ns_ffm0:dec	hl
 	ld	a,' '		; Turn it into a space
-ns_ffm0:inc	hl
+ns_ffm1:inc	hl
 	ld	(de),a
 	inc	de
 	djnz	ns_ffmt
