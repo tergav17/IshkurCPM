@@ -21,8 +21,9 @@ ns_buff:defs	48	; Buffer (48b)
 ns_ptrn:defs	11	; Pattern buffer (11b)
 ns_name:defs	11	; Name bufffer (11b)
 ns_mask:defs	2	; Ownership mask (2b)
-ns_dore:defs	1	; Do reopen?
-ns_isls:defs	1	; Is listing dir?
+ns_cfcb:defs	2	; Current FCB (2b)
+ns_dore:defs	1	; Do reopen? (1b)
+ns_isls:defs	1	; Is listing dir? (1b)
 .area	_TEXT
 
 ns_ayda	equ	0x40		; AY-3-8910 data port
@@ -160,6 +161,10 @@ ns_sysh:ld	a,c
 	jp	z,ns_sfir	; Search for first syscall
 	dec	a
 	jp	z,ns_snxt	; Search for next syscall
+	dec	a
+	; todo delete
+	dec	a
+	jp	z,ns_frea	; File read next record
 	ret
 	
 ; Parses the current FCB, and searches for a file that matches
@@ -168,16 +173,39 @@ ns_sysh:ld	a,c
 ; the FCB so it can be accessed later
 ; de = Address of FCB
 ;
-; uses: all
+; uses: af, bc, de, hl
 ns_fopn:call	ns_ownr
 
 	; Go find the file
-	call	ns_slst	
-	call	ns_list
+	push	de
+	call	ns_find
 	
-	; uhh, todo
+	; Update status
+	ld	hl,0
+	ld	(status),hl
 	
-	jp	goback
+	; Copy over the real filename to the FCB
+	pop	hl
+	push	hl
+	ld	de,16
+	add	hl,de
+	ld	b,d
+	ld	c,e
+	ex	de,hl
+	ld	hl,ns_buff+22
+	ldir
+	
+	; Check if current
+	pop	de
+	ld	hl,(ns_cfcb)
+	sbc	hl,de
+	jr	nz,ns_fop0
+
+	; Set the reopen flag
+	ld	a,1
+	ld	(ns_dore),a
+	
+ns_fop0:jp	goback
 	
 ; Stub for file close syscall
 ; Make sure BDOS does not attempt to close a file owned by the driver
@@ -222,6 +250,13 @@ ns_slst:push	de		; Save de
 	ld	bc,11
 	ldir 
 	ret
+
+; Does a complete find operation
+; Calls ns_slst, and then falls to ns_find
+; de = Address of FCB
+;
+; uses: af, bc, de ,hl
+ns_find:call	ns_slst		; Complete find operation
 	
 ; Put the next found file name into the name buffer
 ; If no more names are found, exit with status of 0x00FF
@@ -229,6 +264,7 @@ ns_slst:push	de		; Save de
 ; should be been run in the meantime.
 ;
 ; uses: af, bc, de, hl
+
 ns_list:ld	hl,0x00FF
 	ld	(status),hl	; Set status
 
@@ -328,7 +364,7 @@ ns_ffm1:inc	hl
 ; Search for next file
 ; Takes the open directory and gets the next file
 ;
-; Uses: all
+; uses: all
 ns_snxt:ld	a,(ns_isls)
 	or	a
 	ret	z
@@ -350,6 +386,23 @@ ns_snx0:call	ns_list
 	ld	(status),hl
 	jp	goback
 	
+; Prepare to access a file
+; Checks the magic number to ensure that the file is in fact open
+; Also checks ns_dore and ns_cfcb to see if a reopen is required
+; If so, copy filename from FCB and do NHACP open
+; a = Logical NHACP device
+; de = Address of FCB
+;
+; uses: af, bc, de, hl
+ns_aces:
+	
+; Read next record
+; Reads the next 128 bytes in a file into the DMA address
+; The FCB record count will be incremented by 1
+; de = Address of FCB
+;
+; uses: all
+ns_frea:call	ns_ownr
 	
 ; Set a 16 bit mask based on a number from 0-15
 ; a = Bit to set
