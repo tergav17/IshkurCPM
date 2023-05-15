@@ -24,6 +24,7 @@ ns_mask:defs	2	; Ownership mask (2b)
 ns_cfcb:defs	2	; Current FCB (2b)
 ns_dore:defs	1	; Do reopen? (1b)
 ns_isls:defs	1	; Is listing dir? (1b)
+ns_tran:defs	1	; Number of bytes in transfer (1b)
 .area	_TEXT
 
 ns_ayda	equ	0x40		; AY-3-8910 data port
@@ -185,10 +186,16 @@ ns_fopn:call	ns_ownr
 	ld	(status),hl
 	
 	; Copy over the real filename to the FCB
+	; Also set open flag
 	pop	hl
 	push	hl
-	ld	de,16
+	ld	de,13
 	add	hl,de
+	ld	(hl),0xE7
+	inc	hl
+	inc	hl
+	inc	hl
+	
 	ld	b,d
 	ld	c,e
 	ex	de,hl
@@ -207,11 +214,19 @@ ns_fopn:call	ns_ownr
 	
 ns_fop0:jp	goback
 	
-; Stub for file close syscall
-; Make sure BDOS does not attempt to close a file owned by the driver
+; Close the file
+; Main purpose is to ensure that a close on this device is deferred
+; Also resets the open flag
+; de = Address of DPH
 ;
 ; uses: does not matter
 ns_fcls:call	ns_ownr
+
+	; Reset open flag
+	ld	hl,13
+	add	hl,de
+	ld	(hl),0x00
+
 	jp	goback
 	
 ; Function call to start a list-dir operation
@@ -394,7 +409,30 @@ ns_snx0:call	ns_list
 ; de = Address of FCB
 ;
 ; uses: af, bc, de, hl
-ns_aces:
+ns_aces:ld	hl,13
+	add	hl,de
+	ld	a,(hl)
+	cp	0xE7
+	jr	z,ns_ace0
+	
+	; Return invalid FCB
+	ld	hl,9
+	ld	(status),hl
+	jp	goback
+	
+	; Check to see if it is currently being accessed
+ns_ace0:ld	hl,(ns_cfcb)
+	sbc	hl,de
+	jr	nz,ns_ace1
+	
+	; See if a reopen is needed
+	ld	a,(ns_dore)
+	or	a
+	ret	z
+	
+	; A reopen is needed, do it!
+ns_ace1:ld	hl,0x00FF
+	ld	(status),hl
 	
 ; Read next record
 ; Reads the next 128 bytes in a file into the DMA address
@@ -504,9 +542,14 @@ ns_getb:ex	de,hl
 	ret	c
 	cp	0x84
 	scf
-	jr	nz,ns_get1
-	call	ns_hcrd
-	ld	b,128
+	jr	nz,ns_get2
+	call	ns_hcre
+	ld	(ns_tran),a
+	ld	b,a
+	call	ns_hcre
+	ld	a,b
+	or	a
+	ret	z
 ns_get0:call	ns_hcre
 	ret	c
 	ld	(hl),a
@@ -514,7 +557,7 @@ ns_get0:call	ns_hcre
 	djnz	ns_get0
 	or	a
 	ret
-ns_get1:call	ns_hcrd	; Read the error message and exit
+ns_get2:call	ns_hcrd	; Read the error message and exit
 	call	ns_hcre
 	scf
 	ret

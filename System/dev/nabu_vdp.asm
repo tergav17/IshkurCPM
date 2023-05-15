@@ -404,7 +404,7 @@ tm_cupd:ld	(tm_mode),hl
 	jr	tm_escd
 	
 tm_80c:	push	hl
-	ld	hl,0x0404
+	ld	hl,0x0407
 	jr	tm_cupd
 	
 	
