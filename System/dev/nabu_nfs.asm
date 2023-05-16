@@ -408,8 +408,9 @@ ns_snx0:call	ns_list
 ; a = Logical NHACP device
 ; de = Address of FCB
 ;
-; uses: af, bc, de, hl
-ns_aces:ld	hl,13
+; uses: af, bc, hl
+ns_aces:ld	c,a
+	ld	hl,13
 	add	hl,de
 	ld	a,(hl)
 	cp	0xE7
@@ -434,6 +435,87 @@ ns_ace0:ld	hl,(ns_cfcb)
 ns_ace1:ld	hl,0x00FF
 	ld	(status),hl
 	
+	; Set the current FCB to this one
+	ld	(ns_cfcb),de
+	
+	; Clear ns_dore flag
+	xor	a
+	ld	(ns_dore),a
+	
+	; Copy over the true filename
+	ld	hl,16
+	add	hl,de
+	push	de
+	ld	de,ns_m0na
+	ld	a,c
+	call	ns_sdir
+	ld	a,'/'
+	ld	(de),a
+	inc	de
+	ld	bc,16
+	ldir
+	
+	; Now open the file
+	call	ns_open
+	pop	de
+	ret
+	
+; Takes in a FCB, and returns the current record to access
+; de = Address to FCB
+;
+; Returns record # in bc
+; uses: af, bc, hl
+ns_gcre:ld	hl,0x0C
+	add	hl,de
+	ld	b,(hl)
+	ld	c,0
+	srl	b
+	rr	c
+	inc	hl
+	inc	hl
+	ld	a,(hl)
+	rlca
+	rlca
+	rlca
+	rlca
+	or	b
+	ld	b,a
+	ld	hl,0x20
+	add	hl,de
+	ld	a,(hl)
+	or	c
+	ld	c,a
+	ret
+	
+; Takes in a random record, and writes it to the FCB
+; bc = Record #
+; de = Address to FCB
+;
+; uses: af, bc, hl
+ns_scre:ld	hl,0x20
+	add	hl,de
+	ld	a,c
+	and	0x7F
+	ld	(hl),a
+	ld	hl,0x0E
+	add	hl,de
+	ld	a,b
+	rrca
+	rrca
+	rrca
+	rrca
+	and	0x0F
+	ld	(hl),a
+	dec	hl
+	dec	hl
+	sla	c
+	rl	b
+	ld	a,b
+	and	0x0F
+	ld	(hl),a
+	ret
+	
+		
 ; Read next record
 ; Reads the next 128 bytes in a file into the DMA address
 ; The FCB record count will be incremented by 1
@@ -441,6 +523,39 @@ ns_ace1:ld	hl,0x00FF
 ;
 ; uses: all
 ns_frea:call	ns_ownr
+
+	; Set file up to access
+	call	ns_aces
+	
+	; Get the record to read
+	call	ns_gcre
+	
+	; Set up and do read
+	push	bc
+	push	de
+	ld	d,b
+	ld	e,c
+	ld	hl,(biodma)
+	call	ns_getb
+	
+	; Make sure there were no issues
+	jp	c,goback
+	
+	; Increment and writeback
+	pop	de
+	pop	bc
+	inc	bc
+	call	ns_scre
+	
+	; Set return status
+	ld	hl,0
+	ld	a,(ns_tran)
+	or	a
+	jr	nz,ns_fre0
+	inc	hl
+	
+ns_fre0:ld	(status),hl
+	jp	goback
 	
 ; Set a 16 bit mask based on a number from 0-15
 ; a = Bit to set
@@ -735,21 +850,13 @@ ns_sdir:add	a,'A'
 	; Fall to ns_wchd
 	
 ; Writes a byte to (de), then increments de
-; ns_dore is set to 1 if a character ends up
-; being changed
 ; a = Character to write
 ; de = Destination for character
 ;
 ; Returns de=de+1
 ; uses: af, de
-ns_wchd:ex	de,hl
-	cp	(hl)
-	ex	de,hl
-	ld	(de),a
+ns_wchd:ld	(de),a
 	inc	de
-	ret	z
-	ld	a,1
-	ld	(ns_dore),a
 	ret
 
 ; Converts lowercase to uppercase
