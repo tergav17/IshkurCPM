@@ -156,15 +156,15 @@ ns_grb1:call	ns_getb
 ns_sysh:ld	a,c
 	sub	15
 	ret	c		; No syscalls lower than 15
-	jr	z,ns_fopn	; Open syscall
+	jr	z,ns_fopn	; Open
 	dec	a
-	jp	z,ns_fcls	; Close syscall (ignored)
+	jp	z,ns_fcls	; Close (ignored)
 	dec	a
-	jp	z,ns_sfir	; Search for first syscall
+	jp	z,ns_sfir	; Search for first 
 	dec	a
-	jp	z,ns_snxt	; Search for next syscall
+	jp	z,ns_snxt	; Search for next 
 	dec	a
-	; todo delete
+	jp	z,ns_dele	; Delete file
 	dec	a
 	jp	z,ns_frea	; File read next record
 	dec	a
@@ -241,6 +241,7 @@ ns_fcls:call	ns_ownr
 	
 ; Function call to start a list-dir operation
 ; Must be called before a file search
+; a = Logical NHACP device
 ; de = Address of FCB
 ;
 ; uses: af, bc, de, hl
@@ -278,6 +279,7 @@ ns_slst:push	de		; Save de
 
 ; Does a complete find operation
 ; Calls ns_slst, and then falls to ns_find
+; a = Logical NHACP device
 ; de = Address of FCB
 ;
 ; uses: af, bc, de ,hl
@@ -287,6 +289,7 @@ ns_find:call	ns_slst		; Complete find operation
 ; If no more names are found, exit with status of 0x00FF
 ; ns_slst must have been run to set up state, no more disk operations
 ; should be been run in the meantime.
+; enter into ns_lis0 to avoid setting status
 ;
 ; uses: af, bc, de, hl
 
@@ -372,6 +375,8 @@ ns_sfir:xor	a
 ; b = Number of characters
 ; de = Destination of data
 ; hl = Source of data
+;
+; uses: af, b, de, hl
 ns_ffmt:ld	a,(hl)
 	call	ns_ltou
 	or	a
@@ -413,6 +418,48 @@ ns_snx0:call	ns_list
 	ld	hl,0
 	ld	(status),hl
 	jp	goback
+	
+; Delete files based on pattern
+; Will return error if less than 1 file is found
+; de = Address to FCB
+;
+; uses: all
+ns_dele:call	ns_ownr
+
+	; Set first part of remove message prototype
+	push	af
+	ex	de,hl
+	ld	de,ns_m6na
+	call	ns_sdir
+	ld	a,'/'
+	ld	(de),a
+	ex	de,hl
+	pop	af
+
+	; Start the list-dir function
+	call	ns_slst
+	
+	; Search for the next entry, do not set flag
+ns_del0:call	ns_lis0
+
+	; Copy over file name into message
+	ld	de,ns_m6na+3
+	ld	hl,ns_buff+22
+	ld	bc,16
+	ldir
+	
+	; Send delete message
+	ld	hl,ns_m6
+	ld	b,28
+	call	ns_send
+	ld	hl,ns_buff
+	call	ns_rece
+	
+	; Set status to 0, and get next element
+	ld	hl,0
+	ld	(status),hl
+	jr	ns_del0
+
 	
 ; Prepare to access a file
 ; Checks the magic number to ensure that the file is in fact open
@@ -967,8 +1014,8 @@ ns_m0:	defb	0x8F,0x00
 	defw	24		; Message length
 	defb	0x01		; Cmd: STORAGE-OPEN
 	defb	ns_fild		; Default file descriptor
-ns_m0fl:defw	0x00		; Read/Write flags
-	defb	19		; Message length
+ns_m0fl:defw	0x0000		; Read/Write flags
+	defb	19		; File name length
 ns_m0na:defs	19,'X'		; File name field
 	defb	0x00		; Padding
 	
@@ -1012,3 +1059,12 @@ ns_m5:	defb	0x8F,0x00
 	defb	0x0F		; Cmd: GET-DIR-ENTRY
 	defb	ns_fild		; Default file descriptor
 	defb	16		; Max length of file
+	
+; Message prototype to remove a file
+; Total length: 27 bytes
+ns_m6:	defb	0x8F,0x00
+	defw	23		; Message length
+	defb	0x10		; Cmd: REMOVE
+	defw	0x0000		; Remove regular file
+	defb	19		; File name length
+ns_m6na:defs	19,'X'		; File name field
