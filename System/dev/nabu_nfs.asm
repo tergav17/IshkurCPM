@@ -83,7 +83,7 @@ nfsdev:	or	a
 ; b = Logical CP/M device #
 ; hl = Call argument
 ;
-; uses: none
+; uses: does not matter
 ns_init:ld	a,b
 	call	ns_domk
 	ld	hl,(ns_mask)
@@ -128,6 +128,7 @@ ns_hini:ld	a,0x07
 	ld	a,0x0F
 	out	(ns_atla),a	; AY register = 15
 	ret
+
 ; Loads the CCP into the CCP space
 ns_ccp:	ld	hl,ns_p0
 	jr	ns_grb0
@@ -389,6 +390,9 @@ ns_snxt:ld	a,(ns_isls)
 	or	a
 	ret	z
 	
+	; Set up the HCCA
+	call	ns_hini	
+	
 	; Find the next entry
 ns_snx0:call	ns_list
 	
@@ -600,7 +604,8 @@ ns_own1:jr	z,ns_own2
 	add	hl,bc
 	dec	a
 	jr	ns_own1
-ns_own2:ld	a,(hl)		; a = Logical NHACP device
+ns_own2:call	ns_hini		; We are commited at this point, init HCCA
+	ld	a,(hl)		; a = Logical NHACP device
 	pop	bc
 	ret
 
