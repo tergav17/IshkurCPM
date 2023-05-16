@@ -167,6 +167,10 @@ ns_sysh:ld	a,c
 	; todo delete
 	dec	a
 	jp	z,ns_frea	; File read next record
+	dec	a
+	jp	z,ns_fwri	; File write next record
+	dec	a
+	jp	z,ns_fmak	; Create file
 	ret
 	
 ; Parses the current FCB, and searches for a file that matches
@@ -523,7 +527,6 @@ ns_scre:ld	hl,0x20
 	and	0x0F
 	ld	(hl),a
 	ret
-	
 		
 ; Read next record
 ; Reads the next 128 bytes in a file into the DMA address
@@ -548,7 +551,7 @@ ns_frea:call	ns_ownr
 	call	ns_getb
 	
 	; Make sure there were no issues
-	jp	c,goback
+ns_fre0:jp	c,goback
 	
 	; Increment and writeback
 	pop	de
@@ -560,10 +563,76 @@ ns_frea:call	ns_ownr
 	ld	hl,0
 	ld	a,(ns_tran)
 	or	a
-	jr	nz,ns_fre0
+	jr	nz,ns_fre1
 	inc	hl
 	
-ns_fre0:ld	(status),hl
+ns_fre1:ld	(status),hl
+	jp	goback
+	
+; Write next record
+; Writes the next 128 bytes into a file from the DMA address
+; The FCB record count will be incremented by 1
+; de = Address of FCB
+;
+; uses: all
+ns_fwri:call	ns_ownr
+
+	; Set file up to access
+	call	ns_aces
+	
+	; Get the record to read
+	call	ns_gcre
+	
+	; Set up and do read
+	push	bc
+	push	de
+	ld	d,b
+	ld	e,c
+	ld	hl,(biodma)
+	call	ns_putb
+	
+	; Continue in read
+	jr	ns_fre0
+	
+; Make new file
+; Reboot the system if the file already exists
+; de = ADdress to FCB
+; uses: all
+ns_fmak:call	ns_ownr
+
+	; We either succeed or die trying
+	ld	hl,0
+	ld	(status),hl
+
+	; Decode filename into open buffer
+	ld	hl,ns_m0na
+	push	de
+	ex	de,hl
+	inc	hl
+	call	ns_form
+	
+	; Set the flag and open
+	ld	hl,0x0030
+	ld	(ns_m0fl),hl
+	call	ns_opef
+	
+	; Error? time to reboot!
+	jp	nz,0
+	
+	; Nope? Activate FCB
+	pop	de
+	ld	hl,0x0D
+	add	hl,de
+	ld	(hl),0xE7	; Set magic number
+	inc	hl
+	inc	hl
+	inc	hl
+	ex	de,hl
+	ld	hl,ns_m0na
+	ld	bc,16
+	ldir
+	
+	; All done
 	jp	goback
 	
 ; Set a 16 bit mask based on a number from 0-15
@@ -821,7 +890,7 @@ ns_hcw1:ld	a,0x01
 ; uses: all
 ns_form:call	ns_sdir
 	ld	a,'/'
-	jp	ns_wchd
+	call	ns_wchd
 	ld	b,8		; Look at all 8 possible name chars
 ns_for1:ld	a,(hl)
 	call	ns_ltou
@@ -842,6 +911,8 @@ ns_for3:ld	a,(hl)
 	inc	hl
 	djnz	ns_for3
 	xor	a		; Zero terminate
+	ld	(de),a
+	ret
 	
 ; Part of ns_form, but sometimes is called independently
 ; Sets the directory to access files from

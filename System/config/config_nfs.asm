@@ -86,7 +86,7 @@ wbinit:	ld	a,0x01		; Bank out ROM
 ;
 
 cbinit:	ld	a,6	; Enable INIT to run
-	;ld	(inbuff+1),a
+	ld	(inbuff+1),a
 	ret
 
 ;
