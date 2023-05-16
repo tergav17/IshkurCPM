@@ -185,23 +185,28 @@ ns_fopn:call	ns_ownr
 	ld	hl,0
 	ld	(status),hl
 	
-	; Copy over the real filename to the FCB
-	; Also set open flag
-	pop	hl
-	push	hl
-	ld	de,13
-	add	hl,de
-	ld	(hl),0xE7
-	inc	hl
-	inc	hl
-	inc	hl
+	; Copy over false CP/M filename to the FCP
+	pop	de
+	push	de
+	inc	de
+	ld	hl,ns_name
+	ld	bc,11
+	ldir
 	
-	ld	b,d
-	ld	c,e
-	ex	de,hl
+	; Set open flag
+	inc	de
+	ld	a,0xE7
+	ld	(de),a
+	inc	de
+	inc	de
+	inc	de
+	
+	; Copy over the real filename to the FCB
+	ld	bc,16
 	ld	hl,ns_buff+22
 	ldir
 	
+
 	; Check if current
 	pop	de
 	ld	hl,(ns_cfcb)
