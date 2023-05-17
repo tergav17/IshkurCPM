@@ -448,31 +448,40 @@ ns_snx0:call	ns_list
 	; Get file size
 	call	ns_nblk
 	
-	; Place file size into dir entry
-	ld	h,0
-	ld	l,c
-	sla	c
-	rl	b
-	rl	h
-	ld	a,b
-	ld	(de),a
-	inc	de
 	xor	a
-	ld	(de),a
-	inc	de
-	ld	a,h
-	ld	(de),a
-	inc	de
-	ld	a,l
-	and	0x7F
-	ld	(de),a
-	inc	de
-	
+	cp	b
 	ld	b,16
+	jr	nz,ns_snx1
 	xor	a
-ns_snx1:ld	(de),a
+	srl	c
+	rla
+	srl	c
+	rla
+	srl	c
+	rla
+	or	a
+	ld	b,c
+	jr	z,ns_snx1
+	inc	b
+	
+	
+	; Set the records to 0
+ns_snx1:ld	c,b
+	ld	b,4
+	xor	a
+ns_snx2:ld	(de),a
 	inc	de
-	djnz	ns_snx1
+	djnz	ns_snx2
+	
+	; Spoof file size 1-16KB
+	ld	b,16
+	ld	a,c
+ns_snx3:ld	(de),a
+	inc	de
+	or	a
+	jr	z,ns_snx4
+	dec	a
+ns_snx4:djnz	ns_snx3
 	
 	; Set status to 0 and return
 	ld	hl,0
