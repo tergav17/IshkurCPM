@@ -294,7 +294,7 @@ swindi0:jr	z,swindi1
 swindi1:ld	a,(hl)
 	ld	(callmj+1),a
 	inc	hl
-	cp	(hl)
+	or	(hl)
 	ret	z
 	ld	a,(hl)
 	ld	(callmj+2),a

@@ -204,7 +204,6 @@ cdevsw:	defw	siodev,	0	; TTY device
 ;*
 ;**************************************************************
 ;
-;#data	_BSS,imgtop
 
 #include "dev/nabu_fdc.asm"
 #include "dev/nabu_vdp.asm"
