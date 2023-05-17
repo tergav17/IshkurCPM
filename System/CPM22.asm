@@ -360,9 +360,9 @@ delbatch: ld	hl,batch	;is batch active?
 ;   check to two strings at (pattrn1) and (pattrn2). they must be
 ; the same or we halt....
 ;
-verify:	ld	de,pattrn1	;these are the serial number bytes.
-	ld	hl,pattrn2	;ditto, but how could they be different?
-	ld	b,6		;6 bytes each.
+verify:	ld	de,pattrn1+2	;these are the serial number bytes.
+	ld	hl,pattrn2+2	;ditto, but how could they be different?
+	ld	b,4		;6 bytes each.
 verify1:ld	a,(de)
 	cp	(hl)
 	jp	nz,halt		;jump to halt routine.
