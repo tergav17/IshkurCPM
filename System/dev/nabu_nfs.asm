@@ -445,7 +445,36 @@ ns_snx0:call	ns_list
 	ld	bc,11
 	ldir
 	
-	; Set status to 0
+	; Get file size
+	call	ns_nblk
+	
+	; Place file size into dir entry
+	ld	h,0
+	ld	l,c
+	sla	c
+	rl	b
+	rl	h
+	ld	a,b
+	ld	(de),a
+	inc	de
+	xor	a
+	ld	(de),a
+	inc	de
+	ld	a,h
+	ld	(de),a
+	inc	de
+	ld	a,l
+	and	0x7F
+	ld	(de),a
+	inc	de
+	
+	ld	b,16
+	xor	a
+ns_snx1:ld	(de),a
+	inc	de
+	djnz	ns_snx1
+	
+	; Set status to 0 and return
 	ld	hl,0
 	ld	(status),hl
 	jp	goback
@@ -833,7 +862,43 @@ ns_frn0:call	ns_lis0
 ; uses: all
 ns_size:call	ns_ownr
 
+	; Find file
+	push	de
+	call	ns_find
+	pop	de
+	
+	; Get number of blocks
+	call	ns_nblk
+	
+	; Set in FCB
+	ld	hl,0x21
+	add	hl,de
+	ld	(hl),c
+	inc	hl
+	ld	(hl),b
+	inc	hl
+	ld	(hl),0
+
 	jp	goback	
+	
+; Use a FILE-INFO block in ns_buff to calculate
+; the number of blocks in a file
+;
+; Returns number of blocks in bc
+; uses: af, bc, hl
+ns_nblk:ld	hl,ns_buff+19
+	ld	b,(hl)
+	dec	hl
+	ld	c,(hl)
+	dec	hl
+	ld	a,(hl)
+	sla	a
+	rl	c
+	rl	b
+	or	a
+	ret	z
+	inc	bc
+	ret
 	
 ; Set a 16 bit mask based on a number from 0-15
 ; a = Bit to set
