@@ -48,7 +48,7 @@ boot:	ld	sp,cbase
 	call	cbinit
 
 	; Jump to CP/M
-	ld	c,0
+	ld	c,default
 	jp	cbase
 
 
@@ -67,7 +67,7 @@ wboot:	ld	sp,cbase
 	pop	af
 	ld	(iobyte),a
 	
-	ld	c,0
+	ld	c,default
 	jp	cbase
 
 ; Warm boot routine

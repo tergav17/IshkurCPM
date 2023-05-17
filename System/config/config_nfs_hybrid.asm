@@ -35,7 +35,7 @@ default	equ	0
 ;
 ;   Set memory base here. 
 ;
-mem	equ	54		; CP/M image starts at mem*1024
+mem	equ	53		; CP/M image starts at mem*1024
 
 
 
@@ -161,8 +161,8 @@ resgrb:	jp	ns_grb
 ; times if it has multipe entires in this table.
 bdevsw:	defw	nfsdev,	0	; 'A'
 	defw	nfsdev,	1	; 'B'
-	defw	nfsdev,	2	; 'C'
-	defw	nfsdev,	3	; 'D'
+	defw	nfddev,	0	; 'C'
+	defw	nfddev,	1	; 'D'
 	defw	nfsdev,	4	; 'E'
 	defw	nfsdev,	5	; 'F'
 	defw	nfsdev,	6	; 'G'
@@ -215,3 +215,4 @@ cdevsw:	defw	siodev,	0	; TTY device
 #include "dev/nabu_nfs.asm"
 #include "dev/nabu_prt.asm"
 #include "dev/nabu_sio.asm"
+#include "dev/nabu_fdc.asm"

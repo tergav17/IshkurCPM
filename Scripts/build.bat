@@ -24,7 +24,10 @@ REM NFS kernel
 move cpm22.bin ..\Output\NFS_CPM22.SYS >NUL
 move config\*.lst ..\Output\Listings >NUL
 
-
+REM NFS hybrid kernel
+..\Build\zasm config\config_nfs_hybrid.asm -u -w -b cpm22.bin
+move cpm22.bin ..\Output\NFS_HYBRID_CPM22.SYS >NUL
+move config\*.lst ..\Output\Listings >NUL
 
 REM Move resource into outputs
 copy res\licca_font.bin ..\Output\FONT.GRB >NUL
@@ -48,6 +51,11 @@ move boot\boot_ndsk_hybrid.lst ..\Output\Listings >NUL
 copy boot_nfs.bin ..\Output\NFS_BOOT.nabu >NUL
 move boot_nfs.bin bin >NUL
 move boot\boot_nfs.lst ..\Output\Listings >NUL
+
+..\Build\zasm boot\boot_nfs_hybrid.asm -u -w -b boot_nfs_hybrid.bin
+copy boot_nfs_hybrid.bin ..\Output\NFS_HYBRID_BOOT.nabu >NUL
+move boot_nfs_hybrid.bin bin >NUL
+move boot\boot_nfs_hybrid.lst ..\Output\Listings >NUL
 
 
 REM Build Ishkur-specific applications

@@ -13,6 +13,11 @@
 ;*
 ;**************************************************************
 ;
+;   Set default drive / user
+;   (uuuudddd) where 'uuuu' is the user number and 'dddd' is the drive number.
+;
+default	equ	0
+
 ;
 ;**************************************************************
 ;*
