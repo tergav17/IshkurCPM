@@ -156,9 +156,9 @@ ns_grb1:call	ns_getb
 ns_sysh:ld	a,c
 	sub	15
 	ret	c		; No syscalls lower than 15
-	jr	z,ns_fopn	; Open
+	jr	z,ns_fopn	; Open file
 	dec	a
-	jp	z,ns_fcls	; Close (ignored)
+	jp	z,ns_fcls	; Close file
 	dec	a
 	jp	z,ns_sfir	; Search for first 
 	dec	a
@@ -171,7 +171,29 @@ ns_sysh:ld	a,c
 	jp	z,ns_fwri	; File write next record
 	dec	a
 	jp	z,ns_fmak	; Create file
+	dec	a
+	jp	z,ns_frnm	; Rename file
+	sub	7
+	jr	z,ns_stmp	; Set file attributes (stump)
+	sub	3
+	jp	z,ns_rrea	; File read random
+	dec	a
+	jp	z,ns_rwri	; File write random
+	dec	a
+	jp	z,ns_size	; Compute file size
+	dec	a
+	jp	z,ns_rrec	; Update random access pointer
+	sub	4
+	jp	z,ns_rwri	; FIle write random (we will ignore the zero part)
 	ret
+	
+; Stump, do nothing if FCB is owned
+; de = Address to FCB
+;
+; uses: does not matter
+ns_stmp:call	ns_ownr
+
+	jp	goback
 	
 ; Parses the current FCB, and searches for a file that matches
 ; the pattern.
@@ -236,6 +258,10 @@ ns_fcls:call	ns_ownr
 	ld	hl,13
 	add	hl,de
 	ld	(hl),0x00
+	
+	; Set flag
+	ld	hl,0
+	ld	(status),hl
 
 	jp	goback
 	
@@ -273,8 +299,13 @@ ns_slst:push	de		; Save de
 	pop	hl		; Get the FCB back
 	inc	hl
 	ld	de,ns_ptrn
-	ld	bc,11
-	ldir 
+	ld	b,11
+ns_sls0:ld	a,(hl)
+	and	0x7F		; Fix for CP/M stupidness
+	ld	(de),a
+	inc	de
+	inc	hl
+	djnz	ns_sls0
 	ret
 
 ; Does a complete find operation
@@ -450,7 +481,7 @@ ns_del0:call	ns_lis0
 	
 	; Send delete message
 	ld	hl,ns_m6
-	ld	b,28
+	ld	b,27
 	call	ns_send
 	ld	hl,ns_buff
 	call	ns_rece
@@ -592,13 +623,13 @@ ns_frea:call	ns_ownr
 	; Set up and do read
 	push	bc
 	push	de
-	ld	d,b
+ns_fre0:ld	d,b
 	ld	e,c
 	ld	hl,(biodma)
 	call	ns_getb
 	
 	; Make sure there were no issues
-ns_fre0:jp	c,goback
+ns_fre1:jp	c,goback
 	
 	; Increment and writeback
 	pop	de
@@ -610,10 +641,10 @@ ns_fre0:jp	c,goback
 	ld	hl,0
 	ld	a,(ns_tran)
 	or	a
-	jr	nz,ns_fre1
+	jr	nz,ns_fre2
 	inc	hl
 	
-ns_fre1:ld	(status),hl
+ns_fre2:ld	(status),hl
 	jp	goback
 	
 ; Write next record
@@ -627,23 +658,88 @@ ns_fwri:call	ns_ownr
 	; Set file up to access
 	call	ns_aces
 	
-	; Get the record to read
+	; Get the record to write
 	call	ns_gcre
 	
-	; Set up and do read
+	; Set up and do write
 	push	bc
 	push	de
-	ld	d,b
+ns_fwr0:ld	d,b
 	ld	e,c
 	ld	hl,(biodma)
 	call	ns_putb
 	
+	; Set amount transfered to 128
+	ld	a,128
+	ld	(ns_tran),a
+	
 	; Continue in read
+	jr	ns_fre1
+	
+; Read record random
+; Takes the random address and read a sector from it
+ns_rrea:call	ns_ownr
+
+	; Set file up to access
+	call	ns_aces
+	
+	; Decode random address
+	call	ns_deco
+	dec	bc
+	push	bc
+	push	de
+	inc	bc
 	jr	ns_fre0
+	
+; Write record random
+; Takes the random address and write a sector to it
+; de = Address to FCB
+;
+; uses: all
+ns_rwri:call	ns_ownr
+
+	; Set file up to access
+	call	ns_aces
+	
+	; Decode random address
+	call	ns_deco
+	dec	bc
+	push	bc
+	push	de
+	inc	bc
+	jr	ns_fwr0
+	
+; Set random record
+; de = Address to FCB
+;
+; uses: all
+ns_rrec:call	ns_ownr
+
+	; Decode random address
+	call	ns_deco
+	
+	; Write it back to the FCB
+	call	ns_scre
+	
+	; Done
+	jp	goback
+	
+; Decodes random address
+; de = Address to FCB
+;
+; Returns block number in bc
+; uses: af, bc, hl
+ns_deco:ld	hl,0x21
+	add	hl,de
+	ld	c,(hl)
+	inc	hl
+	ld	b,(hl)
+	ret
 	
 ; Make new file
 ; Reboot the system if the file already exists
-; de = ADdress to FCB
+; de = Address to FCB
+;
 ; uses: all
 ns_fmak:call	ns_ownr
 
@@ -675,12 +771,69 @@ ns_fmak:call	ns_ownr
 	inc	hl
 	inc	hl
 	ex	de,hl
-	ld	hl,ns_m0na
+	ld	hl,ns_m0na+3
 	ld	bc,16
 	ldir
 	
 	; All done
 	jp	goback
+	
+; Rename file
+; Similar to delete, wildcards are allowed
+; de = Address to FCB
+;
+; uses: all
+ns_frnm:call	ns_ownr
+
+	; Set first part of rename message prototype
+	push	af
+	ex	de,hl
+	ld	de,ns_m7n0
+	call	ns_sdir
+	ld	a,'/'
+	ld	(de),a
+	pop	af
+	push	af
+	push	hl
+	ld	de,17
+	add	hl,de
+	ld	de,ns_m7n1
+	call	ns_form
+	pop	de
+	pop	af
+	
+
+	; Start the list-dir function
+	call	ns_slst
+	
+	; Search for the next entry, do not set flag
+ns_frn0:call	ns_lis0
+
+	; Copy over file name into message
+	ld	de,ns_m7n0+3
+	ld	hl,ns_buff+22
+	ld	bc,16
+	ldir
+	
+	; Send rename message
+	ld	hl,ns_m7
+	ld	b,45
+	call	ns_send
+	ld	hl,ns_buff
+	call	ns_rece
+	
+	; Set status to 0, and get next element
+	ld	hl,0
+	ld	(status),hl
+	jr	ns_frn0
+	
+; Place size of file into FCB
+; de = Address to FCB
+;
+; uses: all
+ns_size:call	ns_ownr
+
+	jp	goback	
 	
 ; Set a 16 bit mask based on a number from 0-15
 ; a = Bit to set
@@ -940,6 +1093,7 @@ ns_form:call	ns_sdir
 	call	ns_wchd
 	ld	b,8		; Look at all 8 possible name chars
 ns_for1:ld	a,(hl)
+	and	0x7F
 	call	ns_ltou
 	cp	0x21
 	jr	c,ns_for2
@@ -953,6 +1107,7 @@ ns_for2:ld	a,0x2E		; '.'
 	add	hl,bc		; Fast forward to extenstion
 	ld	b,3		; Copy over extension
 ns_for3:ld	a,(hl)
+	and	0x7F
 	call	ns_ltou
 	call	ns_wchd
 	inc	hl
@@ -1068,3 +1223,13 @@ ns_m6:	defb	0x8F,0x00
 	defw	0x0000		; Remove regular file
 	defb	19		; File name length
 ns_m6na:defs	19,'X'		; File name field
+
+; Message prototype to rename a file
+; Total length: 45 bytes
+ns_m7:	defb	0x8F,0x00
+	defw	41		; Message length
+	defb	0x11		; Cmd: RENAME
+	defb	19		; File name #1 length
+ns_m7n0:defs	19,'X'		; File name #1 field
+	defb	19		; File name #2 length
+ns_m7n1:defs	19,'X'		; File name #2 field

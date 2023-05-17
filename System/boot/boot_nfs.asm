@@ -1,12 +1,12 @@
 ;
 ;**************************************************************
 ;*
-;*        I S H K U R   N F S  B O O T S T R A P
+;*        I S H K U R   N F S   B O O T S T R A P
 ;*
 ;**************************************************************
 ;
 
-nsec	equ	6		; # of BDOS+BIOS sectors 
+nsec	equ	7		; # of BDOS+BIOS sectors 
 				; (1024 bytes each)
 mem	equ	54		; CP/M image starts at mem*1024
 				; Should be same as cpm22.asm
