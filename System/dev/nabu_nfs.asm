@@ -752,12 +752,18 @@ ns_rwri:call	ns_ownr
 ;
 ; uses: all
 ns_rrec:call	ns_ownr
-
-	; Decode random address
-	call	ns_deco
 	
-	; Write it back to the FCB
-	call	ns_scre
+	; Get current address from FCB
+	call	ns_gcre
+	
+	; Set FCB random record
+	ld	hl,0x21
+	add	hl,de
+	ld	(hl),c
+	inc	hl
+	ld	(hl),b
+	inc	hl
+	ld	(hl),0
 	
 	; Done
 	jp	goback
