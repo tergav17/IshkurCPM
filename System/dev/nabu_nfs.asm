@@ -225,6 +225,8 @@ ns_fopn:call	ns_ownr
 	ld	a,0xE7
 	ld	(de),a
 	inc	de
+	xor	a
+	ld	(de),a
 	inc	de
 	inc	de
 	
@@ -1189,10 +1191,12 @@ ns_for2:ld	a,0x2E		; '.'
 ns_for3:ld	a,(hl)
 	and	0x7F
 	call	ns_ltou
+	cp	0x21
+	jr	c,ns_for4
 	call	ns_wchd
 	inc	hl
 	djnz	ns_for3
-	xor	a		; Zero terminate
+ns_for4:xor	a		; Zero terminate
 	ld	(de),a
 	ret
 	
