@@ -36,7 +36,21 @@ In order to boot NDSK from NHACP, the following files must be setup from the `Ou
 4. `NDSK_BOOT.nabu` must be renamed to `000001.nabu` and moved to your adapter homebrew directory
 
 ### NHACP NDSK + FDC (Hybrid)
-This build works extactly like the standard NHACP NDSK build, but has added support for the floppy drives. Logical drives C: and D: are mapped to floppy drive 0 and 1 respectively. 
+This build works exactly like the standard NHACP NDSK build, but has added support for the floppy drives. Logical drives C: and D: are mapped to floppy drive 0 and 1 respectively. 
+
+### NHACP NFS
+Similar to the NDSK distribution in that it functions over NHACP. However, it does not utilize a virtual disk image, and instead accesses remote file systems directly. This works by intercepting BDOS calls directly instead of servicing BIOS calls like a standard CP/M driver. However, NFS is still able to work alongside more traditional storage drivers by only intercepting calls that pertain to it.
+
+Under NFS, each logical drive and user number combination corresponds to a different folder on the host system. The logical device will be converted to a letter A-P, and the user number will be converted to hexadecimal 0-F. For example, device 0 with user 0 will convert to the directory `A0/`. For most distribution, CP/M drives are mapped 1-1 with similarly named folders on the host system.
+
+In order to boot NFS from NHACP, the following files must be setup from the `Output` directory:
+
+1. `FONT.GRB` must be moved to `A0/` in the NHACP root directory
+2. `NDSK_CPM22.SYS` must be renamed to `CPM22.SYS` and moved to `A0/` in the NHACP root directory
+3. `NFS_BOOT.nabu` must be renamed to `000001.nabu` and moved to your adapter homebrew directory
+
+### NFS NDSK + FDC (Hybrid)
+Similar to NDSK hybrid. Logical drives C: and D: are mapped to floppy drive 0 and 1 respectively. 
 
 ## Building
 ### Windows
