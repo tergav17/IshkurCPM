@@ -98,6 +98,10 @@ wboot0:	push	bc
 	cp	b
 	jr	nz,wboot0
 
+	; Turn off batch mode
+	ld	a,0
+	ld	(batch),a
+
 	; Call config init
 	call	wbinit
 
@@ -110,6 +114,7 @@ wboot0:	push	bc
 	ld	de,0
 	ld	bc,8
 	ldir
+
 
 	; Return
 	ret

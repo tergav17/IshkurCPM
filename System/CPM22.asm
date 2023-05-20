@@ -616,7 +616,10 @@ command:ld	sp,ccpstack	;setup stack area.
 	ld	e,a
 	call	getsetuc	;and set it.
 	call	resdsk		;reset the disk system.
-	ld	(batch),a	;clear batch mode flag.
+	;ld	(batch),a	;clear batch mode flag.
+	nop
+	nop
+	nop
 	pop	bc
 	ld	a,c
 	and	0fh		;isolate the drive number.

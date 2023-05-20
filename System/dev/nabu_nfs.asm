@@ -212,8 +212,10 @@ ns_fopn:call	ns_ownr
 	ld	hl,0
 	ld	(status),hl
 	
-	; Copy over false CP/M filename to the FCP
+	; Copy over false CP/M filename to the FCB
 	pop	de
+	call	ns_nblk		; Get # of blocks
+	ld	a,c
 	push	de
 	inc	de
 	ld	hl,ns_name
@@ -221,6 +223,7 @@ ns_fopn:call	ns_ownr
 	ldir
 	
 	; Set open flag
+	ld	c,a
 	inc	de
 	ld	a,0xE7
 	ld	(de),a
@@ -228,6 +231,8 @@ ns_fopn:call	ns_ownr
 	xor	a
 	ld	(de),a
 	inc	de
+	ld	a,c
+	ld	(de),a
 	inc	de
 	
 	; Copy over the real filename to the FCB
@@ -810,19 +815,13 @@ ns_fmak:call	ns_ownr
 	
 	; Nope? Activate FCB
 	pop	de
-	ld	hl,0x0D
-	add	hl,de
-	ld	(hl),0xE7	; Set magic number
-	inc	hl
-	inc	hl
-	inc	hl
-	ex	de,hl
-	ld	hl,ns_m0na+3
-	ld	bc,16
-	ldir
 	
-	; All done
-	jp	goback
+	; Force reopen
+	ld	a,1
+	ld	(ns_dore),a
+	
+	; Do an open
+	jp	ns_fopn
 	
 ; Rename file
 ; Similar to delete, wildcards are allowed
