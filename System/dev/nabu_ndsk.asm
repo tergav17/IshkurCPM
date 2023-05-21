@@ -226,7 +226,8 @@ nd_grb0:ld	de,nd_m0na
 	ld	bc,10
 	ldir			; Copy name to file open
 	call	nd_hini		; Go to HCCA mode
-	call	nd_open		; Open the file
+	ld	hl,0x0000	; O_RDONLY
+	call	nd_opef		; Open the file
 	ld	de,0
 	ld	hl,cbase
 nd_grb1:call	nd_getb
@@ -241,7 +242,9 @@ nd_grb1:call	nd_getb
 ; Closes the existing file too
 ;
 ; uses: af, b, hl
-nd_open:ld	hl,nd_m1
+nd_open:ld	hl,0x0001	; O_RDWR
+nd_opef:ld	(nd_m0fl),hl
+	ld	hl,nd_m1
 	ld	b,6
 	call	nd_send
 	ld	hl,nd_m0
