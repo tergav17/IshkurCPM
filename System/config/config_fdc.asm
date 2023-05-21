@@ -73,6 +73,9 @@ wbinit:	ld	a,0x01		; Bank out ROM
 	ld	a,0x10
 	;out	(0x40),a
 	
+	; Turn on batch mode
+	ld	a,0xFF
+	ld	(batch),a
 	
 	im	1		; Start interrupts
 	di

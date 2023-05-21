@@ -102,12 +102,11 @@ wboot0:	push	bc
 	ld	a,0
 	ld	(batch),a
 
-	; Call config init
-	call	wbinit
-
 	; Load the CCP
 	call	resccp
 
+	; Call config init
+	call	wbinit
 	
 	; Set up lower memory
 	ld	hl,cpmlow
