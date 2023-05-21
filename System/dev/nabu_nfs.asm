@@ -139,7 +139,8 @@ ns_grb0:ld	de,ns_m0na
 	ld	bc,13
 	ldir			; Copy name to file open
 	call	ns_hini		; Go to HCCA mode
-	call	ns_open		; Open the file
+	ld	hl,0x0000	; O_RDONLY
+	call	ns_opef		; Open the file
 	ld	de,0
 	ld	hl,cbase
 ns_grb1:call	ns_getb
