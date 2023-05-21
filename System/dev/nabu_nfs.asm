@@ -982,7 +982,7 @@ ns_getd:ld	a,(de)
 ;
 ; Flag z cleared on error
 ; uses: af, b, hl
-ns_open:ld	hl,0x0001	; Read/Write flag
+ns_open:ld	hl,0x0002	; Read/Write Protect flag
 ns_opef:ld	(ns_m0fl),hl
 	ld	hl,ns_m1
 	ld	b,6
