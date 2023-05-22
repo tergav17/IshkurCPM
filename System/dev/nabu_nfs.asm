@@ -1176,7 +1176,7 @@ ns_form:call	ns_sdir
 	ld	b,8		; Look at all 8 possible name chars
 ns_for1:ld	a,(hl)
 	and	0x7F
-	call	ns_ltou
+	call	ns_utol
 	cp	0x21
 	jr	c,ns_for2
 	call	ns_wchd
@@ -1190,7 +1190,7 @@ ns_for2:ld	a,0x2E		; '.'
 	ld	b,3		; Copy over extension
 ns_for3:ld	a,(hl)
 	and	0x7F
-	call	ns_ltou
+	call	ns_utol
 	cp	0x21
 	jr	c,ns_for4
 	call	ns_wchd
@@ -1237,6 +1237,19 @@ ns_ltou:and	0x7F
 	cp	0x7B		; '{'
 	ret	nc
 	sub	0x20
+	ret
+	
+; Converts uppercase to lowercase
+; a = Character to convert
+;
+; Returns lowercase in A
+; uses: af
+ns_utol:and	0x7F
+	cp	0x41		; 'A'
+	ret	c
+	cp	0x5B		; '['
+	ret	nc
+	add	0x20
 	ret
 	
 ; Path to CP/M image
