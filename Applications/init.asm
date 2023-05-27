@@ -54,8 +54,35 @@ tm_latc	equ	0xA1	; TMS9918 latch register (mode=1)
 banner:	ld	de,splash_40c
 banner0:ld	c,0x09
 	call	bdos
-
-	ret
+	
+	; See if profile exists
+	ld	hl,profile
+	call	openf
+	ret	z
+	
+	; It exists, run "SUBMIT PROFILE.SUB"
+	ld	hl,subfile
+	call	setf
+	ld	c,0x16		; Create "$$$.SUB"
+	call	bdos
+	
+	; Set DMA to bootstrap command
+	ld	de,subcmd
+	ld	c,0x1A
+	call	bdos
+	
+	; Write the block
+	ld	de,fcb
+	ld	c,0x15
+	call	bdos
+	
+	; Close and exit
+	ld	de,fcb
+	ld	c,0x10
+	call	bdos
+	ld	c,0x00
+	jp	bdos
+	
 	
 ; Actually does the configuration
 docfg:	call	setdma
@@ -98,7 +125,8 @@ prompt:	ld	c,0x09
 	ret
 	
 	; Create the ini file
-cretini:call	setf
+cretini:ld	hl,inifile
+	call	setf
 	ld	c,0x16
 	call	bdos
 	
@@ -211,11 +239,11 @@ setf180:ld	e,a
 	jp	bdos
 	
 ; Sets the FCB for a file open or creation
+; hl = file prototype
 ;
 ; Returns FCB in DE
 ; uses: af, bc, de, hl 
-setf:	ld	hl,inifile
-	ld	de,fcb
+setf:	ld	de,fcb
 	push	de
 	ld	bc,16
 	ldir
@@ -228,7 +256,8 @@ setf:	ld	hl,inifile
 ;
 ; Returns z if failed
 ; uses: all
-openini:call	setf
+openini:ld	hl,inifile
+openf:	call	setf
 	ld	c,0x0F
 	call	bdos
 	inc	a
@@ -254,10 +283,18 @@ ltou:	and	0x7F
 	
 ; Strings
 
-; File prototype
+; File prototypes
 ; Length: 16 bytes
 inifile:
 	defb	0,'INIT    INI',0,0,0,0
+profile:
+	defb	0,'PROFILE SUB',0,0,0,0
+subfile:
+	defb	0,'$$$     SUB',0,0,0,0
+	
+; Submit command to run PROFILE.SUB
+subcmd:
+	defb	0x12,"SUBMIT PROFILE.SUB",0x00
 	
 splash_40c:
 	defb	0x80,0x80,0x80,0x20,0x80,0x80,0x80,0x20,0x80,0x20,0x80,0x20,0x80,0x20,0x80,0x20,0x80,0x20,0x80,0x20,0x80,0x80,0x80,' CP/M Version 2.2',0x0A,0x0D
