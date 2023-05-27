@@ -80,7 +80,7 @@ printb:	push	bc
 crlf:	ld	a,cr
 	call	printb
 	ld	a,lf
-	jp	printb
+	jr	printb
 ;
 ;   routine to send one space to the console and save (bc).
 ;
@@ -252,25 +252,35 @@ getinp:	ld	a,(batch)	;if =0, then use console input.
 	call	open		;look for it.
 	jp	z,getinp1	;if not there, use normal input.
 	ld	a,(batchfcb+15)	;get last record number+1.
-	dec	a
+getinp0:dec	a
 	ld	(batchfcb+32),a
 	ld	de,batchfcb
+	push	af
 	call	rdrec		;read last record.
+	pop	de
 	jp	nz,getinp1	;quit on end of file.
-;
+	ld	hl,tbuff	;data was read into buffer here.
+	xor	a		;skip if entry has nothing in it
+	cp	(hl)
+	ld	a,d
+	jr	z,getinp0
+
 ;   move this record into input buffer.
 ;
 	ld	de,inbuff+1
-	ld	hl,tbuff	;data was read into buffer here.
 	ld	b,128		;all 128 characters may be used.
+	push	hl		;save tbuff
 	call	hl2de		;(hl) to (de), (b) bytes.
-	ld	hl,batchfcb+14
-	ld	(hl),0		;zero out the 's2' byte.
-	inc	hl		;and decrement the record count.
-	dec	(hl)
+	pop	hl		;zero out first in tbuff
+	ld	(hl),0
+	ld	hl,batchfcb+32
+	dec	(hl)		;decrement the record count.
 	ld	de,batchfcb	;close the batch file now.
+	push	de
+	call	wrtrec		;write out record
+	pop	de
 	call	close
-	jp	z,getinp1	;quit on an error.
+	jr	z,getinp1	;quit on an error.
 	ld	a,(cdrive)	;re-select previous drive if need be.
 	or	a
 	call	nz,dsksel	;don't do needless selects.
@@ -280,7 +290,7 @@ getinp:	ld	a,(batch)	;if =0, then use console input.
 	ld	hl,inbuff+2
 	call	pline2
 	call	chkcon		;check console, quit on a key.
-	jp	z,getinp2	;jump if no key is pressed.
+	jr	z,getinp2	;jump if no key is pressed.
 ;
 ;   terminate the submit job on any keyboard input. delete this
 ; file such that it is not re-started and jump to normal keyboard
@@ -306,12 +316,12 @@ getinp2:ld	hl,inbuff+1
 getinp3:inc	hl
 	ld	a,b		;end of the line?
 	or	a
-	jp	z,getinp4
+	jr	z,getinp4
 	ld	a,(hl)		;convert to upper case.
 	call	upper
 	ld	(hl),a
 	dec	b		;adjust character count.
-	jp	getinp3
+	jr	getinp3
 getinp4:ld	(hl),a		;add trailing null.
 	ld	hl,inbuff+2
 	ld	(inpoint),hl	;reset input line pointer.
@@ -617,9 +627,6 @@ command:ld	sp,ccpstack	;setup stack area.
 	call	getsetuc	;and set it.
 	call	resdsk		;reset the disk system.
 	;ld	(batch),a	;clear batch mode flag.
-	nop
-	nop
-	nop
 	pop	bc
 	ld	a,c
 	and	0fh		;isolate the drive number.
@@ -638,11 +645,6 @@ cmmnd1:	ld	sp,ccpstack	;set stack straight.
 	call	getdsk		;get current drive.
 	add	a,'A'
 	call	print		;print current drive.
-	nop
-	nop
-	nop
-	nop
-	nop
 	call	getusr		;get current user.
 	add	a,'0'
 	call	printdc		;print current user.
@@ -3716,6 +3718,11 @@ filepos:defw	0		;files position within directory (0 to max entries -1).
 ; 16 possible drives.
 ;
 cksumtbl: defb	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+	
+;
+;*
+;******************  P O S T - C C P   B O D G E S  *****************
+;*
 	
 ; Small routine to print a decimal 0-19
 printdc:cp	':'
