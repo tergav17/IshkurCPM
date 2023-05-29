@@ -610,5 +610,12 @@ tm_addr:in	a,(tm_latc)
 	ld	c,tm_data
 	ret
 	
+; Handles a TMS9918 irq
+tm_virq:	push	af
+	in	a,(tm_latc)
+	pop	af
+	ei
+	ret
+	
 ; Variables
 tm_mode:defw	0x0002

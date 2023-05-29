@@ -80,7 +80,7 @@ wbootr:	di
 	ld	hl,_TEXT_end
 	ld	(hl),a
 	ld	de,_TEXT_end+1
-	ld	bc,0xFFFF-_TEXT_end
+	ld	bc,_BSS_size
 	ldir
 
 	; Send init signals to all devices
