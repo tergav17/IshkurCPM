@@ -125,7 +125,7 @@ ns_hini:ld	a,0x07
 ; uses: a
 ns_dsnd:ld	a,0x0E
 	out	(ns_atla),a	; AY register = 14
-	ld	a,0x80
+	ld	a,0xB0
 	out	(ns_ayda),a	; Enable HCCA receive and but not send
 	
 ns_dsn0:ld	a,0x0F		
@@ -138,8 +138,8 @@ ns_dsn0:ld	a,0x0F
 ; uses: a
 ns_esnd:ld	a,0x0E
 	out	(ns_atla),a	; AY register = 14
-	ld	a,0xC0
-	out	(ns_ayda),a	; Enable HCCA receive and but not send
+	ld	a,0xF0
+	out	(ns_ayda),a	; Enable HCCA receive and send
 	jr	ns_dsn0
 
 ; Loads the CCP into the CCP space
@@ -1130,9 +1130,12 @@ ns_hcr0:ld	a,(ns_inf)
 	or	a
 	jr	nz,ns_hcr2
 	in	a,(ns_ayda)
-	bit	0,a
-	jr	z,ns_hcr0	; Await an interrupt
-	bit	1,a
+	;bit	0,a
+	;jr	z,ns_hcr0	; Await an interrupt
+	;bit	1,a
+	;jr	z,ns_hcr1
+	and	0x0F
+	xor	0b00000001
 	jr	z,ns_hcr1
 	dec	de
 	ld	a,e
@@ -1177,10 +1180,13 @@ ns_hcw0:ld	a,(ns_outf)
 	or	a
 	jr	nz,ns_hcw2
 	in	a,(ns_ayda)
-	bit	0,a
-	jr	z,ns_hcw0	; Await an interrupt
-	bit	1,a
-	jr	nz,ns_hcw1
+	;bit	0,a
+	;jr	z,ns_hcw0	; Await an interrupt
+	;bit	1,a
+	;jr	nz,ns_hcw1
+	and	0x0F
+	xor	0b00000011
+	jr	z,ns_hcw1
 	dec	de
 	ld	a,e
 	or	d
