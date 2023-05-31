@@ -1118,7 +1118,7 @@ ns_send:ld	a,(hl)
 ; Assumes AY is set to reg 15
 ; Will panic on timeout
 ;
-; Returns return in a
+; Returns result in a
 ; Carry flag set on error
 ; Uses: af
 ns_hcrd:call	ns_hcre
@@ -1126,7 +1126,10 @@ ns_hcre:push	de
 	ld	a,0x09
 	out	(ns_nctl),a	; Turn on recv light
 	ld	de,0xFFFF
-ns_hcr0:in	a,(ns_ayda)
+ns_hcr0:ld	a,(ns_inf)
+	or	a
+	jr	nz,ns_hcr2
+	in	a,(ns_ayda)
 	bit	0,a
 	jr	z,ns_hcr0	; Await an interrupt
 	bit	1,a
@@ -1138,6 +1141,7 @@ ns_hcr0:in	a,(ns_ayda)
 ns_hcer:ld	a,0x01
 	out	(ns_nctl),a	; Turn off recv light
 	scf
+	pop	de
 	ret			; Timed out waiting
 ns_hcr1:ld	a,0x01
 	out	(ns_nctl),a	; Turn off recv light
@@ -1145,6 +1149,14 @@ ns_hcr1:ld	a,0x01
 	pop	de
 	or	a
 	ret
+ns_hcr2:ld	a,0x01
+	out	(ns_nctl),a	; Turn off recv light
+	xor	a
+	ld	(ns_inf),a
+	ld	a,(ns_inb)
+	pop	de
+	ret
+	
 	
 ; Write to the HCCA port
 ; Assumes AY is set to reg 15
@@ -1153,14 +1165,18 @@ ns_hcr1:ld	a,0x01
 ;
 ; Carry flag set on error
 ; Uses: f
-ns_hcwd:call	ns_hcwr
 ns_hcwr:push	de
 	ld	(ns_outb),a
+	xor	a
+	ld	(ns_outf),a
 	call	ns_esnd
 	ld	de,0xFFFF
 	ld	a,0x21
 	out	(ns_nctl),a	; Turn on send light
-ns_hcw0:in	a,(ns_ayda)
+ns_hcw0:ld	a,(ns_outf)
+	or	a
+	jr	nz,ns_hcw2
+	in	a,(ns_ayda)
 	bit	0,a
 	jr	z,ns_hcw0	; Await an interrupt
 	bit	1,a
@@ -1171,12 +1187,12 @@ ns_hcw0:in	a,(ns_ayda)
 	jr	nz,ns_hcw0
 	call	ns_dsnd
 	jr	ns_hcer		; Timed out waiting
-ns_hcw1:ld	a,0x01
-	out	(ns_nctl),a	; Turn off send light
-	call	ns_dsnd
+ns_hcw1:pop	de
 	ld	a,(ns_outb)
 	out	(ns_hcca),a
-	pop	de
+ns_hcw2:ld	a,0x01
+	out	(ns_nctl),a	; Turn off send light
+	call	ns_dsnd
 	or	a
 	ret
 	
@@ -1271,6 +1287,9 @@ ns_utol:and	0x7F
 	
 ; Byte to send out of HCCA
 ns_outb:defb	0
+
+; HCCA output flag
+ns_outf:defb	0
 
 ; Byte received from HCCA
 ns_inb:	defb	0
