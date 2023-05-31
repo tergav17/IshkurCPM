@@ -114,20 +114,33 @@ ns_sel:	ld	de,dirbuf
 ; and leaves it in a state where the interrupt port is
 ; exposed
 ;
-; uses: a
+; uses: a, b
 ns_hini:ld	a,0x07
 	out	(ns_atla),a	; AY register = 7
 	ld	a,0x7F
 	out	(ns_ayda),a	; Configure AY port I/O
 	
-	ld	a,0x0E
+; Set interrupts but disable send
+;
+; uses: a
+ns_dsnd:ld	a,0x0E
+	out	(ns_atla),a	; AY register = 14
+	ld	a,0x80
+	out	(ns_ayda),a	; Enable HCCA receive and but not send
+	
+ns_dsn0:ld	a,0x0F		
+	out	(ns_atla),a	; AY register = 15
+	
+	ret
+
+; Set interrupts and end send
+;
+; uses: a
+ns_esnd:ld	a,0x0E
 	out	(ns_atla),a	; AY register = 14
 	ld	a,0xC0
-	out	(ns_ayda),a	; Enable HCCA receive and send
-	
-	ld	a,0x0F
-	out	(ns_atla),a	; AY register = 15
-	ret
+	out	(ns_ayda),a	; Enable HCCA receive and but not send
+	jr	ns_dsn0
 
 ; Loads the CCP into the CCP space
 ns_ccp:	ld	hl,ns_p0
@@ -1143,6 +1156,7 @@ ns_hcr1:ld	a,0x01
 ns_hcwd:call	ns_hcwr
 ns_hcwr:push	de
 	push	af
+	call	ns_esnd
 	ld	de,0xFFFF
 	ld	a,0x21
 	out	(ns_nctl),a	; Turn on send light
@@ -1155,9 +1169,11 @@ ns_hcw0:in	a,(ns_ayda)
 	ld	a,e
 	or	d
 	jr	nz,ns_hcw0
+	call	ns_dsnd
 	jr	ns_hcer		; Timed out waiting
 ns_hcw1:ld	a,0x01
 	out	(ns_nctl),a	; Turn off send light
+	call	ns_dsnd
 	pop	af
 	out	(ns_hcca),a
 	pop	de
