@@ -1155,7 +1155,7 @@ ns_hcr1:ld	a,0x01
 ; Uses: f
 ns_hcwd:call	ns_hcwr
 ns_hcwr:push	de
-	push	af
+	ld	(ns_outb),a
 	call	ns_esnd
 	ld	de,0xFFFF
 	ld	a,0x21
@@ -1174,11 +1174,12 @@ ns_hcw0:in	a,(ns_ayda)
 ns_hcw1:ld	a,0x01
 	out	(ns_nctl),a	; Turn off send light
 	call	ns_dsnd
-	pop	af
+	ld	a,(ns_outb)
 	out	(ns_hcca),a
 	pop	de
 	or	a
 	ret
+	
 	
 ; Takes a FCB-style name and formats it to standard notation
 ; a = Logical NHACP device
@@ -1267,6 +1268,15 @@ ns_utol:and	0x7F
 	ret	nc
 	add	0x20
 	ret
+	
+; Byte to send out of HCCA
+ns_outb:defb	0
+
+; Byte received from HCCA
+ns_inb:	defb	0
+
+; HCCA input flag
+ns_inf: defb	0
 	
 ; Path to CP/M image
 ; Total length: 13 bytes
