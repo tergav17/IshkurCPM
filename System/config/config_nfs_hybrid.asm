@@ -64,9 +64,6 @@ dircbuf:defs	128
 
 wbinit:	ld	a,0x01		; Bank out ROM
 	out	(0x00),a
-		
-	ld	hl,tm_virq	; Set up interrupt vectors
-	ld	(intvec+6),hl
 	
 	; Turn on batch mode
 	ld	a,0xFF

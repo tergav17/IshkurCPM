@@ -62,17 +62,7 @@ dircbuf:defs	128
 
 wbinit:	ld	a,0x01		; Bank out ROM
 	out	(0x00),a
-	
-	ld	a,0xC3		; Set up IRQ handler
-	ld	(0x38),a	
-	ld	hl,cfirq
-	ld	(0x39),hl
-	
-	ld	a,0x0E		; Enable clock
-	;out	(0x41),a
-	ld	a,0x00
-	;out	(0x40),a
-	
+
 	; Turn on batch mode
 	ld	a,0xFF
 	ld	(batch),a
@@ -80,7 +70,8 @@ wbinit:	ld	a,0x01		; Bank out ROM
 	; Also set interrupt mode 2 stuff
 	ld	i,a
 	im	2		; Start interrupts
-	di
+	ei
+	
 	ret
 
 ;

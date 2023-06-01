@@ -69,11 +69,6 @@ wbinit:	ld	a,0x01		; Bank out ROM
 	ld	hl,cfirq
 	ld	(0x39),hl
 	
-	ld	a,0x0E		; Enable clock
-	;out	(0x41),a
-	ld	a,0x00
-	;out	(0x40),a
-	
 	; Turn on batch mode
 	ld	a,0xFF
 	ld	(batch),a
