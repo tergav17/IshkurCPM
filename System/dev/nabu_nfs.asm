@@ -133,7 +133,7 @@ ns_hini:ld	a,0x07
 ; uses: a
 ns_dsnd:ld	a,0x0E
 	out	(ns_atla),a	; AY register = 14
-	ld	a,0x90
+	ld	a,0xB0
 	out	(ns_ayda),a	; Enable HCCA receive and but not send
 	
 ns_dsn0:ld	a,0x0F		
@@ -146,7 +146,7 @@ ns_dsn0:ld	a,0x0F
 ; uses: a
 ns_esnd:ld	a,0x0E
 	out	(ns_atla),a	; AY register = 14
-	ld	a,0xD0
+	ld	a,0xF0
 	out	(ns_ayda),a	; Enable HCCA receive and send
 	jr	ns_dsn0
 

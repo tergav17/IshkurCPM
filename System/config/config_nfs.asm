@@ -78,8 +78,11 @@ wbinit:	ld	a,0x01		; Bank out ROM
 	ld	a,0xFF
 	ld	(batch),a
 	
-	im	1		; Start interrupts
-	di
+	; Also set interrupt mode 2 stuff
+	ld	i,a
+	im	2		; Start interrupts
+	ei
+	
 	ret
 
 ;

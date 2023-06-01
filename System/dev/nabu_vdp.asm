@@ -103,6 +103,8 @@ tm_init:call	resgrb
 	; Set up interrupt vectors (if needed)
 	ld	hl,tm_virq
 	ld	(intvec+6),hl
+	ld	hl,tm_kirq
+	ld	(intvec+4),hl
 	
 	; Set TMS pattern generator block to 0
 	in	a,(tm_latc)
@@ -443,17 +445,38 @@ tm_dsc0:push	bc
 ; Returns key in A, or 0xFF if none
 ;
 ; uses: af, bc, de, hl
-tm_getc:in	a,(tm_keys)
+tm_getc:ld	a,(tm_inf)
+	or	a
+	ld	a,0
+	ld	(tm_inf),a
+	ld	a,(tm_inb)
+	jr	nz,tm_get0
+
+	in	a,(tm_keys)
 	and	2
 	dec	a
 	ret	m
 	
 	; Grab the key
 	in	a,(tm_keyd)
-	ld	(tm_last),a
+tm_get0:ld	(tm_last),a
 	call	tm_map
 	ld	a,c
 	ret
+	
+; Handles a keyboard interrupt for the VDP terminal driver
+; Keypress stored in tm_inb and tm_inf flag is set
+; 
+; uses: none
+tm_kirq:push	af
+	in	a,(tm_keyd)
+	ld	(tm_inb),a
+	ld	a,1
+	ld	(tm_inf),a
+	pop	af
+	ei
+	ret
+	
 	
 ; Maps keyboard input to ASCII
 ; a = Key to map
@@ -623,3 +646,5 @@ tm_virq:push	af
 	
 ; Variables
 tm_mode:defw	0x0002
+tm_inb:	defb	0x00
+tm_inf:	defb	0x00

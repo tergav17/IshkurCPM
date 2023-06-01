@@ -41,6 +41,9 @@ nf_cach:defs	1024	; Sector cache
 
 nf_rdsk	equ	2	; Defines which drives contains system
 			; resources (2 = A, 4 = B)
+			
+nf_ayda	equ	0x40	; AY-3-8910 data port
+nf_atla	equ	0x41	; AY-3-8910 latch port
 
 ;
 ;**************************************************************
@@ -367,7 +370,9 @@ nf_wdef:ld	a,(nf_dirt)
 	push	de
 	push	hl
 	
+	
 	; Write physical sector
+	call	nf_dint
 	call	nf_dvsc
 	ld	a,(nf_io)
 	ld	c,a
@@ -386,7 +391,8 @@ nf_wde1:in	a,(c)
 	outi 
 	ld	c,e
 	jr	nf_wde1
-nf_wde2:in	a,(c)
+nf_wde2:call	nf_eint
+	in	a,(c)
 	
 	; Deselect drive
 	ld	b,a
@@ -476,7 +482,8 @@ nf_r2k0:in	a,(c)
 ;
 ; Returns a=0 if successful
 ; uses: af, bc, de, hl
-nf_rphy:ld	d,c
+nf_rphy:call	nf_dint
+	ld	d,c
 	ld	e,c
 	inc	d
 	inc	d
@@ -494,7 +501,8 @@ nf_rph1:in	a,(c)
 	ini
 	ld	c,e
 	jr	nf_rph1
-nf_rph2:in	a,(c)
+nf_rph2:call	nf_eint
+	in	a,(c)
 	and	0xFC
 	ret
 
@@ -532,4 +540,22 @@ nf_busy:in	a,(c)
 nf_stal:push	bc
 	pop	bc
 	djnz	nf_stal
+	ret
+	
+; Disables all interrupts while FDC operations occur
+;
+; uses: a
+nf_dint:ld	a,0x0E
+	out	(nf_atla),a	; AY register = 14
+	ld	a,0x00
+	out	(nf_ayda),a	
+	ret
+	
+; Enables interrupts again
+;
+; uses: a
+nf_eint:ld	a,0x0E
+	out	(nf_atla),a	; AY register = 14
+	ld	a,0xB0
+	out	(nf_ayda),a
 	ret
