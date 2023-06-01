@@ -120,12 +120,20 @@ ns_hini:ld	a,0x07
 	ld	a,0x7F
 	out	(ns_ayda),a	; Configure AY port I/O
 	
+	; Claim interrupt vectors
+	push	hl
+	ld	hl,ns_rirq
+	ld	(intvec),hl
+	ld	hl,ns_wirq
+	ld	(intvec+2),hl
+	pop	hl
+	
 ; Set interrupts but disable send
 ;
 ; uses: a
 ns_dsnd:ld	a,0x0E
 	out	(ns_atla),a	; AY register = 14
-	ld	a,0xB0
+	ld	a,0x80
 	out	(ns_ayda),a	; Enable HCCA receive and but not send
 	
 ns_dsn0:ld	a,0x0F		
@@ -133,12 +141,12 @@ ns_dsn0:ld	a,0x0F
 	
 	ret
 
-; Set interrupts and end send
+; Set interrupts and send
 ;
 ; uses: a
 ns_esnd:ld	a,0x0E
 	out	(ns_atla),a	; AY register = 14
-	ld	a,0xF0
+	ld	a,0xC0
 	out	(ns_ayda),a	; Enable HCCA receive and send
 	jr	ns_dsn0
 
@@ -1160,6 +1168,19 @@ ns_hcr2:ld	a,0x01
 	pop	de
 	ret
 	
+; HCCA read interrupt
+; Reads from the HCCA, buffers it, and then sets the flag
+;
+; uses: none
+ns_rirq:push	af
+	in	a,(ns_hcca)
+	ld	(ns_inb),a
+	ld	a,1
+	ld	(ns_inf),a
+	pop	af
+	ei
+	ret
+	
 	
 ; Write to the HCCA port
 ; Assumes AY is set to reg 15
@@ -1193,13 +1214,25 @@ ns_hcw0:ld	a,(ns_outf)
 	jr	nz,ns_hcw0
 	call	ns_dsnd
 	jr	ns_hcer		; Timed out waiting
-ns_hcw1:pop	de
-	ld	a,(ns_outb)
+ns_hcw1:ld	a,(ns_outb)
 	out	(ns_hcca),a
-ns_hcw2:ld	a,0x01
+ns_hcw2:pop	de
+	ld	a,0x01
 	out	(ns_nctl),a	; Turn off send light
 	call	ns_dsnd
 	or	a
+	ret
+	
+; HCCA write interrupt
+; Writes to the HCCA from the buffer, and 
+ns_wirq:push	af
+	ld	a,(ns_outb)
+	out	(ns_hcca),a
+	ld	a,1
+	ld	(ns_outf),a
+	call	ns_dsnd		; Y'all can't behave, turning off
+	pop	af
+	ei
 	ret
 	
 	

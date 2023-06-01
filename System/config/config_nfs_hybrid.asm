@@ -75,7 +75,7 @@ wbinit:	ld	a,0x01		; Bank out ROM
 	; Also set interrupt mode 2 stuff
 	ld	i,a
 	im	2		; Start interrupts
-	di
+	ei
 	
 	ret
 
