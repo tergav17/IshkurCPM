@@ -56,6 +56,10 @@ boot:	ld	sp,cbase
 ; Mainly just calls wbootr and manages IOBYTE
 wboot:	ld	sp,cbase
 
+	; Save current drive + user
+	ld	a,(tdrive)
+	push	af
+
 	; Save IOBYTE
 	ld	a,(iobyte)
 	push	af
@@ -67,7 +71,9 @@ wboot:	ld	sp,cbase
 	pop	af
 	ld	(iobyte),a
 	
-	ld	c,default
+	; Restore tdrive and warm boot
+	pop	af
+	ld	c,a
 	jp	cbase
 
 ; Warm boot routine

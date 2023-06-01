@@ -19,8 +19,8 @@
 ;
 ; BSS Segment Variables
 .area	_BSS
-tm_curx:defs	1	; Cursor X
-tm_cury:defs	1	; Cursor Y
+;tm_curx:defs	1	; Cursor X
+;tm_cury:defs	1	; Cursor Y
 tm_outc:defs	1	; Output character
 tm_scro:defs	1	; Scroll width
 tm_escs:defs	1	; Escape state
@@ -124,8 +124,11 @@ tm_ini0:ld	b,0
 	dec	a
 	jr	nz,tm_ini0
 	
-	; Clear the terminal
+	; Reset the terminal
 	call	tm_cls
+	xor	a
+	ld	(tm_curx),a
+	ld	(tm_cury),a
 	
 	; Fall to tm_cloc
 	
@@ -648,3 +651,5 @@ tm_virq:push	af
 tm_mode:defw	0x0002
 tm_inb:	defb	0x00
 tm_inf:	defb	0x00
+tm_curx:defb	0
+tm_cury:defb	0
