@@ -1321,7 +1321,9 @@ error3:	ld	hl,diskro	;disk is read only.
 ;
 error4:	ld	hl,filero	;file is read only.
 ;
-error5:	call	prterr
+error5:	ld	a,default
+	ld	(tdrive),a
+	call	prterr
 	jp	0		;always reboot on these errors.
 ;
 bdoserr:defb	'Bdos Err on '
