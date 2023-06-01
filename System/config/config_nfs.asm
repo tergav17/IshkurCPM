@@ -42,9 +42,10 @@ mem	equ	54		; CP/M image starts at mem*1024
 #target	BIN			; Set up memory segments
 #code	_TEXT,(mem)*1024
 #data	_BSS,_TEXT_end
+#data	_JUMP_TABLE,0xFF00
+intvec:	defs	16
 dircbuf:defs	128
 .area	_TEXT
-
 ; Include CP/M and BIOS
 #include "CPM22.asm"
 #include "bios.asm"
@@ -68,17 +69,15 @@ wbinit:	ld	a,0x01		; Bank out ROM
 	ld	hl,cfirq
 	ld	(0x39),hl
 	
-	ld	a,0x0E		; Enable clock
-	;out	(0x41),a
-	ld	a,0x00
-	;out	(0x40),a
-	
 	; Turn on batch mode
 	ld	a,0xFF
 	ld	(batch),a
 	
-	im	1		; Start interrupts
-	di
+	; Also set interrupt mode 2 stuff
+	ld	i,a
+	im	2		; Start interrupts
+	ei
+	
 	ret
 
 ;

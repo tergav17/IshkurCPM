@@ -202,20 +202,43 @@ nd_gbno:ld	hl,(nd_ctrk)
 ; and leaves it in a state where the interrupt port is
 ; exposed
 ;
-; uses: a
+; uses: a, b
 nd_hini:ld	a,0x07
 	out	(nd_atla),a	; AY register = 7
 	ld	a,0x7F
 	out	(nd_ayda),a	; Configure AY port I/O
 	
-	ld	a,0x0E
-	out	(nd_atla),a	; AY register = 14
-	ld	a,0xC0
-	out	(nd_ayda),a	; Enable HCCA receive and send
+	; Claim interrupt vectors
+	push	hl
+	ld	hl,nd_rirq
+	ld	(intvec),hl
+	ld	hl,nd_wirq
+	ld	(intvec+2),hl
+	pop	hl
 	
-	ld	a,0x0F
+; Set interrupts but disable send
+;
+; uses: a
+nd_dsnd:ld	a,0x0E
+	out	(nd_atla),a	; AY register = 14
+	ld	a,0xB0
+	out	(nd_ayda),a	; Enable HCCA receive and but not send
+	
+nd_dsn0:ld	a,0x0F		
 	out	(nd_atla),a	; AY register = 15
+	
 	ret
+
+; Set interrupts and send
+;
+; uses: a
+nd_esnd:ld	a,0x0E
+	out	(nd_atla),a	; AY register = 14
+	ld	a,0xF0
+	out	(nd_ayda),a	; Enable HCCA receive and send
+	jr	nd_dsn0
+	
+
 ; Loads the CCP into the CCP space
 nd_ccp:	ld	hl,nd_p0
 	jr	nd_grb0
@@ -358,7 +381,7 @@ nd_send:ld	a,(hl)
 ; Assumes AY is set to reg 15
 ; Will panic on timeout
 ;
-; Returns return in a
+; Returns result in a
 ; Carry flag set on error
 ; Uses: af
 nd_hcrd:call	nd_hcre
@@ -366,10 +389,16 @@ nd_hcre:push	de
 	ld	a,0x09
 	out	(nd_nctl),a	; Turn on recv light
 	ld	de,0xFFFF
-nd_hcr0:in	a,(nd_ayda)
-	bit	0,a
-	jr	z,nd_hcr0	; Await an interrupt
-	bit	1,a
+nd_hcr0:ld	a,(nd_inf)
+	or	a
+	jr	nz,nd_hcr2
+	in	a,(nd_ayda)
+	;bit	0,a
+	;jr	z,nd_hcr0	; Await an interrupt
+	;bit	1,a
+	;jr	z,nd_hcr1
+	and	0x0F
+	xor	0b00000001
 	jr	z,nd_hcr1
 	dec	de
 	ld	a,e
@@ -378,6 +407,7 @@ nd_hcr0:in	a,(nd_ayda)
 nd_hcer:ld	a,0x01
 	out	(nd_nctl),a	; Turn off recv light
 	scf
+	pop	de
 	ret			; Timed out waiting
 nd_hcr1:ld	a,0x01
 	out	(nd_nctl),a	; Turn off recv light
@@ -385,6 +415,27 @@ nd_hcr1:ld	a,0x01
 	pop	de
 	or	a
 	ret
+nd_hcr2:ld	a,0x01
+	out	(nd_nctl),a	; Turn off recv light
+	xor	a
+	ld	(nd_inf),a
+	ld	a,(nd_inb)
+	pop	de
+	ret
+	
+; HCCA read interrupt
+; Reads from the HCCA, buffers it, and then sets the flag
+;
+; uses: none
+nd_rirq:push	af
+	in	a,(nd_hcca)
+	ld	(nd_inb),a
+	ld	a,1
+	ld	(nd_inf),a
+	pop	af
+	ei
+	ret
+	
 	
 ; Write to the HCCA port
 ; Assumes AY is set to reg 15
@@ -393,29 +444,63 @@ nd_hcr1:ld	a,0x01
 ;
 ; Carry flag set on error
 ; Uses: f
-nd_hcwd:call	nd_hcwr
 nd_hcwr:push	de
-	push	af
+	ld	(nd_outb),a
+	xor	a
+	ld	(nd_outf),a
+	call	nd_esnd
 	ld	de,0xFFFF
 	ld	a,0x21
 	out	(nd_nctl),a	; Turn on send light
-nd_hcw0:in	a,(nd_ayda)
-	bit	0,a
-	jr	z,nd_hcw0	; Await an interrupt
-	bit	1,a
-	jr	nz,nd_hcw1
+nd_hcw0:ld	a,(nd_outf)
+	or	a
+	jr	nz,nd_hcw2
+	in	a,(nd_ayda)
+	;bit	0,a
+	;jr	z,nd_hcw0	; Await an interrupt
+	;bit	1,a
+	;jr	nz,nd_hcw1
+	and	0x0F
+	xor	0b00000011
+	jr	z,nd_hcw1
 	dec	de
 	ld	a,e
 	or	d
 	jr	nz,nd_hcw0
+	call	nd_dsnd
 	jr	nd_hcer		; Timed out waiting
-nd_hcw1:ld	a,0x01
-	out	(nd_nctl),a	; Turn off send light
-	pop	af
+nd_hcw1:ld	a,(nd_outb)
 	out	(nd_hcca),a
-	pop	de
+nd_hcw2:pop	de
+	ld	a,0x01
+	out	(nd_nctl),a	; Turn off send light
+	call	nd_dsnd
 	or	a
 	ret
+	
+; HCCA write interrupt
+; Writes to the HCCA from the buffer, and 
+nd_wirq:push	af
+	ld	a,(nd_outb)
+	out	(nd_hcca),a
+	ld	a,1
+	ld	(nd_outf),a
+	call	nd_dsnd		; Y'all can't behave, turning off
+	pop	af
+	ei
+	ret
+	
+; Byte to send out of HCCA
+nd_outb:defb	0
+
+; HCCA output flag
+nd_outf:defb	0
+
+; Byte received from HCCA
+nd_inb:	defb	0
+
+; HCCA input flag
+nd_inf: defb	0
 	
 ; Path to CP/M image
 ; Total length: 10 bytes

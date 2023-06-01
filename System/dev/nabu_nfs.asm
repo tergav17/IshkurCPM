@@ -114,20 +114,41 @@ ns_sel:	ld	de,dirbuf
 ; and leaves it in a state where the interrupt port is
 ; exposed
 ;
-; uses: a
+; uses: a, b
 ns_hini:ld	a,0x07
 	out	(ns_atla),a	; AY register = 7
 	ld	a,0x7F
 	out	(ns_ayda),a	; Configure AY port I/O
 	
-	ld	a,0x0E
-	out	(ns_atla),a	; AY register = 14
-	ld	a,0xC0
-	out	(ns_ayda),a	; Enable HCCA receive and send
+	; Claim interrupt vectors
+	push	hl
+	ld	hl,ns_rirq
+	ld	(intvec),hl
+	ld	hl,ns_wirq
+	ld	(intvec+2),hl
+	pop	hl
 	
-	ld	a,0x0F
+; Set interrupts but disable send
+;
+; uses: a
+ns_dsnd:ld	a,0x0E
+	out	(ns_atla),a	; AY register = 14
+	ld	a,0xB0
+	out	(ns_ayda),a	; Enable HCCA receive and but not send
+	
+ns_dsn0:ld	a,0x0F		
 	out	(ns_atla),a	; AY register = 15
+	
 	ret
+
+; Set interrupts and send
+;
+; uses: a
+ns_esnd:ld	a,0x0E
+	out	(ns_atla),a	; AY register = 14
+	ld	a,0xF0
+	out	(ns_ayda),a	; Enable HCCA receive and send
+	jr	ns_dsn0
 
 ; Loads the CCP into the CCP space
 ns_ccp:	ld	hl,ns_p0
@@ -1105,7 +1126,7 @@ ns_send:ld	a,(hl)
 ; Assumes AY is set to reg 15
 ; Will panic on timeout
 ;
-; Returns return in a
+; Returns result in a
 ; Carry flag set on error
 ; Uses: af
 ns_hcrd:call	ns_hcre
@@ -1113,10 +1134,16 @@ ns_hcre:push	de
 	ld	a,0x09
 	out	(ns_nctl),a	; Turn on recv light
 	ld	de,0xFFFF
-ns_hcr0:in	a,(ns_ayda)
-	bit	0,a
-	jr	z,ns_hcr0	; Await an interrupt
-	bit	1,a
+ns_hcr0:ld	a,(ns_inf)
+	or	a
+	jr	nz,ns_hcr2
+	in	a,(ns_ayda)
+	;bit	0,a
+	;jr	z,ns_hcr0	; Await an interrupt
+	;bit	1,a
+	;jr	z,ns_hcr1
+	and	0x0F
+	xor	0b00000001
 	jr	z,ns_hcr1
 	dec	de
 	ld	a,e
@@ -1125,6 +1152,7 @@ ns_hcr0:in	a,(ns_ayda)
 ns_hcer:ld	a,0x01
 	out	(ns_nctl),a	; Turn off recv light
 	scf
+	pop	de
 	ret			; Timed out waiting
 ns_hcr1:ld	a,0x01
 	out	(ns_nctl),a	; Turn off recv light
@@ -1132,6 +1160,27 @@ ns_hcr1:ld	a,0x01
 	pop	de
 	or	a
 	ret
+ns_hcr2:ld	a,0x01
+	out	(ns_nctl),a	; Turn off recv light
+	xor	a
+	ld	(ns_inf),a
+	ld	a,(ns_inb)
+	pop	de
+	ret
+	
+; HCCA read interrupt
+; Reads from the HCCA, buffers it, and then sets the flag
+;
+; uses: none
+ns_rirq:push	af
+	in	a,(ns_hcca)
+	ld	(ns_inb),a
+	ld	a,1
+	ld	(ns_inf),a
+	pop	af
+	ei
+	ret
+	
 	
 ; Write to the HCCA port
 ; Assumes AY is set to reg 15
@@ -1140,29 +1189,52 @@ ns_hcr1:ld	a,0x01
 ;
 ; Carry flag set on error
 ; Uses: f
-ns_hcwd:call	ns_hcwr
 ns_hcwr:push	de
-	push	af
+	ld	(ns_outb),a
+	xor	a
+	ld	(ns_outf),a
+	call	ns_esnd
 	ld	de,0xFFFF
 	ld	a,0x21
 	out	(ns_nctl),a	; Turn on send light
-ns_hcw0:in	a,(ns_ayda)
-	bit	0,a
-	jr	z,ns_hcw0	; Await an interrupt
-	bit	1,a
-	jr	nz,ns_hcw1
+ns_hcw0:ld	a,(ns_outf)
+	or	a
+	jr	nz,ns_hcw2
+	in	a,(ns_ayda)
+	;bit	0,a
+	;jr	z,ns_hcw0	; Await an interrupt
+	;bit	1,a
+	;jr	nz,ns_hcw1
+	and	0x0F
+	xor	0b00000011
+	jr	z,ns_hcw1
 	dec	de
 	ld	a,e
 	or	d
 	jr	nz,ns_hcw0
+	call	ns_dsnd
 	jr	ns_hcer		; Timed out waiting
-ns_hcw1:ld	a,0x01
-	out	(ns_nctl),a	; Turn off send light
-	pop	af
+ns_hcw1:ld	a,(ns_outb)
 	out	(ns_hcca),a
-	pop	de
+ns_hcw2:pop	de
+	ld	a,0x01
+	out	(ns_nctl),a	; Turn off send light
+	call	ns_dsnd
 	or	a
 	ret
+	
+; HCCA write interrupt
+; Writes to the HCCA from the buffer, and 
+ns_wirq:push	af
+	ld	a,(ns_outb)
+	out	(ns_hcca),a
+	ld	a,1
+	ld	(ns_outf),a
+	call	ns_dsnd		; Y'all can't behave, turning off
+	pop	af
+	ei
+	ret
+	
 	
 ; Takes a FCB-style name and formats it to standard notation
 ; a = Logical NHACP device
@@ -1251,6 +1323,18 @@ ns_utol:and	0x7F
 	ret	nc
 	add	0x20
 	ret
+	
+; Byte to send out of HCCA
+ns_outb:defb	0
+
+; HCCA output flag
+ns_outf:defb	0
+
+; Byte received from HCCA
+ns_inb:	defb	0
+
+; HCCA input flag
+ns_inf: defb	0
 	
 ; Path to CP/M image
 ; Total length: 13 bytes
