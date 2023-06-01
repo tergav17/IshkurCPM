@@ -100,6 +100,10 @@ tm_init:call	resgrb
 	; Set up registers
 	call	tm_setp
 	
+	; Set up interrupt vectors (if needed)
+	ld	hl,tm_virq
+	ld	(intvec+6),hl
+	
 	; Set TMS pattern generator block to 0
 	in	a,(tm_latc)
 	xor	a
@@ -611,7 +615,7 @@ tm_addr:in	a,(tm_latc)
 	ret
 	
 ; Handles a TMS9918 irq
-tm_virq:	push	af
+tm_virq:push	af
 	in	a,(tm_latc)
 	pop	af
 	ei
