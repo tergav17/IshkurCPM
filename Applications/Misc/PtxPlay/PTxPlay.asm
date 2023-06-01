@@ -59,6 +59,9 @@ FCB2	EQU #006C
 ; This is the start of the CP/M shell that will faciliate running
 ; PTxPlay under user control.
 SHELL	
+	; No more interrupts
+	DI
+	
 	; Print hello message
 	LD C,#09
 	LD DE,HELLOMSG
@@ -153,7 +156,7 @@ DODELAY	CALL DELAY
 	; Return?
 	LD A,(HASSC2)
 	OR A
-	RET Z
+;	RET Z
 	RST 0		; Lets do a warm boot instead
 	
 	; Mute AY
@@ -418,7 +421,7 @@ CPMERROR
 	CALL BDOS
 	LD A,(HASSC2)
 	OR A
-	RET Z
+;	RET Z
 	RST 0		; Lets do a warm boot instead
 
 LOOKGLOB
@@ -426,10 +429,10 @@ LOOKGLOB
 
 HELLOMSG
 	DB "PTxPlay r.",Release,", Written by S.V.Bulba",#0D,#0A
-	DB "NABU support by tergav17 (Gavin) Rev 3c",#0D,#0A,"$"
+	DB "NABU support by tergav17 (Gavin) Rev 4d",#0D,#0A,"$"
 	
 ERRORMSG
-	DB "Cannot fine PTX file!$"
+	DB "Cannot find PTX file!$"
 	
 PLAYMSG
 	DB "Now playing: $"
