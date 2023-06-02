@@ -19,8 +19,6 @@
 ;
 ; BSS Segment Variables
 .area	_BSS
-;tm_curx:defs	1	; Cursor X
-;tm_cury:defs	1	; Cursor Y
 tm_outc:defs	1	; Output character
 tm_scro:defs	1	; Scroll width
 tm_escs:defs	1	; Escape state
@@ -34,6 +32,17 @@ tm_latc	equ	0xA1	; TMS9918 latch register (mode=1)
 
 tm_keyd	equ	0x90	; Keyboard data register
 tm_keys	equ	0x91	; Keyboard status register
+
+; --- VRAM MAP ---
+; 0x0000 - 0x07FF: Font
+; 0x0800 - 0x0BFF: 40 column screen buffer
+; 0x0C00 - 0x0FFF: Unused
+; 0x1000 - 0x17FF: 80 column screen buffer
+;
+; Serial #
+; 0x17FE: 0xE5
+; 0x17FF: 0x81
+
 
 ; Driver jump table
 vdpdev:	or	a
@@ -124,11 +133,27 @@ tm_ini0:ld	b,0
 	dec	a
 	jr	nz,tm_ini0
 	
+	; Cold boot?
+	ld	a,(tm_cold)
+	or	a
+	jr	nz,tm_ini1
+	
+	; Check serial #
+	ld	bc,0x17FE
+	call	tm_addr
+	in	a,(c)
+	cp	0xE5
+	jr	nz,tm_ini1
+	in	a,(c)
+	cp	0x81
+	jr	z,tm_cloc
+	
 	; Reset the terminal
-	call	tm_cls
+tm_ini1:call	tm_cls
 	xor	a
 	ld	(tm_curx),a
 	ld	(tm_cury),a
+	ld	(tm_cold),a
 	
 	; Fall to tm_cloc
 	
@@ -617,18 +642,27 @@ tm_usc0:push	bc
 ;
 ; uses: af, bc, de
 tm_cls:	ld	bc,0x4800
-	ld	de,0x1000
+	ld	de,0x1000-2
 	call	tm_addr
 tm_cls0:out	(c),0
 	dec	de
 	ld	a,d
 	or	e
 	jr	nz,tm_cls0
+	
+	; Write super special serial #
+	ld	a,0xE5
+	out	(c),a
+	push	af
+	pop	af
+	ld	a,0x81
+	out	(c),a
 	ret
 
 ; Sets the TMS address for either reading or writing
 ; bc = Address 
 ;
+; Returns tm_data in c
 ; uses: af, bc
 tm_addh:ld	b,h		; Does HL instead of BC
 	ld	c,l
@@ -649,7 +683,8 @@ tm_virq:push	af
 	
 ; Variables
 tm_mode:defw	0x0002
-tm_inb:	defb	0x00
-tm_inf:	defb	0x00
+tm_inb:	defb	0
+tm_inf:	defb	0
 tm_curx:defb	0
 tm_cury:defb	0
+tm_cold:defb	1
