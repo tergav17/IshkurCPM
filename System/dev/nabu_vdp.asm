@@ -33,6 +33,9 @@ tm_latc	equ	0xA1	; TMS9918 latch register (mode=1)
 tm_keyd	equ	0x90	; Keyboard data register
 tm_keys	equ	0x91	; Keyboard status register
 
+tm_ayda	equ	0x40	; AY-3-8910 data port
+tm_atla	equ	0x41	; AY-3-8910 latch port
+
 ; --- VRAM MAP ---
 ; 0x0000 - 0x07FF: Font
 ; 0x0800 - 0x0BFF: 40 column screen buffer
@@ -273,7 +276,8 @@ tm_sta1:push	bc
 ;
 ; Returns c,b as next position 
 ; uses: af, bc, de, hl
-tm_writ:ld	e,c
+tm_writ:call	tm_dint
+	ld	e,c
 	ld	a,(tm_curx)
 	ld	c,a
 	ld	a,(tm_cury)
@@ -283,6 +287,7 @@ tm_writ:ld	e,c
 	ld	(tm_cury),a
 	ld	a,c
 	ld	(tm_curx),a
+	call	tm_eint
 	ret
 	
 ; Write helper routine
@@ -679,6 +684,25 @@ tm_virq:push	af
 	in	a,(tm_latc)
 	pop	af
 	ei
+	ret
+	
+	
+; Disables all interrupts while VDP operations occur
+;
+; uses: a
+tm_dint:ld	a,0x0E
+	out	(tm_atla),a	; AY register = 14
+	ld	a,0x00
+	out	(tm_ayda),a	
+	ret
+	
+; Enables interrupts again
+;
+; uses: a
+tm_eint:ld	a,0x0E
+	out	(tm_atla),a	; AY register = 14
+	ld	a,0xB0
+	out	(tm_ayda),a
 	ret
 	
 ; Variables
