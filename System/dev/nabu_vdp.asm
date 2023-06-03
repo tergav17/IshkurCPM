@@ -203,6 +203,13 @@ tm_setp:ld	hl,(tm_mode)
 	ld	a,0x81
 	out	(tm_latc),a
 	
+	; Set TMS color
+	in	a,(tm_latc)
+	ld	a,(tm_colr)
+	out	(tm_latc),a
+	ld	a,0x87
+	out	(tm_latc),a
+	
 	; Set TMS name table to 0x0800
 	in	a,(tm_latc)
 	ld	a,l
@@ -378,6 +385,8 @@ tm_esc:	dec	a
 	jr	z,tm_esc1
 	dec	a
 	jr	z,tm_esc2
+	dec	a
+	jr	z,tm_updc
 tm_escd:xor	a	; Escape done
 tm_escr:ld	(tm_escs),a
 	ret
@@ -387,6 +396,9 @@ tm_esc0:ld	a,0xFF	; Do 40-col
 	ld	a,0xFE	; Do 80-col
 	cp	e
 	jr	z,tm_80c
+	ld	a,0xFD	; Set color
+	cp	e
+	jr	z,tm_scol
 	ld	a,0x3D	; '='
 	cp	e
 	jr	nz,tm_escd
@@ -445,6 +457,17 @@ tm_cupd:ld	(tm_mode),hl
 tm_80c:	push	hl
 	ld	hl,0x0407
 	jr	tm_cupd
+	
+	; Set color command
+tm_scol:ld	a,4
+	jr	tm_escr
+	
+	; Update color here
+tm_updc:ld	a,e
+	ld	(tm_colr),a
+	call	tm_setp
+	jr	tm_escd
+	
 	
 	
 ; Scroll both frame buffers down one
@@ -707,6 +730,7 @@ tm_eint:ld	a,0x0E
 	
 ; Variables
 tm_mode:defw	0x0002
+tm_colr:defb	0xE1
 tm_inb:	defb	0
 tm_inf:	defb	0
 tm_curx:defb	0

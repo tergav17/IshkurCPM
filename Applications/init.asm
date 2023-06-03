@@ -216,12 +216,16 @@ cfgf181:call	setf18
 	jp	prompt
 	
 ; Sets the TMS9918 color 
-setcol:	in	a,(tm_latc)
+setcol:	ld	c,2
+	ld	e,0x1B
+	call	bdos
+	ld	c,2
+	ld	e,0xFD
+	call	bdos
+	ld	c,2
 	ld	a,(tsmcol)
-	out	(tm_latc),a
-	ld	a,0x87
-	out	(tm_latc),a
-	ret
+	ld	e,a
+	jp	bdos
 	
 ; Sets the F18A mode
 setf18:	ld	a,(f18a80)

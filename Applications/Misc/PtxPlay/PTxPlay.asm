@@ -376,7 +376,7 @@ SCLOAD1	LD C,(HL)
 	CALL TMSWRI
 	INC HL
 	INC B
-	LD A,7
+	LD A,8
 	CP B
 	JR NZ,SCLOAD1
 	
@@ -398,7 +398,7 @@ SCLOAD2	LD A,(HL)
 	JR NZ,SCLOAD2
 	RET		; All done!
 	
-TMSDATA DB #02,#E0,#06,#FF,#03,#FF,#FF
+TMSDATA DB #02,#E0,#06,#FF,#03,#FF,#FF,#E1
 	
 ; Write to a TMS9918 register
 ; B = Register #
