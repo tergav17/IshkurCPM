@@ -26,6 +26,7 @@
 ;
 ; BSS Segment Variables
 .area	_BSS
+nd_tran:defs	1	; Transfer count
 nd_csec:defs	1	; Current sector (1b)
 nd_ctrk:defs	2	; Current track (2b)
 nd_buff:defs	64	; Buffer (64b)
@@ -216,28 +217,37 @@ nd_hini:ld	a,0x07
 	ld	(intvec+2),hl
 	pop	hl
 	
-; Set interrupts but disable send
+; Set interrupts to their default state
 ;
 ; uses: a
-nd_dsnd:ld	a,0x0E
+nd_dflt:ld	a,0x0E
 	out	(nd_atla),a	; AY register = 14
 	ld	a,0xB0
-	out	(nd_ayda),a	; Enable HCCA receive and but not send
+	out	(nd_ayda),a	; Enable HCCA receive and but not send, plus key and VDP
 	
-nd_dsn0:ld	a,0x0F		
+nd_dfl0:ld	a,0x0F		
 	out	(nd_atla),a	; AY register = 15
 	
 	ret
 
-; Set interrupts and send
+; Set receive and send interrupts
 ;
 ; uses: a
 nd_esnd:ld	a,0x0E
 	out	(nd_atla),a	; AY register = 14
-	ld	a,0xF0
+	ld	a,0xC0
 	out	(nd_ayda),a	; Enable HCCA receive and send
-	jr	nd_dsn0
+	jr	nd_dfl0
 	
+; Set receive but not send interrupt
+;
+; uses: a
+nd_dsnd:ld	a,0x0E
+	out	(nd_atla),a	; AY register = 14
+	ld	a,0x80
+	out	(nd_ayda),a	; Enable HCCA receive and but not send
+	jr	nd_dfl0
+
 
 ; Loads the CCP into the CCP space
 nd_ccp:	ld	hl,nd_p0
@@ -285,7 +295,9 @@ nd_opef:ld	(nd_m0fl),hl
 ; Returns location directly after in hl
 ; Carry flag set on error
 ; uses: af, b, hl
-nd_getb:ex	de,hl
+nd_getb:call	nd_get0
+	jp	nd_dflt
+nd_get0:ex	de,hl
 	ld	(nd_m2bn),hl
 	ex	de,hl
 	push	hl
@@ -299,17 +311,22 @@ nd_getb:ex	de,hl
 	ret	c
 	cp	0x84
 	scf
-	jr	nz,nh_get1
-	call	nd_hcrd
-	ld	b,128
-nd_get0:call	nd_hcre
+	jr	nz,nd_get2
+	call	nd_hcre
+	ld	(nd_tran),a
+	ld	b,a
+	call	nd_hcre
+	ld	a,b
+	or	a
+	ret	z
+nd_get1:call	nd_hcre
 	ret	c
 	ld	(hl),a
 	inc	hl
-	djnz	nd_get0
+	djnz	nd_get1
 	or	a
 	ret
-nh_get1:call	nd_hcrd	; Read the error message and exit
+nd_get2:call	nd_hcrd	; Read the error message and exit
 	call	nd_hcre
 	scf
 	ret
@@ -321,7 +338,9 @@ nh_get1:call	nd_hcrd	; Read the error message and exit
 ;
 ; Carry flag set on error
 ; uses: af, b, hl
-nd_putb:ex	de,hl
+nd_putb:call	nd_put0
+	jp	nd_dflt
+nd_put0:ex	de,hl
 	ld	(nd_m3bn),hl
 	ex	de,hl
 	push	hl
@@ -331,11 +350,11 @@ nd_putb:ex	de,hl
 	pop	hl
 	ret	c
 	ld	b,128
-nd_put0:ld	a,(hl)		; Send the block
+nd_put1:ld	a,(hl)		; Send the block
 	call	nd_hcwr
 	ret	c
 	inc	hl
-	djnz	nd_put0
+	djnz	nd_put1
 	ld	hl,nd_buff
 	call	nd_rece
 	ld	a,(nd_buff)
@@ -349,18 +368,20 @@ nd_put0:ld	a,(hl)		; Send the block
 ;
 ; Carry flag set on error
 ; uses: af, b, hl
-nd_rece:call	nd_hcre
+nd_rece:call	nd_rec0
+	jp	nd_dflt
+nd_rec0:call	nd_hcre
 	ret	c		; Existing error
 	ld	b,a
 	call	nd_hcre
 	ret	c		; Existing error
 	scf
 	ret	nz		; Message too big!
-nd_rec0:call	nd_hcre
+nd_rec1:call	nd_hcre
 	ret	c		; Error!
 	ld	(hl),a
 	inc	hl
-	djnz	nd_rec0
+	djnz	nd_rec1
 	or	a
 	ret
 	
