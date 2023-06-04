@@ -128,27 +128,36 @@ ns_hini:ld	a,0x07
 	ld	(intvec+2),hl
 	pop	hl
 	
-; Set interrupts but disable send
+; Set interrupts to their default state
 ;
 ; uses: a
-ns_dsnd:ld	a,0x0E
+ns_dflt:ld	a,0x0E
 	out	(ns_atla),a	; AY register = 14
 	ld	a,0xB0
-	out	(ns_ayda),a	; Enable HCCA receive and but not send
+	out	(ns_ayda),a	; Enable HCCA receive and but not send, plus key and VDP
 	
-ns_dsn0:ld	a,0x0F		
+ns_dfl0:ld	a,0x0F		
 	out	(ns_atla),a	; AY register = 15
 	
 	ret
 
-; Set interrupts and send
+; Set receive and send interrupts
 ;
 ; uses: a
 ns_esnd:ld	a,0x0E
 	out	(ns_atla),a	; AY register = 14
-	ld	a,0xF0
+	ld	a,0xC0
 	out	(ns_ayda),a	; Enable HCCA receive and send
-	jr	ns_dsn0
+	jr	ns_dfl0
+	
+; Set receive but not send interrupt
+;
+; uses: a
+ns_dsnd:ld	a,0x0E
+	out	(ns_atla),a	; AY register = 14
+	ld	a,0x80
+	out	(ns_ayda),a	; Enable HCCA receive and but not send
+	jr	ns_dfl0
 
 ; Loads the CCP into the CCP space
 ns_ccp:	ld	hl,ns_p0
@@ -1025,7 +1034,9 @@ ns_opef:ld	(ns_m0fl),hl
 ; Returns location directly after in hl
 ; Carry flag set on error
 ; uses: af, b, hl
-ns_getb:ex	de,hl
+ns_getb:call	ns_get0
+	jp	ns_dflt
+ns_get0:ex	de,hl
 	ld	(ns_m2bn),hl
 	ex	de,hl
 	push	hl
@@ -1047,11 +1058,11 @@ ns_getb:ex	de,hl
 	ld	a,b
 	or	a
 	ret	z
-ns_get0:call	ns_hcre
+ns_get1:call	ns_hcre
 	ret	c
 	ld	(hl),a
 	inc	hl
-	djnz	ns_get0
+	djnz	ns_get1
 	or	a
 	ret
 ns_get2:call	ns_hcrd	; Read the error message and exit
@@ -1066,7 +1077,9 @@ ns_get2:call	ns_hcrd	; Read the error message and exit
 ;
 ; Carry flag set on error
 ; uses: af, b, hl
-ns_putb:ex	de,hl
+ns_putb:call	ns_put0
+	jp	ns_dflt
+ns_put0:ex	de,hl
 	ld	(ns_m3bn),hl
 	ex	de,hl
 	push	hl
@@ -1076,11 +1089,11 @@ ns_putb:ex	de,hl
 	pop	hl
 	ret	c
 	ld	b,128
-ns_put0:ld	a,(hl)		; Send the block
+ns_put1:ld	a,(hl)		; Send the block
 	call	ns_hcwr
 	ret	c
 	inc	hl
-	djnz	ns_put0
+	djnz	ns_put1
 	ld	hl,ns_buff
 	call	ns_rece
 	ld	a,(ns_buff)
@@ -1094,18 +1107,20 @@ ns_put0:ld	a,(hl)		; Send the block
 ;
 ; Carry flag set on error
 ; uses: af, b, hl
-ns_rece:call	ns_hcre
+ns_rece:call	ns_rec0
+	jp	ns_dflt
+ns_rec0:call	ns_hcre
 	ret	c		; Existing error
 	ld	b,a
 	call	ns_hcre
 	ret	c		; Existing error
 	scf
 	ret	nz		; Message too big!
-ns_rec0:call	ns_hcre
+ns_rec1:call	ns_hcre
 	ret	c		; Error!
 	ld	(hl),a
 	inc	hl
-	djnz	ns_rec0
+	djnz	ns_rec1
 	or	a
 	ret
 	
