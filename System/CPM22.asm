@@ -1049,12 +1049,12 @@ rename1:ex	de,hl
 	jp	z,rename2
 	cp	b
 	ld	(hl),b
-	jp	nz,rename5	;they were different, error.
+	jr	nz,rename5	;they were different, error.
 rename2:ld	(hl),b		;	reset as per the first file specification.
 	xor	a
 	ld	(fcb),a		;clear the drive byte of the fcb.
 rename3:call	srchfcb		;and go look for second file.
-	jp	z,rename4	;doesn't exist?
+	jr	z,rename4	;doesn't exist?
 	ld	de,fcb
 	call	renam		;ok, rename the file.
 	jp	getback
@@ -1064,7 +1064,7 @@ rename3:call	srchfcb		;and go look for second file.
 rename4:call	none		;file not there.
 	jp	getback
 rename5:call	resetdr		;bad command format.
-	jp	synerr
+synerrt:jp	synerr
 rename6:ld	bc,exists	;destination file already exists.
 	call	pline
 	jp	getback
@@ -1078,11 +1078,11 @@ exists:	defb	'file exists',0
 ;
 user:	call	decode		;get numeric value following command.
 	cp	16		;legal user number?
-	jp	nc,synerr
+	jr	nc,synerrt
 	ld	e,a		;yes but is there anything else?
 	ld	a,(fcb+1)
 	cp	' '
-	jp	z,synerr	;yes, that is not allowed.
+	jr	z,synerrt	;yes, that is not allowed.
 	call	getsetuc	;ok, set user code.
 	jp	getback1
 ;
@@ -1095,7 +1095,7 @@ user:	call	decode		;get numeric value following command.
 unknown:call	verify		;check for valid system (why?).
 	ld	a,(fcb+1)	;anything to execute?
 	cp	' '
-	jp	nz,unkwn1
+	jr	nz,unkwn1
 	ld	a,(chgdrv)	;nope, only a drive change?
 	or	a
 	jp	z,getback1	;neither???
@@ -1110,7 +1110,7 @@ unknown:call	verify		;check for valid system (why?).
 unkwn1:	ld	de,fcb+9	;an extension specified?
 	ld	a,(de)
 	cp	' '
-	jp	nz,synerr	;yes, not allowed.
+	jr	nz,synerrt	;yes, not allowed.
 unkwn2:	push	de
 	call	dselect		;select specified drive.
 	pop	de
@@ -1127,7 +1127,7 @@ unkwn3:	push	hl
 	call	dmaset		;set transfer address.
 	ld	de,fcb		;and read the next record.
 	call	rdrec
-	jp	nz,unkwn4	;end of file or read error?
+	jr	nz,unkwn4	;end of file or read error?
 	pop	hl		;nope, bump pointer for next sector.
 	ld	de,128
 	add	hl,de
@@ -1136,14 +1136,14 @@ unkwn3:	push	hl
 	sub	e
 	ld	a,h
 	sbc	a,d
-	jp	nc,unkwn0	;no, it can't fit.
-	jp	unkwn3
+	jr	nc,unkwn0	;no, it can't fit.
+	jr	unkwn3
 ;
 ;   get here after finished reading.
 ;
 unkwn4:	pop	hl
 	dec	a		;normal end of file?
-	jp	nz,unkwn0
+	jr	nz,unkwn0
 	call	resetdr		;yes, reset previous drive.
 	call	convfst		;convert the first file name that follows
 	ld	hl,chgdrv	;command name.
@@ -1164,11 +1164,11 @@ unkwn4:	pop	hl
 	ld	hl,inbuff+2	;now move the remainder of the input
 unkwn5:	ld	a,(hl)		;line down to (0080h). look for a non blank.
 	or	a		;or a null.
-	jp	z,unkwn6
+	jr	z,unkwn6
 	cp	' '
-	jp	z,unkwn6
+	jr	z,unkwn6
 	inc	hl
-	jp	unkwn5
+	jr	unkwn5
 ;
 ;   do the line move now. it ends in a null byte.
 ;
@@ -1177,11 +1177,11 @@ unkwn6:	ld	b,0		;keep a character count.
 unkwn7:	ld	a,(hl)		;move it now.
 	ld	(de),a
 	or	a
-	jp	z,unkwn8
+	jr	z,unkwn8
 	inc	b
 	inc	hl
 	inc	de
-	jp	unkwn7
+	jr	unkwn7
 unkwn8:	ld	a,b		;now store the character count.
 	ld	(tbuff),a
 	call	crlf		;clean up the screen.
@@ -1202,7 +1202,7 @@ unkwn9:	call	resetdr		;inproper format.
 	jp	synerr
 unkwn0:	ld	bc,badload	;read error or won't fit.
 	call	pline
-	jp	getback
+	jr	getback
 badload:defb	'Bad load',0
 comfile:defb	'COM'		;command file extension.
 ;
@@ -1218,6 +1218,16 @@ getback1: call	convfst		;convert first name in (fcb).
 	or	(hl)
 	jp	nz,synerr
 	jp	cmmnd1		;ok, return to command level.
+	
+; Small routine to print a decimal 0-19
+printdc:cp	':'
+	jp	c,print
+	sub	10
+	push	af
+	ld	a,'1'
+	call	print
+	pop	af
+	jr	printdc
 ;
 ;   ccp stack area.
 ;
@@ -3720,21 +3730,6 @@ filepos:defw	0		;files position within directory (0 to max entries -1).
 ; 16 possible drives.
 ;
 cksumtbl: defb	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-	
-;
-;*
-;******************  P O S T - C C P   B O D G E S  *****************
-;*
-	
-; Small routine to print a decimal 0-19
-printdc:cp	':'
-	jp	c,print
-	sub	10
-	push	af
-	ld	a,'1'
-	call	print
-	pop	af
-	jr	printdc
 
 ;
 ;*
