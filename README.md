@@ -28,9 +28,9 @@ This distribution boots up from a NHACP-based network disk image. This image is 
 
 It should be noted that the virtual disk image must be at least 8196 bytes long, or else it will result in read errors.
 
-In order to boot NDSK from NHACP, the following files must be setup from the `Output` directory:
+In order to boot NDSK from NHACP, the following files must be setup from the `Output_NDSK` directory:
 
-1. `FONT.GRB` must be moved to the NHACP root directory
+1. `Output/FONT.GRB` must be moved to the NHACP root directory
 2. `NDSK_CPM22.SYS` must be renamed to `CPM22.SYS` and moved to the NHACP root directory
 3. `NDSK_DEFAULT.IMG` must be renamed to `NDSK_A.IMG` and moved to the NHACP root directory
 4. `NDSK_BOOT.nabu` must be renamed to `000001.nabu` and moved to your adapter homebrew directory
@@ -43,11 +43,12 @@ Similar to the NDSK distribution in that it functions over NHACP. However, it do
 
 Under NFS, each logical drive and user number combination corresponds to a different folder on the host system. The logical device will be converted to a letter A-P, and the user number will be converted to hexadecimal 0-F. For example, device 0 with user 0 will convert to the directory `A0/`. For most distribution, CP/M drives are mapped 1-1 with similarly named folders on the host system.
 
-In order to boot NFS from NHACP, the following files must be setup from the `Output` directory:
+In order to boot NFS from NHACP, the following files must be setup from the `Output/Nabu_NFS` directory:
 
-1. `FONT.GRB` must be moved to `A0/` in the NHACP root directory
-2. `NDSK_CPM22.SYS` must be renamed to `CPM22.SYS` and moved to `A0/` in the NHACP root directory
-3. `NFS_BOOT.nabu` must be renamed to `000001.nabu` and moved to your adapter homebrew directory
+1. `Output/FONT.GRB` must be moved to `A0/` in the NHACP root directory
+2. Optionally, all files in the `Directory` folder should be moved into `A0/` to give you some software to run on boot
+3. `NDSK_CPM22.SYS` must be renamed to `CPM22.SYS` and moved to `A0/` in the NHACP root directory
+4. `NFS_BOOT.nabu` must be renamed to `000001.nabu` and moved to your adapter homebrew directory
 
 ### NFS NDSK + FDC (Hybrid)
 Similar to NDSK hybrid. Logical drives C: and D: are mapped to floppy drive 0 and 1 respectively. 
