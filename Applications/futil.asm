@@ -30,7 +30,8 @@ b_dma	equ	0x1A
 	
 	
 	; Print banner
-start:	ld	c,b_print
+start:	di	
+	ld	c,b_print
 	ld	de,splash
 	call	bdos
 
@@ -327,7 +328,7 @@ writr3:	ld	a,(nf_io)
 	ld	c,a
 	call	nf_wphy
 	or	a
-	jp	nz,nready
+	call	nz,ioerror
 	
 	; Do we need to read another in?
 	ld	a,(seccnt)
@@ -417,7 +418,7 @@ readr1:	ld	a,(nf_io)
 	ld	c,a
 	call	nf_rphy
 	or	a
-	jp	nz,nready
+	call 	nz,ioerror
 	
 	; Do we need to read another in?
 	ld	a,(seccnt)
@@ -521,6 +522,7 @@ nf_rph1:in	a,(c)
 	ld	c,e
 	jr	nf_rph1
 nf_rph2:in	a,(c)
+	ld	(lastfdc),a
 	and	0xFC
 	ret
 	
@@ -554,6 +556,7 @@ nf_wph1:in	a,(c)
 	ld	c,e
 	jr	nf_wph1
 nf_wph2:in	a,(c)
+	ld	(lastfdc),a
 	and	0xFC
 	ret
 	
@@ -590,8 +593,9 @@ nf_bout:in	a,(c)
 	dec	c
 	ret
 nf_bou1:in	a,(c)		; Operation is complete?
+	ld	(lastfdc),a
 	and	0xFC
-	jp	nz,nready	; Error!
+	call	nz,ioerror	; Error!
 	ld	(trkdone),a
 	ret
 
@@ -616,7 +620,7 @@ dskrdy0:call	nf_stal
 	jr	nz,dskrdy0
 	
 	; No disk!
-nready:	call	nf_udsl
+	call	nf_udsl
 	
 	ld	c,b_print
 	ld	de,nrdymsg
@@ -663,6 +667,46 @@ nf_dvsl:push	bc
 	call	nf_stal
 	pop	bc
 	ret
+	
+; Prints out an I/O error
+;
+; uses: does not matter
+ioerror:di
+	call	nf_udsl
+
+	; Print error message
+	ld	c,b_print
+	ld	de,iomsg
+	call	bdos
+	
+	; Print error number
+	ld	a,(lastfdc)
+	ld	l,a
+	xor	a
+	ld	h,a
+	call	putd
+	
+	; Print stack #1
+	ld	c,b_print
+	ld	de,stckmsg
+	call	bdos
+	pop	hl
+	call	putd
+	
+	; Print stack #2
+	ld	c,b_print
+	ld	de,stckmsg
+	call	bdos
+	pop	hl
+	call	putd
+	
+	; Print stack #3
+	ld	c,b_print
+	ld	de,stckmsg
+	call	bdos
+	pop	hl
+	call	putd
+	jp	waitex
 	
 ; Waits until FDC is not busy
 ; c = FDC command address
@@ -776,6 +820,9 @@ cursec:
 trkdone:
 	defb	0x00
 	
+lastfdc:
+	defb	0xFF
+	
 ; Disk format
 
 fm1_pre:	; Disk preamble
@@ -837,7 +884,14 @@ nfdcmsg:
 	defb	0x0A,0x0D,'Error! No FDC detected$'
 	
 nrdymsg:	
-	defb	0x0A,0x0D,'Error! Disk Operation Failed$'
+	defb	0x0A,0x0D,'Error! Disk Not Ready$'
+	
+iomsg:
+	defb	0x0A,0x0D,'Error! I/O Operation Failed'
+	defb	0x0A,0x0D,'FDC Code: $'
+	
+stckmsg:
+	defb	0x0A,0x0D,'Stack Trace: $'
 
 readmsg:	
 	defb	0x0A,0x0D,'Reading Track $'
