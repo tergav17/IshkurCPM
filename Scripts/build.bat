@@ -1,35 +1,36 @@
 @ECHO OFF
-cd ..\System
+cd ..\System\config
 
 REM Assemble the CP/M system into a binary image
 REM Then move to outputs folder
 
 REM Floppy kernel
-..\Build\zasm config\config_fdc.asm -u -w -b cpm22.bin
-move cpm22.bin bin\cpm22_fdc.bin >NUL
-move config\*.lst ..\Output\Nabu_FDC\Listings >NUL
+..\..\Build\zasm config_fdc.asm -u -w -b cpm22.bin
+move cpm22.bin ..\bin\cpm22_fdc.bin >NUL
+move *.lst ..\..\Output\Nabu_FDC\Listings >NUL
 
 REM NDSK kernel
-..\Build\zasm config\config_ndsk.asm -u -w -b cpm22.bin
-move cpm22.bin ..\Output\Nabu_NDSK\NDSK_CPM22.SYS >NUL
-move config\*.lst ..\Output\Nabu_NDSK\Listings >NUL
+..\..\Build\zasm config_ndsk.asm -u -w -b cpm22.bin
+move cpm22.bin ..\..\Output\Nabu_NDSK\NDSK_CPM22.SYS >NUL
+move *.lst ..\..\Output\Nabu_NDSK\Listings >NUL
 
 REM NDSK hybrid kernel
-..\Build\zasm config\config_ndsk_hybrid.asm -u -w -b cpm22.bin
-move cpm22.bin ..\Output\Nabu_NDSK\NDSK_HYBRID_CPM22.SYS >NUL
-move config\*.lst ..\Output\Nabu_NDSK\Listings >NUL
+..\..\Build\zasm config_ndsk_hybrid.asm -u -w -b cpm22.bin
+move cpm22.bin ..\..\Output\Nabu_NDSK\NDSK_HYBRID_CPM22.SYS >NUL
+move *.lst ..\..\Output\Nabu_NDSK\Listings >NUL
 
 REM NFS kernel
-..\Build\zasm config\config_nfs.asm -u -w -b cpm22.bin
-move cpm22.bin ..\Output\Nabu_NFS\NFS_CPM22.SYS >NUL
-move config\*.lst ..\Output\Nabu_NFS\Listings >NUL
+..\..\Build\zasm config_nfs.asm -u -w -b cpm22.bin
+move cpm22.bin ..\..\Output\Nabu_NFS\NFS_CPM22.SYS >NUL
+move *.lst ..\..\Output\Nabu_NFS\Listings >NUL
 
 REM NFS hybrid kernel
-..\Build\zasm config\config_nfs_hybrid.asm -u -w -b cpm22.bin
-move cpm22.bin ..\Output\Nabu_NFS\NFS_HYBRID_CPM22.SYS >NUL
-move config\*.lst ..\Output\Nabu_NFS\Listings >NUL
+..\..\Build\zasm config_nfs_hybrid.asm -u -w -b cpm22.bin
+move cpm22.bin ..\..\Output\Nabu_NFS\NFS_HYBRID_CPM22.SYS >NUL
+move *.lst ..\..\Output\Nabu_NFS\Listings >NUL
 
 REM Move resource into outputs
+cd ..
 copy res\licca_font.bin ..\Output\FONT.GRB >NUL
 
 REM Assemble the boot programs

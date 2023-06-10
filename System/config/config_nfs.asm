@@ -47,8 +47,8 @@ intvec:	defs	16
 dircbuf:defs	128
 .area	_TEXT
 ; Include CP/M and BIOS
-#include "CPM22.asm"
-#include "bios.asm"
+#include "../CPM22.asm"
+#include "../bios.asm"
 
 ;
 ;**************************************************************
@@ -213,7 +213,7 @@ cdevsw:	defw	siodev,	0	; TTY device
 ;**************************************************************
 ;
 
-#include "dev/nabu_vdp.asm"
-#include "dev/nabu_nfs.asm"
-#include "dev/nabu_prt.asm"
-#include "dev/nabu_sio.asm"
+#include "../dev/nabu_vdp.asm"
+#include "../dev/nabu_nfs.asm"
+#include "../dev/nabu_prt.asm"
+#include "../dev/nabu_sio.asm"
