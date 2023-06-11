@@ -222,7 +222,13 @@ tm_setp:ld	hl,(tm_mode)
 ;
 ; Returns ASCII key in A
 ; uses: af, bc, de, hl
-tm_read:ld	a,(tm_curx)
+tm_read:call	tm_dint
+	call	tm_rea0
+	push	af
+	call	tm_eint
+	pop	af
+	ret
+tm_rea0:ld	a,(tm_curx)
 	ld	c,a
 	ld	a,(tm_cury)
 	ld	d,a
@@ -234,37 +240,35 @@ tm_read:ld	a,(tm_curx)
 	ld	e,a		; blinking char
 	ld	b,1
 	
-tm_rea0:push	de
+tm_rea1:push	de
 	call	tm_stat
 	pop	de
 	inc	a
-	jr	nz,tm_rea1
+	jr	nz,tm_rea2
 	ld	e,d
-	call	tm_rea2
+	call	tm_rea3
 	ld	a,(tm_outc)
 	ld	b,a
 	call	tm_cloc
 	ld	a,b
 	ret
 	
-tm_rea1:call	tm_stal
-	djnz	tm_rea0
+tm_rea2:call	tm_stal
+	djnz	tm_rea1
 	ld	a,0x80
 	xor	e
 	ld	e,a
-	call	tm_rea2
+	call	tm_rea3
 	ld	b,190
-	jr	tm_rea0
+	jr	tm_rea1
 
 
-tm_rea2:push	de
+tm_rea3:push	de
 	ld	a,(tm_curx)
 	ld	c,a
 	ld	a,(tm_cury)
 	ld	d,a
-	call	tm_dint
 	call	tm_putc
-	call	tm_eint
 	pop	de
 	ret
 
