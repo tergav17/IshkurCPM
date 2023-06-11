@@ -89,12 +89,18 @@ tm_inr0:in	a,(c)
 ;
 ; Returns a=0xFF if there is a key to read 
 ; uses: af, bc, de, hl
-tm_stat:ld	a,(tm_last)
+tm_stat:call	tm_dint
+	call	tm_sta0
+	push	af
+	call	tm_eint
+	pop	af
+	ret 
+tm_sta0:ld	a,(tm_last)
 	cp	0xE4
 	jr	z,tm_scri
 	cp	0xE5
 	jr	z,tm_sclf
-tm_sta0:ld	a,(tm_outc)
+tm_sta1:ld	a,(tm_outc)
 	inc	a
 	ld	a,0xFF
 	ret	nz
@@ -178,7 +184,7 @@ tm_scri:ld	a,(tm_scro)
 	add	a,4
 tm_scr0:ld	(tm_scro),a
 	call	tm_usco
-tm_scr1:jr	tm_sta0
+tm_scr1:jr	tm_sta1
 tm_sclf:ld	a,(tm_scro)
 	or	a
 	jr	z,tm_scr1
@@ -227,7 +233,7 @@ tm_read:call	tm_dint
 	push	af
 	call	tm_eint
 	pop	af
-	ret
+	ret 
 tm_rea0:ld	a,(tm_curx)
 	ld	c,a
 	ld	a,(tm_cury)
@@ -241,7 +247,7 @@ tm_rea0:ld	a,(tm_curx)
 	ld	b,1
 	
 tm_rea1:push	de
-	call	tm_stat
+	call	tm_sta0		; No interrupts!
 	pop	de
 	inc	a
 	jr	nz,tm_rea2
@@ -277,9 +283,9 @@ tm_rea3:push	de
 ; uses: none
 tm_stal:push	bc
 	ld	b,255
-tm_sta1:push	bc
+tm_sta2:push	bc
 	pop	bc
-	djnz	tm_sta1
+	djnz	tm_sta2
 	pop	bc
 	ret
 
@@ -719,7 +725,10 @@ tm_virq:push	af
 ; Disables all interrupts while VDP operations occur
 ;
 ; uses: a
-tm_dint:ld	a,0x0E
+tm_dint:ld	a,0xC9
+	ld	(0x38),a
+	im	1
+	ld	a,0x0E
 	out	(tm_atla),a	; AY register = 14
 	ld	a,0x00
 	out	(tm_ayda),a	
@@ -732,6 +741,7 @@ tm_eint:ld	a,0x0E
 	out	(tm_atla),a	; AY register = 14
 	ld	a,0xB0
 	out	(tm_ayda),a
+	im	2
 	ret
 	
 ; Variables
