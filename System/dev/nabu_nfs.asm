@@ -1107,7 +1107,8 @@ ns_put1:ld	a,(hl)		; Send the block
 ;
 ; Carry flag set on error
 ; uses: af, b, hl
-ns_rece:call	ns_rec0
+ns_rece:call	ns_dsnd
+	call	ns_rec0
 	jp	ns_dflt
 ns_rec0:call	ns_hcre
 	ret	c		; Existing error
@@ -1145,7 +1146,9 @@ ns_send:ld	a,(hl)
 ; Carry flag set on error
 ; Uses: af
 ns_hcrd:call	ns_hcre
-ns_hcre:push	de
+ns_hcre:xor	a
+	ld	(ns_inf),a
+	push	de
 	ld	a,0x09
 	out	(ns_nctl),a	; Turn on recv light
 	ld	de,0xFFFF

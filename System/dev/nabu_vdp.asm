@@ -262,7 +262,9 @@ tm_rea2:push	de
 	ld	c,a
 	ld	a,(tm_cury)
 	ld	d,a
+	call	tm_dint
 	call	tm_putc
+	call	tm_eint
 	pop	de
 	ret
 
