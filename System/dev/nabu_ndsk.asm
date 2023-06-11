@@ -368,7 +368,8 @@ nd_put1:ld	a,(hl)		; Send the block
 ;
 ; Carry flag set on error
 ; uses: af, b, hl
-nd_rece:call	nd_rec0
+nd_rece:call	nd_dsnd
+	call	nd_rec0
 	jp	nd_dflt
 nd_rec0:call	nd_hcre
 	ret	c		; Existing error
@@ -406,7 +407,9 @@ nd_send:ld	a,(hl)
 ; Carry flag set on error
 ; Uses: af
 nd_hcrd:call	nd_hcre
-nd_hcre:push	de
+nd_hcre:xor	a
+	ld	(nd_inf),a
+	push	de
 	ld	a,0x09
 	out	(nd_nctl),a	; Turn on recv light
 	ld	de,0xFFFF
