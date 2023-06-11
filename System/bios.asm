@@ -14,7 +14,7 @@
 ;*    This isn't actually used by the BDOS, but
 ;*    some applications (*cough* MBASIC) use it
 ;*    to directly address BIOS calls to get around
-;*    the BDOS. 
+;*    the BDOS.
 ;*
 ;**************************************************************
 ;

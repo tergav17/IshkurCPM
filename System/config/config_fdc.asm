@@ -8,7 +8,7 @@
 ;*      a mimumum, they need to be included at the bottom
 ;*      of the file, and added to their appropriate dev
 ;*      switch. Some devices may need additional config
-;*      directly in their source files
+;*      directly in their source files.
 ;*       
 ;*
 ;**************************************************************
