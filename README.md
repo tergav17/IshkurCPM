@@ -9,8 +9,11 @@ As of updating this file. The NHACP-based system is nominally functional on real
 - Emulated VDP terminal with ADM-3A escape code support
 - 80 column screen scrolling
 - F18A 80 column mode
+- Multi-directory submit files
+- PROFILE.SUB auto execution at startup
 - Full support for SSDD floppy disks on the FDC
-- Ability to access virtual disks over an NHACP connection
+- Ability to access virtual disks over a NHACP connection
+- Direct file access over a NHACP connection
 - Modified IOBYTE device redirection
 - NABU printer support
 - NABU serial option card support
