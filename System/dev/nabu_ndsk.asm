@@ -206,7 +206,9 @@ nd_gbno:ld	hl,(nd_ctrk)
 ; uses: a, b
 nd_hini:ld	a,0x07
 	out	(nd_atla),a	; AY register = 7
-	ld	a,0x7F
+	in	a,(nd_ayda)
+	and	0x3F
+	or	0x40
 	out	(nd_ayda),a	; Configure AY port I/O
 	
 	; Claim interrupt vectors

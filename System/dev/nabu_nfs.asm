@@ -117,7 +117,9 @@ ns_sel:	ld	de,dirbuf
 ; uses: a, b
 ns_hini:ld	a,0x07
 	out	(ns_atla),a	; AY register = 7
-	ld	a,0x7F
+	in	a,(ns_ayda)
+	and	0x3F
+	or	0x40
 	out	(ns_ayda),a	; Configure AY port I/O
 	
 	; Claim interrupt vectors
