@@ -1,6 +1,6 @@
               	; --------------------------------------
               	; zasm: assemble "txtfix.asm"
-              	; date: 2023-06-12 00:09:14
+              	; date: 2023-06-12 19:29:24
               	; --------------------------------------
 
 
@@ -23,12 +23,17 @@
 0015:         	b_write	equ	0x15
 0016:         	b_make	equ	0x16
 001A:         	b_dma	equ	0x1A
+0021:         	b_rrnd	equ	0x21
+0022:         	b_wrnd	equ	0x22
+0023:         	b_size	equ	0x23
+              	
+0021:         	f_rand	equ	0x21
               	
               	; Program start
 0100:         		org	0x0100
               		
 0100: 0E09    	start:	ld	c,b_print
-0102: 114F01  		ld	de,splash
+0102: 11BB01  		ld	de,splash
 0105: CD0500  		call	bdos
               		
               		; Dump out all matching filenames into the heap
@@ -56,10 +61,10 @@
               	
               		; Now copy it to heap
 012A: 23      	gothl:	inc	hl
-012B: ED5BEA01		ld	de,(pointer)
+012B: ED5B5602		ld	de,(pointer)
 012F: 010B00  		ld	bc,11
 0132: EDB0    		ldir
-0134: ED53EA01		ld	(pointer),de
+0134: ED535602		ld	(pointer),de
               		
               		; Find next filename
 0138: 0E12    		ld	c,b_snext
@@ -67,63 +72,150 @@
 013D: CD0500  		call	bdos
 0140: 18D6    		jr	nextf
               		
-0142: ED5BEA01	endlook:ld	de,(pointer)
+              		; Zero terminate array
+0142: ED5B5602	endlook:ld	de,(pointer)
 0146: AF      		xor	a
 0147: 12      		ld	(de),a
-0148: 21EC01  		ld	hl,heap
-014B: 22EA01  		ld	(pointer),hl
+0148: 215802  		ld	hl,heap
               		
+              		; Scan through file list, and fix them
+014B: 225602  	scanf:	ld	(pointer),hl
+014E: AF      		xor	a
+014F: BE      		cp	(hl)
+0150: C8      		ret	z
+0151: CD5E01  		call	dofix
+0154: 2A5602  		ld	hl,(pointer)
+0157: 110B00  		ld	de,11
+015A: 19      		add	hl,de
+015B: 18EE    		jr	scanf
+              		 
+015D: C9      		ret
               		
-014E: C9      		ret
+              	; Performs actual fix operation
+              	; hl = Address of filename to fix
+              	;
+              	; uses: all
+015E: 115C00  	dofix:	ld	de,fcb
+0161: AF      		xor	a
+0162: 12      		ld	(de),a
+              		
+              		; Copy filename
+0163: 13      		inc	de
+0164: 010B00  		ld	bc,11
+0167: EDB0    		ldir
+              		
+              		; Clear rest of FCB
+0169: 12      		ld	(de),a
+016A: 62      		ld	h,d
+016B: 6B      		ld	l,e
+016C: 13      		inc	de
+016D: 011700  		ld	bc,23
+0170: EDB0    		ldir
+              		
+              		; Open file
+0172: 0E0F    		ld	c,b_open
+0174: 115C00  		ld	de,fcb
+0177: CD0500  		call	bdos
+              		
+              		; Calculate file size
+017A: 0E23    		ld	c,b_size
+017C: 115C00  		ld	de,fcb
+017F: CD0500  		call	bdos
+              		
+              		; Get last block (make sure it's not zero)
+0182: 2A7D00  		ld	hl,(fcb+f_rand)
+0185: 7D      		ld	a,l
+0186: B4      		or	h
+0187: C8      		ret	z
+0188: 2B      		dec	hl
+0189: 227D00  		ld	(fcb+f_rand),hl
+              		
+              		; Read in block
+018C: 0E1A    		ld	c,b_dma
+018E: 11D601  		ld	de,buffer
+0191: CD0500  		call	bdos
+0194: 0E21    		ld	c,b_rrnd
+0196: 115C00  		ld	de,fcb
+0199: CD0500  		call	bdos
+              		
+              		; "Fix" the file
+019C: 0680    		ld	b,128
+019E: 215602  		ld	hl,buffer+128
+              		
+01A1: 2B      	dofix0:	dec	hl
+01A2: 7E      		ld	a,(hl)
+01A3: B7      		or	a
+01A4: 2005    		jr	nz,dofix1
+01A6: 3E1A    		ld	a,0x1A
+01A8: 77      		ld	(hl),a
+01A9: 10F6    		djnz	dofix0
+              		
+              		; Fixing done, write it back
+01AB: 0E22    	dofix1:	ld	c,b_wrnd
+01AD: 115C00  		ld	de,fcb
+01B0: CD0500  		call	bdos
+              		
+              		; And close it!
+01B3: 0E10    		ld	c,b_close
+01B5: 115C00  		ld	de,fcb
+01B8: C30500  		jp	bdos
               	
-014F:         	splash:	
-014F: 4953484B		defb	'ISHKUR/NFS TextFix Utiltiy$'
-0153: 55522F4E	
-0157: 46532054	
-015B: 65787446	
-015F: 69782055	
-0163: 74696C74	
-0167: 697924  	
-016A:         	buffer:
-016A: FFFFFFFF		defs	128
-016E: FF...   	
-01EA:         	pointer:
-01EA: EC01    		defw	heap
-01EC:         	heap:
+01BB:         	splash:	
+01BB: 4953484B		defb	'ISHKUR/NFS TextFix Utiltiy$'
+01BF: 55522F4E	
+01C3: 46532054	
+01C7: 65787446	
+01CB: 69782055	
+01CF: 74696C74	
+01D3: 697924  	
+01D6:         	buffer:
+01D6: FFFFFFFF		defs	128
+01DA: FF...   	
+0256:         	pointer:
+0256: 5802    		defw	heap
+0258:         	heap:
 
 
 ; +++ segments +++
 
-#CODE          = $0100 =   256,  size = $00EC =   236
+#CODE          = $0100 =   256,  size = $0158 =   344
 
 ; +++ global symbols +++
 
-_end    = $01EC =   492          txtfix.asm:22 (unused)
-_size   = $00EC =   236          txtfix.asm:22 (unused)
-b_close = $0010 =    16          txtfix.asm:13 (unused)
+_end    = $0258 =   600          txtfix.asm:27 (unused)
+_size   = $0158 =   344          txtfix.asm:27 (unused)
+b_close = $0010 =    16          txtfix.asm:13
 b_coin  = $0001 =     1          txtfix.asm:9 (unused)
 b_cout  = $0002 =     2          txtfix.asm:10 (unused)
 b_dma   = $001A =    26          txtfix.asm:19
 b_make  = $0016 =    22          txtfix.asm:18 (unused)
-b_open  = $000F =    15          txtfix.asm:12 (unused)
+b_open  = $000F =    15          txtfix.asm:12
 b_print = $0009 =     9          txtfix.asm:11
 b_read  = $0014 =    20          txtfix.asm:16 (unused)
+b_rrnd  = $0021 =    33          txtfix.asm:20
 b_sfirs = $0011 =    17          txtfix.asm:14
+b_size  = $0023 =    35          txtfix.asm:22
 b_snext = $0012 =    18          txtfix.asm:15
 b_write = $0015 =    21          txtfix.asm:17 (unused)
+b_wrnd  = $0022 =    34          txtfix.asm:21
 bdos    = $0005 =     5          txtfix.asm:5
-buffer  = $016A =   362          txtfix.asm:75 (unused)
+buffer  = $01D6 =   470          txtfix.asm:159
 dirent  = $0080 =   128          txtfix.asm:7
-endlook = $0142 =   322          txtfix.asm:64
+dofix   = $015E =   350          txtfix.asm:92
+dofix0  = $01A1 =   417          txtfix.asm:139
+dofix1  = $01AB =   427          txtfix.asm:148
+endlook = $0142 =   322          txtfix.asm:70
+f_rand  = $0021 =    33          txtfix.asm:24
 fcb     = $005C =    92          txtfix.asm:6
-gethl   = $0123 =   291          txtfix.asm:45
-gothl   = $012A =   298          txtfix.asm:52
-heap    = $01EC =   492          txtfix.asm:79
-nextf   = $0118 =   280          txtfix.asm:38
-pointer = $01EA =   490          txtfix.asm:77
-splash  = $014F =   335          txtfix.asm:73
-start   = $0100 =   256          txtfix.asm:24 (unused)
+gethl   = $0123 =   291          txtfix.asm:50
+gothl   = $012A =   298          txtfix.asm:57
+heap    = $0258 =   600          txtfix.asm:163
+nextf   = $0118 =   280          txtfix.asm:43
+pointer = $0256 =   598          txtfix.asm:161
+scanf   = $014B =   331          txtfix.asm:76
+splash  = $01BB =   443          txtfix.asm:157
+start   = $0100 =   256          txtfix.asm:29 (unused)
 
 
-total time: 0.0020 sec.
+total time: 0.0022 sec.
 no errors

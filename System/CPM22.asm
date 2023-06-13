@@ -902,7 +902,7 @@ erase:	call	convfst		;convert file name.
 	jp	nz,cmmnd1
 	inc	hl
 	ld	a,(hl)
-	cp	'y'
+	cp	'Y'
 	jp	nz,cmmnd1
 	inc	hl
 	ld	(inpoint),hl	;save input line pointer.
@@ -912,7 +912,7 @@ erase1:	call	dselect		;select desired disk.
 	inc	a
 	call	z,none		;not there?
 	jp	getback		;return to command level now.
-yesno:	defb	'all (y/n)?',0
+yesno:	defb	'All (Y/N)?',0
 ;
 ;**************************************************************
 ;*
