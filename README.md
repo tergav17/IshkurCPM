@@ -4,7 +4,7 @@ An open source, modular CP/M distribution for the NABU computer. It is designed 
 One of the core design ideas behind Ishkur is device modularity. Unlike standard CP/M, devices in Ishkur CP/M are self-contained. The only file that needs to be modified in order to add, remove, or reconfigure device drivers is `config.asm`. This makes spinning up a custom distribution that matches a target machine's hardware capabilities very easy. The hope is that this will facilitate support for a wide range of custom hobbyist hardware and software projects.
 
 ## Progress
-As of updating this file. The NHACP-based system is nominally functional on real hardware. The FDC-based system works in emulator, but has yet to be tested on hardware. Right now, the system is fairly bare-bones. However, the following features are included:
+As of updating this file. The NHACP-based system is nominally functional on real hardware. The FDC-based system works both in emulator and on hardware. Right now, the system is fairly bare-bones. However, the following features are included:
 
 - Emulated VDP terminal with ADM-3A escape code support
 - 80 column screen scrolling
