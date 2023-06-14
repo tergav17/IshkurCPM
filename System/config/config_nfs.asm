@@ -46,8 +46,10 @@ mem	equ	54		; CP/M image starts at mem*1024
 intvec:	defs	16
 dircbuf:defs	128
 .area	_TEXT
+
 ; Include CP/M and BIOS
-#include "../CPM22.asm"
+#include "../dr_ccp.asm"
+#include "../bdos.asm"
 #include "../bios.asm"
 
 ;
