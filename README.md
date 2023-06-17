@@ -65,4 +65,4 @@ In order to build on Windows, ensure the following programs are installed:
 After that, go into the `Scripts` directory and run `build.bat`. This will take care of all assembly and boot image creation.
 
 ### UNIX-likes
-There is currently no pre-built shell script to build Ishkur. This will hopefully change soon.
+There is a makefile in development to build all of the different Ishkur configurations. Hopefully this will become the default build method once it is finished.
