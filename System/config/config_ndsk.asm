@@ -48,7 +48,7 @@ dircbuf:defs	128
 .area	_TEXT
 
 ; Include CP/M and BIOS
-#include "../dr_ccp.asm"
+#include "../zcpr1_ccp.asm"
 #include "../bdos.asm"
 #include "../bios.asm"
 
