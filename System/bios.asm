@@ -130,7 +130,7 @@ wboot0:	push	bc
 cpmlow:	jp	wbootin	; Call jump table version instead
 	defb	0x81	; Default IOBYTE
 	defb	0	; Default drive
-	jp	fbase-4	; 4 bytes before BDOS entry 
+	jp	fbase	; BDOS entry 
 
 
 ; Console status
