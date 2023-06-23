@@ -52,6 +52,11 @@ boot:	ld	sp,cbase
 	jp	cbase
 
 
+; Error boot entry
+; Kinda like warm boot, but drive is reset to default
+eboot:	ld	a,default
+	ld	(tdrive),a
+
 ; Warm boot entry
 ; Mainly just calls wbootr and manages IOBYTE
 wboot:	ld	sp,cbase
@@ -276,6 +281,12 @@ prstat:	ld	a,0xFF
 sectrn:	ld	h,b
 	ld	l,c
 	ret
+	
+
+; BDOS -> BIOS system hook
+; stubs some stuff out, and then jumps to the config system hook
+bshook:	ld	(auto),a
+	jp	syshook
 	
 ; Character device switch indirection
 ; Obtains device by doing IOBYTE indirection

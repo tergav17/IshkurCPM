@@ -112,7 +112,7 @@ dwait:	in	a,(c)
 	; If all sectors are in, jump to image
 nexts:	ld	a,(nsecle)
 	dec	a
-	jp	z,9+1024*(mem+2)
+	jp	z,0xE00+1024*(mem+2)
 	ld	(nsecle),a
 	
 	; Move on to the next sector

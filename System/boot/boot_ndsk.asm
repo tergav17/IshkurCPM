@@ -152,7 +152,7 @@ exec:	ld	hl,m_close
 ;loop:	jr	loop
 
 
-	jp	z,9+1024*(mem+2)
+	jp	0xE00+1024*(mem+2)
 ; Sends a message to the HCCA modem
 ; b = # of bytes to send
 ; hl = pointer to address

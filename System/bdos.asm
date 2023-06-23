@@ -27,7 +27,6 @@ pattrn2:defb	0,22,0,0,0,0	;(* serial number bytes *).
 ;**************************************************************
 ;
 fbase:	jp	fbase1
-	jp	boot
 ;
 ;   bdos error table.
 ;
@@ -51,10 +50,9 @@ fbase1:	ex	de,hl		;save the (de) parameters.
 	ld	sp,stkarea	;and set our own.
 	xor	a		;clear auto select storage space.
 	ld	(autoflag),a
-	ld	(auto),a
 	ld	hl,goback	;set return address.
 	push	hl
-	call	syshook		; see if anyone wants to intercept the call
+	call	bshook		; see if anyone wants to intercept the call
 	ld	a,c		;get function number.
 	cp	nfuncts		;valid function number?
 	ret	nc
@@ -98,10 +96,8 @@ error3:	ld	hl,diskro	;disk is read only.
 ;
 error4:	ld	hl,filero	;file is read only.
 ;
-error5:	ld	a,default
-	ld	(tdrive),a
-	call	prterr
-	jp	0		;always reboot on these errors.
+error5:	call	prterr
+	jp	eboot		;always reboot on these errors.
 ;
 bdoserr:defb	'Bdos Err on '
 bdosdrv:defb	' : $'
@@ -2498,6 +2494,7 @@ filepos:defw	0		;files position within directory (0 to max entries -1).
 ;
 cksumtbl: defb	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 
+	defb	0,0,0,0
 ;
 ;*
 ;******************   E N D   O F   C P / M   *****************
