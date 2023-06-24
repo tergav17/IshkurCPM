@@ -32,7 +32,7 @@ ns_atla	equ	0x41		; AY-3-8910 latch port
 ns_hcca	equ	0x80		; Modem data port
 ns_nctl	equ	0x00		; NABU control port
 
-ns_fild	equ	0x80		; Default file access desc
+ns_fild	equ	0x81		; Default file access desc
 
 
 ;

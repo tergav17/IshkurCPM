@@ -20,7 +20,7 @@
 ;*
 ;*
 ;*
-;*     Device requires 384 bytes of bss space (nd_bss)
+;*     Device requires 384 bytes of bss space
 ;* 
 ;**************************************************************
 ;
