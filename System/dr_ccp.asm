@@ -366,10 +366,13 @@ delbatch: ld	hl,batch	;is batch active?
 ;
 verify:	ld	de,pattrn1+2	;these are the serial number bytes.
 	ld	hl,pattrn2+2	;ditto, but how could they be different?
-	ld	b,4		;6 bytes each.
+	ld	b,1		;6 bytes each.
 verify1:ld	a,(de)
 	cp	(hl)
-	jp	nz,halt		;jump to halt routine.
+	;jp	nz,halt		;jump to halt routine.
+	nop
+	nop
+	nop
 	inc	de
 	inc	hl
 	dec	b
