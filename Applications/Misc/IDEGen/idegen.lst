@@ -1,6 +1,6 @@
               	; --------------------------------------
               	; zasm: assemble "idegen.asm"
-              	; date: 2023-07-02 22:48:14
+              	; date: 2023-07-02 23:35:59
               	; --------------------------------------
 
 
@@ -40,14 +40,14 @@
               		; Print banner
 0100: F3      	start:	di	
 0101: 0E09    		ld	c,b_print
-0103: 11FF01  		ld	de,splash
+0103: 117002  		ld	de,splash
 0106: CD0500  		call	bdos
               	
               		; Get system image
 0109: 0E09    	getsys: ld	c,b_print
-010B: 113302  		ld	de,cfgmsg
+010B: 11A402  		ld	de,cfgmsg
 010E: CD0500  		call	bdos
-0111: CDA901  		call	getopt
+0111: CD1A02  		call	getopt
               		
               		; Exit option
 0114: FE39    		cp	'9'
@@ -63,13 +63,13 @@
 011E: 18E9    		jr	getsys
               		
               		; Set system image
-0120: 22FB01  	setsys:	ld	(sysimg),hl
+0120: 226C02  	setsys:	ld	(sysimg),hl
               	
               		; Now lets get the logical drive #
 0123: 0E09    	getcurd:ld	c,b_print
-0125: 118202  		ld	de,drvmsg
+0125: 11F302  		ld	de,drvmsg
 0128: CD0500  		call	bdos
-012B: CDA901  		call	getopt
+012B: CD1A02  		call	getopt
               		
 012E: 06E0    		ld	b,0xE0
 0130: FE30    		cp	'0'
@@ -80,277 +80,365 @@
 013A: 18E7    		jr	getcurd
               		
 013C: 78      	setcurd:ld	a,b
-013D: 32FD01  		ld	(curdrv),a
+013D: 326E02  		ld	(curdrv),a
               	
               		; Format option
 0140: 0E09    		ld	c,b_print
-0142: 119C02  		ld	de,formmsg
+0142: 110D03  		ld	de,formmsg
 0145: CD0500  		call	bdos
-0148: CDA901  		call	getopt
-014B: 32FE01  		ld	(doform),a
+0148: CD1A02  		call	getopt
+014B: 326F02  		ld	(doform),a
               		
               		; Ready to begin?
 014E: 0E09    		ld	c,b_print
-0150: 11B302  		ld	de,readymsg
+0150: 112403  		ld	de,readymsg
 0153: CD0500  		call	bdos
-0156: CDA901  		call	getopt
+0156: CD1A02  		call	getopt
 0159: FE59    		cp	'Y'
 015B: C20901  		jp	nz,getsys
               		
               		; Begin operation, check to made sure drive is present
-015E: 3AFD01  		ld	a,(curdrv)
+015E: 3A6E02  		ld	a,(curdrv)
 0161: D3CC    		out	(id_base+0xC),a
 0163: 06FF    		ld	b,255
-0165: CDF601  		call	stall
+0165: CD6702  		call	stall
 0168: DBCC    		in	a,(id_base+0xC)
 016A: 3C      		inc	a
 016B: 200E    		jr	nz,format
               		
               		; Error!
 016D: 0E09    		ld	c,b_print
-016F: 11E802  		ld	de,noderror
+016F: 115A03  		ld	de,nodmsg
 0172: CD0500  		call	bdos
 0175: AF      		xor	a
 0176: D3CC    		out	(id_base+0xC),a
 0178: C30000  		jp	0
               		
               		; Do a format?
-017B: CD9E01  	format:	call	id_busy
-017E: 3AFE01  		ld	a,(doform)
+017B: CD0D02  	format:	call	id_busy
+017E: 3A6F02  		ld	a,(doform)
 0181: FE59    		cp	'Y'
-0183: C28F01  		jp	nz,sysgen
+0183: C2D101  		jp	nz,sysgen
               		
 0186: 0E09    		ld	c,b_print
-0188: 11CD02  		ld	de,fnowmsg
+0188: 113E03  		ld	de,fnowmsg
 018B: CD0500  		call	bdos
               		
-018E: C9      		ret
+              		; Fill top of memory with 0xE5
+018E: 21B003  		ld	hl,top
+0191: 0600    		ld	b,0
+0193: 3EE5    		ld	a,0xE5
+0195: 77      	format0:ld	(hl),a
+0196: 23      		inc	hl
+0197: 77      		ld	(hl),a
+0198: 23      		inc	hl
+0199: 10FA    		djnz	format0
               		
+              		; Write 65536 sectors
+019B: 010000  		ld	bc,0
+019E: 1608    		ld	d,8
+              	
+              		; Set transfer registers
+01A0: 3E01    	format1:ld	a,1
+01A2: D3C4    		out	(id_base+0x4),a
+01A4: 79      		ld	a,c
+01A5: D3C6    		out	(id_base+0x6),a
+01A7: 78      		ld	a,b
+01A8: D3C8    		out	(id_base+0x8),a
+01AA: AF      		xor	a
+01AB: D3CA    		out	(id_base+0xA),a
+              		
+              		; Perform the write
+01AD: C5      		push	bc
+01AE: CDDF01  		call	write
+01B1: 3EE7    		ld	a,0xE7
+01B3: CD0502  		call	id_comm
+01B6: C1      		pop	bc
+01B7: C2D401  		jp	nz,ioerror
+              	
+              		; Increment counter
+01BA: 03      		inc	bc
+01BB: AF      		xor	a
+01BC: B1      		or	c
+01BD: 20E1    		jr	nz,format1
+              	
+01BF: 15      		dec	d
+01C0: 200B    		jr	nz,format2
+01C2: C5      		push	bc
+01C3: 0E02    		ld	c,b_cout
+01C5: 1E2E    		ld	e,'.'
+01C7: CD0500  		call	bdos
+01CA: C1      		pop	bc
+01CB: 1608    		ld	d,8
+              	
+01CD: 78      	format2:ld	a,b
+01CE: B1      		or	c
+01CF: 20CF    		jr	nz,format1
               		
               		; Generate system onto disk
-018F:         	sysgen:	
+01D1: C30000  	sysgen:	jp	0
+              		
+              		; Handle an IO error
+01D4: 0E09    	ioerror:ld	c,b_print 
+01D6: 117503  		ld	de,iomsg
+01D9: CD0500  		call	bdos
+              	
+01DC: C30000  		jp	0
+              	
+              	; Executes a write command, data written from buffer
+              	;
+              	; uses: af, bc, hl
+01DF: CD0D02  	write:	call	id_busy
+01E2: 3E30    		ld	a,0x30
+01E4: CD0502  		call	id_comm
+01E7: CDFE01  		call	id_wdrq
+01EA: 0600    		ld	b,0
+01EC: 21B003  		ld	hl,top
+01EF: 4E      	write0:	ld	c,(hl)
+01F0: 23      		inc	hl
+01F1: 7E      		ld	a,(hl)
+01F2: D3C1    		out	(id_base+1),a
+01F4: 23      		inc	hl
+01F5: 79      		ld	a,c
+01F6: D3C0    		out	(id_base),a
+01F8: 10F5    		djnz	write0
+01FA: CD0D02  		call	id_busy
+01FD: C9      		ret
               		
               	; Waits for a DRQ (Data Request)
               	;
               	; uses: af
-018F: DBCE    	id_wdrq:in	a,(id_base+0xE)
-0191: CB5F    		bit	3,a
-0193: 28FA    		jr	z,id_wdrq
-0195: C9      		ret
+01FE: DBCE    	id_wdrq:in	a,(id_base+0xE)
+0200: CB5F    		bit	3,a
+0202: 28FA    		jr	z,id_wdrq
+0204: C9      		ret
               		
               	; Issues an IDE command
               	; a = Command to issue
               	;
               	; uses: af
-0196: F5      	id_comm:push	af
-0197: CD9E01  		call	id_busy
-019A: F1      		pop	af
-019B: D3CE    		out	(id_base+0xE),a
-019D: C9      		ret
+0205: F5      	id_comm:push	af
+0206: CD0D02  		call	id_busy
+0209: F1      		pop	af
+020A: D3CE    		out	(id_base+0xE),a
+020C: C9      		ret
               		
               		
               	; Waits for the IDE drive to no longer be busy
-019E: DBCE    	id_busy:in	a,(id_base+0xE)
-01A0: CB77    		bit	6,a
-01A2: 28FA    		jr	z,id_busy
-01A4: CB7F    		bit	7,a
-01A6: 20F6    		jr	nz,id_busy
-01A8: C9      		ret
+              	;
+              	; Resets flag z on error
+020D: DBCE    	id_busy:in	a,(id_base+0xE)
+020F: CB77    		bit	6,a
+0211: 28FA    		jr	z,id_busy
+0213: CB7F    		bit	7,a
+0215: 20F6    		jr	nz,id_busy
+0217: CB47    		bit	0,a
+0219: C9      		ret
               		
               	; Gets a single character option from the user
               	; Letters will be converted to upper case
               	;
               	; Returns character in A
               	; uses: all
-01A9: 0E0A    	getopt:	ld	c,0x0A
-01AB: 111903  		ld	de,inpbuf
-01AE: CD0500  		call	bdos
-01B1: 3A1B03  		ld	a,(inpbuf+2)
+021A: 0E0A    	getopt:	ld	c,0x0A
+021C: 11AC03  		ld	de,inpbuf
+021F: CD0500  		call	bdos
+0222: 3AAE03  		ld	a,(inpbuf+2)
               		
               	; Converts lowercase to uppercase
               	; a = Character to convert
               	;
               	; Returns uppercase in A
               	; uses: af
-01B4: E67F    	ltou:	and	0x7F
-01B6: FE61    		cp	0x61		; 'a'
-01B8: D8      		ret	c
-01B9: FE7B    		cp	0x7B		; '{'
-01BB: D0      		ret	nc
-01BC: D620    		sub	0x20
-01BE: C9      		ret
+0225: E67F    	ltou:	and	0x7F
+0227: FE61    		cp	0x61		; 'a'
+0229: D8      		ret	c
+022A: FE7B    		cp	0x7B		; '{'
+022C: D0      		ret	nc
+022D: D620    		sub	0x20
+022F: C9      		ret
               		
               	; Print decimal
               	; hl = value to print
               	;
               	; uses: all
-01BF: 1630    	putd:	ld	d,'0'
-01C1: 01F0D8  		ld	bc,0-10000
-01C4: CDDD01  		call	putd0
-01C7: 0118FC  		ld	bc,0-1000
-01CA: CDDD01  		call	putd0
-01CD: 019CFF  		ld	bc,0-100
-01D0: CDDD01  		call	putd0
-01D3: 01F6FF  		ld	bc,0-10
-01D6: CDDD01  		call	putd0
-01D9: 01FFFF  		ld	bc,0-1
-01DC: 15      		dec	d
-01DD: 3E2F    	putd0:	ld	a,'0'-1		; get character
-01DF: 3C      	putd1:	inc	a
-01E0: 09      		add	hl,bc
-01E1: 38FC    		jr	c,putd1
-01E3: ED42    		sbc	hl,bc
-01E5: 47      		ld	b,a
-01E6: BA      		cp	d		; check for leading zeros
-01E7: C8      		ret	z
-01E8: 15      		dec	d
+0230: 1630    	putd:	ld	d,'0'
+0232: 01F0D8  		ld	bc,0-10000
+0235: CD4E02  		call	putd0
+0238: 0118FC  		ld	bc,0-1000
+023B: CD4E02  		call	putd0
+023E: 019CFF  		ld	bc,0-100
+0241: CD4E02  		call	putd0
+0244: 01F6FF  		ld	bc,0-10
+0247: CD4E02  		call	putd0
+024A: 01FFFF  		ld	bc,0-1
+024D: 15      		dec	d
+024E: 3E2F    	putd0:	ld	a,'0'-1		; get character
+0250: 3C      	putd1:	inc	a
+0251: 09      		add	hl,bc
+0252: 38FC    		jr	c,putd1
+0254: ED42    		sbc	hl,bc
+0256: 47      		ld	b,a
+0257: BA      		cp	d		; check for leading zeros
+0258: C8      		ret	z
+0259: 15      		dec	d
               		
               		; Actually print character out
-01E9: C5      		push	bc
-01EA: D5      		push	de
-01EB: E5      		push	hl
-01EC: 58      		ld	e,b
-01ED: 0E02    		ld	c,b_cout
-01EF: CD0500  		call	bdos
-01F2: E1      		pop	hl
-01F3: D1      		pop	de
-01F4: C1      		pop	bc
-01F5: C9      		ret
+025A: C5      		push	bc
+025B: D5      		push	de
+025C: E5      		push	hl
+025D: 58      		ld	e,b
+025E: 0E02    		ld	c,b_cout
+0260: CD0500  		call	bdos
+0263: E1      		pop	hl
+0264: D1      		pop	de
+0265: C1      		pop	bc
+0266: C9      		ret
               		
               	; Waits a little bit
               	; b = Number of cycles to stall for
               	;
               	; uses: b
-01F6: C5      	stall:  push	bc
-01F7: C1      		pop	bc
-01F8: 10FC    		djnz	stall
-01FA: C9      		ret
+0267: C5      	stall:  push	bc
+0268: C1      		pop	bc
+0269: 10FC    		djnz	stall
+026B: C9      		ret
               		
               	; Variables
               		
-01FB:         	sysimg:
-01FB: 0000    		defw	0
+026C:         	sysimg:
+026C: 0000    		defw	0
               		
-01FD:         	curdrv:
-01FD: 00      		defb	0
+026E:         	curdrv:
+026E: 00      		defb	0
               	
-01FE:         	doform:
-01FE: 00      		defb	0
+026F:         	doform:
+026F: 00      		defb	0
               	
               	; Strings
               		
-01FF:         	splash:
-01FF: 4E414255		defb	'NABU IDE SysGen Utility',0x0A,0x0D
-0203: 20494445	
-0207: 20537973	
-020B: 47656E20	
-020F: 5574696C	
-0213: 6974790A	
-0217: 0D      	
-0218: 52657620		defb	'Rev 1a, tergav17 (Gavin)',0x0A,0x0D,'$'
-021C: 31612C20	
-0220: 74657267	
-0224: 61763137	
-0228: 20284761	
-022C: 76696E29	
-0230: 0A0D24  	
+0270:         	splash:
+0270: 4E414255		defb	'NABU IDE SysGen Utility',0x0A,0x0D
+0274: 20494445	
+0278: 20537973	
+027C: 47656E20	
+0280: 5574696C	
+0284: 6974790A	
+0288: 0D      	
+0289: 52657620		defb	'Rev 1a, tergav17 (Gavin)',0x0A,0x0D,'$'
+028D: 31612C20	
+0291: 74657267	
+0295: 61763137	
+0299: 20284761	
+029D: 76696E29	
+02A1: 0A0D24  	
               	
-0233:         	cfgmsg:
-0233: 0A0D5365		defb	0x0A,0x0D,'Select a System Image:',0x0A,0x0A,0x0D
-0237: 6C656374	
-023B: 20612053	
-023F: 79737465	
-0243: 6D20496D	
-0247: 6167653A	
-024B: 0A0A0D  	
+02A4:         	cfgmsg:
+02A4: 0A0D5365		defb	0x0A,0x0D,'Select a System Image:',0x0A,0x0A,0x0D
+02A8: 6C656374	
+02AC: 20612053	
+02B0: 79737465	
+02B4: 6D20496D	
+02B8: 6167653A	
+02BC: 0A0A0D  	
               		
-024E: 20202020		defb	'    1: IshkurCP/M IDE + NFS',0x0A,0x0D
-0252: 313A2049	
-0256: 73686B75	
-025A: 7243502F	
-025E: 4D204944	
-0262: 45202B20	
-0266: 4E46530A	
-026A: 0D      	
-026B: 20202020		defb	'    9: Exit',0x0A,0x0A,0x0D
-026F: 393A2045	
-0273: 7869740A	
-0277: 0A0D    	
-0279: 4F707469		defb	'Option: $'
-027D: 6F6E3A20	
-0281: 24      	
+02BF: 20202020		defb	'    1: IshkurCP/M IDE + NFS',0x0A,0x0D
+02C3: 313A2049	
+02C7: 73686B75	
+02CB: 7243502F	
+02CF: 4D204944	
+02D3: 45202B20	
+02D7: 4E46530A	
+02DB: 0D      	
+02DC: 20202020		defb	'    9: Exit',0x0A,0x0A,0x0D
+02E0: 393A2045	
+02E4: 7869740A	
+02E8: 0A0D    	
+02EA: 4F707469		defb	'Option: $'
+02EE: 6F6E3A20	
+02F2: 24      	
               		
               		
-0282:         	drvmsg:	
-0282: 0A0D4C6F		defb	0x0A,0x0D,'Logical Drive # (0,1): $'
-0286: 67696361	
-028A: 6C204472	
-028E: 69766520	
-0292: 23202830	
-0296: 2C31293A	
-029A: 2024    	
+02F3:         	drvmsg:	
+02F3: 0A0D4C6F		defb	0x0A,0x0D,'Logical Drive # (0,1): $'
+02F7: 67696361	
+02FB: 6C204472	
+02FF: 69766520	
+0303: 23202830	
+0307: 2C31293A	
+030B: 2024    	
               	
-029C:         	formmsg:	
-029C: 0A0D466F		defb	0x0A,0x0D,'Format Disk? (Y,N): $'
-02A0: 726D6174	
-02A4: 20446973	
-02A8: 6B3F2028	
-02AC: 592C4E29	
-02B0: 3A2024  	
+030D:         	formmsg:	
+030D: 0A0D466F		defb	0x0A,0x0D,'Format Disk? (Y,N): $'
+0311: 726D6174	
+0315: 20446973	
+0319: 6B3F2028	
+031D: 592C4E29	
+0321: 3A2024  	
               		
-02B3:         	readymsg:	
-02B3: 0A0D5265		defb	0x0A,0x0D,'Ready to begin? (Y,N): $'
-02B7: 61647920	
-02BB: 746F2062	
-02BF: 6567696E	
-02C3: 3F202859	
-02C7: 2C4E293A	
-02CB: 2024    	
+0324:         	readymsg:	
+0324: 0A0D5265		defb	0x0A,0x0D,'Ready to begin? (Y,N): $'
+0328: 61647920	
+032C: 746F2062	
+0330: 6567696E	
+0334: 3F202859	
+0338: 2C4E293A	
+033C: 2024    	
               	
-02CD:         	fnowmsg:	
-02CD: 0A0D466F		defb	0x0A,0x0D,'Formatting Drive Now... $'
-02D1: 726D6174	
-02D5: 74696E67	
-02D9: 20447269	
-02DD: 7665204E	
-02E1: 6F772E2E	
-02E5: 2E2024  	
+033E:         	fnowmsg:	
+033E: 0A0D466F		defb	0x0A,0x0D,'Formatting Drive Now...',0x0A,0x0D,'$'
+0342: 726D6174	
+0346: 74696E67	
+034A: 20447269	
+034E: 7665204E	
+0352: 6F772E2E	
+0356: 2E0A0D24	
               	
-              	
-02E8:         	noderror:	
-02E8: 0A0D4572		defb	0x0A,0x0D,'Error: No Disk Detected!$'
-02EC: 726F723A	
-02F0: 204E6F20	
-02F4: 4469736B	
-02F8: 20446574	
-02FC: 65637465	
-0300: 642124  	
+035A:         	nodmsg:	
+035A: 0A0D4572		defb	0x0A,0x0D,'Error: No Disk Detected!$'
+035E: 726F723A	
+0362: 204E6F20	
+0366: 4469736B	
+036A: 20446574	
+036E: 65637465	
+0372: 642124  	
               		
-0303:         	donemsg:	
-0303: 0A0D4F70		defb	0x0A,0x0D,'Operation Complete!$'
-0307: 65726174	
-030B: 696F6E20	
-030F: 436F6D70	
-0313: 6C657465	
-0317: 2124    	
+0375:         	iomsg:	
+0375: 0A0D4572		defb	0x0A,0x0D,'Error: Sector Transfer Failed!$'	
+0379: 726F723A	
+037D: 20536563	
+0381: 746F7220	
+0385: 5472616E	
+0389: 73666572	
+038D: 20466169	
+0391: 6C656421	
+0395: 24      	
+              		
+0396:         	donemsg:	
+0396: 0A0D4F70		defb	0x0A,0x0D,'Operation Complete!$'
+039A: 65726174	
+039E: 696F6E20	
+03A2: 436F6D70	
+03A6: 6C657465	
+03AA: 2124    	
               	
               	
               		
               	; Input buffer
-0319: 02000000	inpbuf:	defb	0x02, 0x00, 0x00, 0x00
+03AC: 02000000	inpbuf:	defb	0x02, 0x00, 0x00, 0x00
               		
               	; Top of program, use it to store stuff
-031D:         	top:
+03B0:         	top:
 
 
 ; +++ segments +++
 
-#CODE          = $0100 =   256,  size = $021D =   541
+#CODE          = $0100 =   256,  size = $02B0 =   688
 
 ; +++ global symbols +++
 
-_end     = $031D =   797          idegen.asm:31 (unused)
-_size    = $021D =   541          idegen.asm:31 (unused)
+_end     = $03B0 =   944          idegen.asm:31 (unused)
+_size    = $02B0 =   688          idegen.asm:31 (unused)
 b_close  = $0010 =    16          idegen.asm:22 (unused)
 b_coin   = $0001 =     1          idegen.asm:18 (unused)
 b_cout   = $0002 =     2          idegen.asm:19
@@ -361,37 +449,44 @@ b_print  = $0009 =     9          idegen.asm:20
 b_read   = $0014 =    20          idegen.asm:23 (unused)
 b_write  = $0015 =    21          idegen.asm:24 (unused)
 bdos     = $0005 =     5          idegen.asm:15
-cfgmsg   = $0233 =   563          idegen.asm:240
-curdrv   = $01FD =   509          idegen.asm:228
-doform   = $01FE =   510          idegen.asm:231
-donemsg  = $0303 =   771          idegen.asm:264 (unused)
-drvmsg   = $0282 =   642          idegen.asm:248
+cfgmsg   = $02A4 =   676          idegen.asm:318
+curdrv   = $026E =   622          idegen.asm:306
+doform   = $026F =   623          idegen.asm:309
+donemsg  = $0396 =   918          idegen.asm:344 (unused)
+drvmsg   = $02F3 =   755          idegen.asm:326
 fcb      = $005C =    92          idegen.asm:16 (unused)
-fnowmsg  = $02CD =   717          idegen.asm:257
+fnowmsg  = $033E =   830          idegen.asm:335
 format   = $017B =   379          idegen.asm:112
-formmsg  = $029C =   668          idegen.asm:251
+format0  = $0195 =   405          idegen.asm:125
+format1  = $01A0 =   416          idegen.asm:136
+format2  = $01CD =   461          idegen.asm:168
+formmsg  = $030D =   781          idegen.asm:329
 getcurd  = $0123 =   291          idegen.asm:63
-getopt   = $01A9 =   425          idegen.asm:159
+getopt   = $021A =   538          idegen.asm:237
 getsys   = $0109 =   265          idegen.asm:41
 id_base  = $00C0 =   192          idegen.asm:28
-id_busy  = $019E =   414          idegen.asm:147
-id_comm  = $0196 =   406          idegen.asm:139 (unused)
-id_wdrq  = $018F =   399          idegen.asm:130
-inpbuf   = $0319 =   793          idegen.asm:270
-ltou     = $01B4 =   436          idegen.asm:169 (unused)
-noderror = $02E8 =   744          idegen.asm:261
-putd     = $01BF =   447          idegen.asm:181 (unused)
-putd0    = $01DD =   477          idegen.asm:192
-putd1    = $01DF =   479          idegen.asm:193
-readymsg = $02B3 =   691          idegen.asm:254
+id_busy  = $020D =   525          idegen.asm:224
+id_comm  = $0205 =   517          idegen.asm:214
+id_wdrq  = $01FE =   510          idegen.asm:205
+inpbuf   = $03AC =   940          idegen.asm:350
+ioerror  = $01D4 =   468          idegen.asm:176
+iomsg    = $0375 =   885          idegen.asm:341
+ltou     = $0225 =   549          idegen.asm:247 (unused)
+nodmsg   = $035A =   858          idegen.asm:338
+putd     = $0230 =   560          idegen.asm:259 (unused)
+putd0    = $024E =   590          idegen.asm:270
+putd1    = $0250 =   592          idegen.asm:271
+readymsg = $0324 =   804          idegen.asm:332
 setcurd  = $013C =   316          idegen.asm:76
 setsys   = $0120 =   288          idegen.asm:60
-splash   = $01FF =   511          idegen.asm:236
-stall    = $01F6 =   502          idegen.asm:218
+splash   = $0270 =   624          idegen.asm:314
+stall    = $0267 =   615          idegen.asm:296
 start    = $0100 =   256          idegen.asm:35 (unused)
-sysgen   = $018F =   399          idegen.asm:125
-sysimg   = $01FB =   507          idegen.asm:225
-top      = $031D =   797          idegen.asm:273 (unused)
+sysgen   = $01D1 =   465          idegen.asm:173
+sysimg   = $026C =   620          idegen.asm:303
+top      = $03B0 =   944          idegen.asm:353
+write    = $01DF =   479          idegen.asm:185
+write0   = $01EF =   495          idegen.asm:191
 
 
 total time: 0.0025 sec.

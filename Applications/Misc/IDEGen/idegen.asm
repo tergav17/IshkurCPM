@@ -102,7 +102,7 @@ setcurd:ld	a,b
 	
 	; Error!
 	ld	c,b_print
-	ld	de,noderror
+	ld	de,nodmsg
 	call	bdos
 	xor	a
 	out	(id_base+0xC),a
@@ -118,11 +118,86 @@ format:	call	id_busy
 	ld	de,fnowmsg
 	call	bdos
 	
-	ret
+	; Fill top of memory with 0xE5
+	ld	hl,top
+	ld	b,0
+	ld	a,0xE5
+format0:ld	(hl),a
+	inc	hl
+	ld	(hl),a
+	inc	hl
+	djnz	format0
 	
+	; Write 65536 sectors
+	ld	bc,0
+	ld	d,8
+
+	; Set transfer registers
+format1:ld	a,1
+	out	(id_base+0x4),a
+	ld	a,c
+	out	(id_base+0x6),a
+	ld	a,b
+	out	(id_base+0x8),a
+	xor	a
+	out	(id_base+0xA),a
+	
+	; Perform the write
+	push	bc
+	call	write
+	ld	a,0xE7
+	call	id_comm
+	pop	bc
+	jp	nz,ioerror
+
+	; Increment counter
+	inc	bc
+	xor	a
+	or	c
+	jr	nz,format1
+
+	dec	d
+	jr	nz,format2
+	push	bc
+	ld	c,b_cout
+	ld	e,'.'
+	call	bdos
+	pop	bc
+	ld	d,8
+
+format2:ld	a,b
+	or	c
+	jr	nz,format1
 	
 	; Generate system onto disk
-sysgen:	
+sysgen:	jp	0
+	
+	; Handle an IO error
+ioerror:ld	c,b_print 
+	ld	de,iomsg
+	call	bdos
+
+	jp	0
+
+; Executes a write command, data written from buffer
+;
+; uses: af, bc, hl
+write:	call	id_busy
+	ld	a,0x30
+	call	id_comm
+	call	id_wdrq
+	ld	b,0
+	ld	hl,top
+write0:	ld	c,(hl)
+	inc	hl
+	ld	a,(hl)
+	out	(id_base+1),a
+	inc	hl
+	ld	a,c
+	out	(id_base),a
+	djnz	write0
+	call	id_busy
+	ret
 	
 ; Waits for a DRQ (Data Request)
 ;
@@ -144,11 +219,14 @@ id_comm:push	af
 	
 	
 ; Waits for the IDE drive to no longer be busy
+;
+; Resets flag z on error
 id_busy:in	a,(id_base+0xE)
 	bit	6,a
 	jr	z,id_busy
 	bit	7,a
 	jr	nz,id_busy
+	bit	0,a
 	ret
 	
 ; Gets a single character option from the user
@@ -255,11 +333,13 @@ readymsg:
 	defb	0x0A,0x0D,'Ready to begin? (Y,N): $'
 
 fnowmsg:	
-	defb	0x0A,0x0D,'Formatting Drive Now... $'
+	defb	0x0A,0x0D,'Formatting Drive Now...',0x0A,0x0D,'$'
 
-
-noderror:	
+nodmsg:	
 	defb	0x0A,0x0D,'Error: No Disk Detected!$'
+	
+iomsg:	
+	defb	0x0A,0x0D,'Error: Sector Transfer Failed!$'	
 	
 donemsg:	
 	defb	0x0A,0x0D,'Operation Complete!$'
