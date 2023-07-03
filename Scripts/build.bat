@@ -65,8 +65,12 @@ move futil.com ..\Directory >NUL
 move futil.lst ..\Output\Application\Nabu\Listings >NUL
 cd Misc\TxtFix
 ..\..\..\Build\zasm txtfix.asm -u -w -b txtfix.com
-move txtfix.com ..\..\..\Directory >NUL
-move txtfix.lst ..\..\..\Output\Application\Nabu\Listings >NUL
+copy txtfix.com ..\..\..\Directory >NUL
+copy txtfix.lst ..\..\..\Output\Application\Nabu\Listings >NUL
+cd ..\..
+cd Misc\IDEGen
+..\..\..\Build\zasm idegen.asm -u -w -b idegen.com
+copy txtfix.lst ..\..\..\Output\Application\Nabu\Listings >NUL
 cd ..\..
 
 REM Assemble the disk image
