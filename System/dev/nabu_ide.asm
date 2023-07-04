@@ -186,6 +186,7 @@ id_strk:ld	hl,(id_ctrk)
 id_ssec:ld	a,(id_csec)
 	xor	c
 	and	0xFC
+	ld	a,c
 	ld	(id_csec),a
 	ret	z	; No effective change!
 	call	id_wdef
@@ -204,8 +205,8 @@ id_sbno:ld	hl,(id_ctrk)
 	srl	a
 	srl	a
 	or	l
-	ld	l,a
 	out	(id_base+0x6),a
+	ld	a,(id_curd)
 	or	h
 	out	(id_base+0x8),a
 	xor	a
