@@ -48,7 +48,7 @@ getsys: ld	c,b_print
 	ret	z
 	
 	; System Option #1
-	ld	hl,0	; pointer to image
+	ld	hl,sys_ide_nfs	; pointer to image
 	cp	'1'
 	jr	z,setsys
 
@@ -173,12 +173,12 @@ format2:ld	a,b
 	; Drop down to sysgen
 	ld	c,b_print
 	ld	de,fdonemsg
-	call	b_print
+	call	bdos
 	
 	; Generate system onto disk
 sysgen:	ld	c,b_print
 	ld	de,gnowmsg
-	call	b_print
+	call	bdos
 	
 	; Write GRB (Sectors 1-4)
 	ld	b,4
@@ -201,11 +201,11 @@ sysgen:	ld	c,b_print
 	; All done
 	ld	c,b_print
 	ld	de,gdonemsg
-	call	b_print
+	call	bdos
 	
 	ld	c,b_print
 	ld	de,donemsg
-	call	b_print
+	call	bdos
 	
 	jp	0
 	

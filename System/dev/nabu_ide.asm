@@ -315,7 +315,7 @@ id_ccp:	ld	c,5
 
 ; Reads in a 2K bytes, starting at track 0, sector (id_r2ks)
 ; This is placed into the cbase
-id_r2k: ld	a,(id_rdsk)
+id_r2k: ld	a,id_rdsk
 	out	(id_base+0xC),a
 	ld	b,10
 	call	id_stal
