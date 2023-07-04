@@ -61,7 +61,7 @@ move boot\boot_nfs_hybrid.lst ..\Output\Nabu_NFS\Listings >NUL
 
 ..\Build\zasm boot\boot_ide.asm -u -w -b boot_ide.bin
 move boot_ide.bin ..\Output\Nabu_IDE\boot.bin >NUL
-move boot\boot_ide.lst ..\Output\Nabu_NFS\Listings >NUL
+move boot\boot_ide.lst ..\Output\Nabu_IDE\Listings >NUL
 
 
 REM Build Ishkur-specific applications
