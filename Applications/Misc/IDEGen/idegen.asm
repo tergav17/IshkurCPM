@@ -186,8 +186,20 @@ sysgen:	ld	c,b_print
 	ld	hl,fontgrb
 	call	trans
 	
-	; Write boot block (TODO) (Sector 0)
-	ld	hl,(sysimg)	
+	; Write boot block (Sector 0)
+	; Configure boot parameters too
+	ld	hl,(sysimg)
+	ld	de,boot+2
+	ldi
+	ldi
+	ld	a,(hl)
+	sub	a,4
+	ld	(de),a
+	
+	ld	hl,boot
+	ld	b,1
+	ld	c,0
+	call	trans
 	
 	; Write system (Sectors 5+)
 	ld	hl,(sysimg)
@@ -418,8 +430,11 @@ inpbuf:	defb	0x02, 0x00, 0x00, 0x00
 fontgrb:
 #insert	"font.bin"
 
+boot:
+#insert	"../../../Output/Nabu_IDE/boot.bin"
+
 sys_ide_nfs:
-	defw	0xD400		; Load in address
+	defw	0xDC00		; Load in address
 	defb	19		; Sectors to write
 #insert "../../../Output/Nabu_IDE/ide_nfs_cpm22.bin"
 	
