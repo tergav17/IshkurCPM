@@ -29,6 +29,11 @@ REM NFS hybrid kernel
 move cpm22.bin ..\..\Output\Nabu_NFS\NFS_HYBRID_CPM22.SYS >NUL
 move *.lst ..\..\Output\Nabu_NFS\Listings >NUL
 
+REM IDE + NFS kernel
+..\..\Build\zasm config_ide_nfs.asm -u -w -b cpm22.bin
+move cpm22.bin ..\..\Output\Nabu_IDE\ide_nfs_cpm22.bin >NUL
+move *.lst ..\..\Output\Nabu_IDE\Listings >NUL
+
 REM Move resource into outputs
 cd ..
 copy res\licca_font.bin ..\Output\FONT.GRB >NUL
