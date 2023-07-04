@@ -148,21 +148,21 @@ syshook:jp	ns_sysh
 	
 ; One of the block devices needs to have the responsibiliy
 ; of loading the CCP into memory. Define the jump vector here
-resccp:	jp	ns_ccp
+resccp:	jp	id_ccp
 
 ; Additionally, if Ishkur is using a graphical device, that
 ; device may temporarily need to access the Graphical Resource
 ; Block (GRB) to load in fonts and such. This is up to 2k in
 ; size, and goes in the location that the CCP resides
-resgrb:	jp	ns_grb
+resgrb:	jp	id_grb
 
 ; A device of "0" will be read as a non-existant device
 ; The 'init' signal can be sent to the same devices many 
 ; times if it has multipe entires in this table.
-bdevsw:	defw	nfsdev,	0	; 'A'
-	defw	nfsdev,	1	; 'B'
-	defw	idedev,	0	; 'C'
-	defw	idedev,	1	; 'D'
+bdevsw:	defw	idedev,	0	; 'A'
+	defw	idedev,	1	; 'B'
+	defw	idedev,	2	; 'C'
+	defw	idedev,	3	; 'D'
 	defw	nfsdev,	4	; 'E'
 	defw	nfsdev,	5	; 'F'
 	defw	nfsdev,	6	; 'G'

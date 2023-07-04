@@ -133,9 +133,7 @@ format0:ld	(hl),a
 	ld	d,8
 
 	; Set transfer registers
-format1:ld	a,1
-	out	(id_base+0x4),a
-	ld	a,c
+format1:ld	a,c
 	out	(id_base+0x6),a
 	ld	a,b
 	out	(id_base+0x8),a
@@ -144,9 +142,12 @@ format1:ld	a,1
 	
 	; Perform the write
 	push	bc
+	ld	hl,top
 	call	write
+	push	af
 	ld	a,0xE7
 	call	id_comm
+	pop	af
 	pop	bc
 	jp	nz,ioerror
 
@@ -169,8 +170,44 @@ format2:ld	a,b
 	or	c
 	jr	nz,format1
 	
+	; Drop down to sysgen
+	ld	c,b_print
+	ld	de,fdonemsg
+	call	b_print
+	
 	; Generate system onto disk
-sysgen:	jp	0
+sysgen:	ld	c,b_print
+	ld	de,gnowmsg
+	call	b_print
+	
+	; Write GRB (Sectors 1-4)
+	ld	b,4
+	ld	c,1
+	ld	hl,fontgrb
+	call	trans
+	
+	; Write boot block (TODO) (Sector 0)
+	ld	hl,(sysimg)	
+	
+	; Write system (Sectors 5+)
+	ld	hl,(sysimg)
+	inc	hl
+	inc	hl
+	ld	b,(hl)
+	ld	c,5
+	inc	hl
+	call	trans
+	
+	; All done
+	ld	c,b_print
+	ld	de,gdonemsg
+	call	b_print
+	
+	ld	c,b_print
+	ld	de,donemsg
+	call	b_print
+	
+	jp	0
 	
 	; Handle an IO error
 ioerror:ld	c,b_print 
@@ -179,15 +216,36 @@ ioerror:ld	c,b_print
 
 	jp	0
 
+; Transfers a number of blocks onto the IDE device
+; b = Number of blocks to transfer
+; c = Inital block
+; hl = Source of data
+trans:	xor	a
+	out	(id_base+0x8),a
+	out	(id_base+0xA),a
+	
+trans0:	ld	a,c
+	out	(id_base+0x6),a
+	push	bc
+	call	write
+	pop	bc
+	jp	nz,ioerror
+	inc	c
+	djnz	trans0
+	ret
+
 ; Executes a write command, data written from buffer
+; hl = Source of data
 ;
+; Returns hl += 512
 ; uses: af, bc, hl
-write:	call	id_busy
+write:	ld	a,1
+	out	(id_base+0x4),a
+	call	id_busy
 	ld	a,0x30
 	call	id_comm
 	call	id_wdrq
 	ld	b,0
-	ld	hl,top
 write0:	ld	c,(hl)
 	inc	hl
 	ld	a,(hl)
@@ -334,6 +392,15 @@ readymsg:
 
 fnowmsg:	
 	defb	0x0A,0x0D,'Formatting Drive Now...',0x0A,0x0D,'$'
+	
+fdonemsg:	
+	defb	0x0A,0x0D,'Format Complete$'
+	
+gnowmsg:
+	defb	0x0A,0x0D,'Generating System Now...$'
+	
+gdonemsg:
+	defb	0x0A,0x0D,'System Generate Done$'
 
 nodmsg:	
 	defb	0x0A,0x0D,'Error: No Disk Detected!$'
@@ -344,10 +411,17 @@ iomsg:
 donemsg:	
 	defb	0x0A,0x0D,'Operation Complete!$'
 
-
-	
 ; Input buffer
 inpbuf:	defb	0x02, 0x00, 0x00, 0x00
+	
+; Font GRB, load into sectors 1-4
+fontgrb:
+#insert	"font.bin"
+
+sys_ide_nfs:
+	defw	0xD400		; Load in address
+	defb	19		; Sectors to write
+#insert "../../../Output/Nabu_IDE/ide_nfs_cpm22.bin"
 	
 ; Top of program, use it to store stuff
 top:

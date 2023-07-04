@@ -307,20 +307,40 @@ id_wde1:xor	a
 	ret
 	
 ; Loads the GRB into memory from sector 2-3
-id_grb:	ld	a,2
+id_grb:	ld	c,1
 	jr	id_r2k
 	
 ; Loads the CCP into memory from sectors 4-5
-id_ccp:	ld	a,4
+id_ccp:	ld	c,5
 
 ; Reads in a 2K bytes, starting at track 0, sector (id_r2ks)
 ; This is placed into the cbase
-id_r2k: ret
+id_r2k: ld	a,(id_rdsk)
+	out	(id_base+0xC),a
+	ld	b,10
+	call	id_stal
+
+	; Prepare to load 4 sectors into cbase
+	ld	hl,cbase
+	ld	b,4
+	xor	a
+	out	(id_base+0x8),a
+	out	(id_base+0xA),a
+	
+id_r2k0:ld	a,c
+	out	(id_base+0x6),a
+	push	bc
+	call	id_rphy
+	pop	bc
+	inc	c
+	djnz	id_r2k0
+	ret
 
 
 ; Executes a read command
 ; hl = Destination of data
 ;
+; Returns hl += 512
 ; uses: af, bc, d, hl
 id_rphy:ld	a,1
 	out	(id_base+0x04),a
@@ -342,6 +362,7 @@ id_rph0:ini
 ; Executes a write command
 ; hl = Source of data
 ;
+; Returns hl += 512
 ; uses: af, bc, hl
 id_wphy:ld	a,1
 	out	(id_base+0x04),a
