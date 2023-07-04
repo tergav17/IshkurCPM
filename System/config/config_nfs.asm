@@ -42,6 +42,7 @@ mem	equ	54		; CP/M image starts at mem*1024
 #target	BIN			; Set up memory segments
 #code	_TEXT,(mem)*1024
 #data	_BSS,_TEXT_end
+#data	_NOINIT,_BSS_end
 #data	_JUMP_TABLE,0xFF00
 intvec:	defs	16
 dircbuf:defs	128

@@ -1,6 +1,6 @@
               	; --------------------------------------
               	; zasm: assemble "config_nfs_hybrid.asm"
-              	; date: 2023-07-02 23:35:58
+              	; date: 2023-07-03 22:26:25
               	; --------------------------------------
 
 
@@ -48,6 +48,7 @@
               	#target	BIN			; Set up memory segments
 D400:         	#code	_TEXT,(mem)*1024
 F938:         	#data	_BSS,_TEXT_end
+FDB8:         	#data	_NOINIT,_BSS_end
 FF00:         	#data	_JUMP_TABLE,0xFF00
 FF00: 00000000	intvec:	defs	16
 FF04: 00...   	
@@ -5184,7 +5185,7 @@ EA5E: AF      		xor	a
 EA5F: 2138F9  		ld	hl,_TEXT_end
 EA62: 77      		ld	(hl),a
 EA63: 1139F9  		ld	de,_TEXT_end+1
-EA66: 01D204  		ld	bc,_BSS_size
+EA66: 018004  		ld	bc,_BSS_size
 EA69: EDB0    		ldir
               	
               		; Send init signals to all devices
@@ -8051,17 +8052,20 @@ F9B5: 00      	nf_sync:defs	1	; Set if disk needs to be rehomed
 F9B6: 00      	nf_inco:defs	1	; Set if sector is in core already
 F9B7: 00      	nf_dirt:defs	1	; Set if cache is dirty
               	
-F9B8: 00000000	nf_asva:defs	26	; Misc CP/M buffer
+F9B8: 00000000	nf_cach:defs	1024	; Sector cache
 F9BC: 00...   	
-F9D2: 00000000	nf_asvb:defs	26
-F9D6: 00...   	
-F9EC: 00000000	nf_csva:defs	15
-F9F0: 00...   	
-F9FB: 00000000	nf_csvb:defs	15
-F9FF: 00...   	
               	
-FA0A: 00000000	nf_cach:defs	1024	; Sector cache
-FA0E: 00...   	
+              	.area	_NOINIT
+              	
+FDB8: 00000000	nf_asva:defs	26	; Misc CP/M buffer
+FDBC: 00...   	
+FDD2: 00000000	nf_asvb:defs	26
+FDD6: 00...   	
+FDEC: 00000000	nf_csva:defs	15
+FDF0: 00...   	
+FDFB: 00000000	nf_csvb:defs	15
+FDFF: 00...   	
+              	
               	.area	_TEXT
               	
 0002:         	nf_rdsk	equ	2	; Defines which drives contains system
@@ -8084,8 +8088,8 @@ F6CC: 00000000		defw	0,0,0,0
 F6D0: 00000000	
 F6D4: 10FF    		defw	dircbuf	; DIRBUF
 F6D6: ECF6    		defw	nf_dpb	; DPB
-F6D8: ECF9    		defw	nf_csva	; CSV
-F6DA: B8F9    		defw	nf_asva	; ALV
+F6D8: ECFD    		defw	nf_csva	; CSV
+F6DA: B8FD    		defw	nf_asva	; ALV
               	
               	; Disk B DPH
 F6DC:         	nf_dphb:
@@ -8093,8 +8097,8 @@ F6DC: 00000000		defw	0,0,0,0
 F6E0: 00000000	
 F6E4: 10FF    		defw	dircbuf	; DIRBUF
 F6E6: ECF6    		defw	nf_dpb	; DPB
-F6E8: FBF9    		defw	nf_csvb	; CSV
-F6EA: D2F9    		defw	nf_asvb	; ALV
+F6E8: FBFD    		defw	nf_csvb	; CSV
+F6EA: D2FD    		defw	nf_asvb	; ALV
               	
               	; Osborne 1 format
 F6EC:         	nf_dpb:
@@ -8333,7 +8337,7 @@ F803: 2019    		jr	nz,nf_rdw0
 F805: CD04F9  		call	nf_dvsc
 F808: 3AB1F9  		ld	a,(nf_io)
 F80B: 4F      		ld	c,a
-F80C: 210AFA  		ld	hl,nf_cach
+F80C: 21B8F9  		ld	hl,nf_cach
 F80F: CDE2F8  		call	nf_rphy
 F812: 47      		ld	b,a
 F813: CD09F9  		call	nf_udsl
@@ -8350,7 +8354,7 @@ F81E: 2A4DEB  	nf_rdw0:ld	hl,(biodma)
 F821: EB      		ex	de,hl
               	
 F822: 3AB4F9  		ld	a,(nf_subs)
-F825: 218AF9  		ld	hl,nf_cach-128
+F825: 2138F9  		ld	hl,nf_cach-128
 F828: 018000  		ld	bc,128
 F82B: 3C      		inc	a
 F82C: 09      	nf_rdw1:add	hl,bc
@@ -8408,7 +8412,7 @@ F866: 57      		ld	d,a
 F867: 59      		ld	e,c
 F868: 3EA8    		ld	a,0xA8		; Write command
 F86A: ED79    		out	(c),a
-F86C: 210AFA  		ld	hl,nf_cach
+F86C: 21B8F9  		ld	hl,nf_cach
 F86F: ED78    	nf_wde1:in	a,(c)
 F871: 1F      		rra	
 F872: 3009    		jr	nc,nf_wde2
@@ -8591,7 +8595,8 @@ F937: C9      		ret
 ; +++ segments +++
 
 #CODE _TEXT        = $D400 = 54272,  size = $2538 =  9528
-#DATA _BSS         = $F938 = 63800,  size = $04D2 =  1234
+#DATA _BSS         = $F938 = 63800,  size = $0480 =  1152
+#DATA _NOINIT      = $FDB8 = 64952,  size = $0052 =    82
 #DATA _JUMP_TABLE  = $FF00 = 65280,  size = $0090 =   144
 
 ; +++ global symbols +++
@@ -8845,11 +8850,14 @@ WIDE             = $00FF =   255  _TEXT       zcpr1_ccp_nfs.asm:448
 WSTYPE           = $00FF =   255  _TEXT       zcpr1_ccp_nfs.asm:353
 YESCR            = $D9FD = 55805  _TEXT       zcpr1_ccp_nfs.asm:1950
 _BSS             = $F938 = 63800  _BSS        config_nfs_hybrid.asm:44 (unused)
-_BSS_end         = $FE0A = 65034  _BSS        config_nfs_hybrid.asm:44 (unused)
-_BSS_size        = $04D2 =  1234  _BSS        config_nfs_hybrid.asm:44
-_JUMP_TABLE      = $FF00 = 65280  _JUMP_TABLE config_nfs_hybrid.asm:45 (unused)
-_JUMP_TABLE_end  = $FF90 = 65424  _JUMP_TABLE config_nfs_hybrid.asm:45 (unused)
-_JUMP_TABLE_size = $0090 =   144  _JUMP_TABLE config_nfs_hybrid.asm:45 (unused)
+_BSS_end         = $FDB8 = 64952  _BSS        config_nfs_hybrid.asm:44
+_BSS_size        = $0480 =  1152  _BSS        config_nfs_hybrid.asm:44
+_JUMP_TABLE      = $FF00 = 65280  _JUMP_TABLE config_nfs_hybrid.asm:46 (unused)
+_JUMP_TABLE_end  = $FF90 = 65424  _JUMP_TABLE config_nfs_hybrid.asm:46 (unused)
+_JUMP_TABLE_size = $0090 =   144  _JUMP_TABLE config_nfs_hybrid.asm:46 (unused)
+_NOINIT          = $FDB8 = 64952  _NOINIT     config_nfs_hybrid.asm:45 (unused)
+_NOINIT_end      = $FE0A = 65034  _NOINIT     config_nfs_hybrid.asm:45 (unused)
+_NOINIT_size     = $0052 =    82  _NOINIT     config_nfs_hybrid.asm:45 (unused)
 _TEXT            = $D400 = 54272  _TEXT       config_nfs_hybrid.asm:43 (unused)
 _TEXT_end        = $F938 = 63800  _TEXT       config_nfs_hybrid.asm:43
 _TEXT_size       = $2538 =  9528  _TEXT       config_nfs_hybrid.asm:43 (unused)
@@ -8869,7 +8877,7 @@ badsec           = $DCCA = 56522  _TEXT       bdos.asm:104
 badsel           = $DCD5 = 56533  _TEXT       bdos.asm:105
 badslct          = $DC0B = 56331  _TEXT       bdos.asm:34
 batch            = $D4E2 = 54498  _TEXT       zcpr1_ccp_nfs.asm:713
-bdevsw           = $EB70 = 60272  _TEXT       config_nfs_hybrid.asm:161
+bdevsw           = $EB70 = 60272  _TEXT       config_nfs_hybrid.asm:162
 bdosdrv          = $DCC6 = 56518  _TEXT       bdos.asm:103
 bdoserr          = $DCBA = 56506  _TEXT       bdos.asm:102
 bigdisk          = $E9DD = 59869  _TEXT       bdos.asm:2480
@@ -8887,12 +8895,12 @@ bshook           = $EB18 = 60184  _TEXT       bios.asm:288
 callbd           = $EAF6 = 60150  _TEXT       bios.asm:230
 callmj           = $EB4A = 60234  _TEXT       bios.asm:331
 cbase            = $D400 = 54272  _TEXT       zcpr1_ccp_nfs.asm:515
-cbinit           = $EB5E = 60254  _TEXT       config_nfs_hybrid.asm:92
-cdevsw           = $EBB0 = 60336  _TEXT       config_nfs_hybrid.asm:200
+cbinit           = $EB5E = 60254  _TEXT       config_nfs_hybrid.asm:93
+cdevsw           = $EBB0 = 60336  _TEXT       config_nfs_hybrid.asm:201
 cdindi0          = $EB22 = 60194  _TEXT       bios.asm:296
 cdindi1          = $EB28 = 60200  _TEXT       bios.asm:300
 cdindir          = $EB1E = 60190  _TEXT       bios.asm:294
-cfirq            = $EB64 = 60260  _TEXT       config_nfs_hybrid.asm:108 (unused)
+cfirq            = $EB64 = 60260  _TEXT       config_nfs_hybrid.asm:109 (unused)
 charbuf          = $DF0E = 57102  _TEXT       bdos.asm:478
 checkdir         = $E19E = 57758  _TEXT       bdos.asm:991
 checksum         = $E0F7 = 57591  _TEXT       bdos.asm:830
@@ -8951,7 +8959,7 @@ del              = $007F =   127  _TEXT       zcpr1_ccp_nfs.asm:35
 delfile          = $E8D7 = 59607  _TEXT       bdos.asm:2274
 dirbuf           = $E9B9 = 59833  _TEXT       bdos.asm:2453
 dirc1            = $DEE0 = 57056  _TEXT       bdos.asm:434
-dircbuf          = $FF10 = 65296  _JUMP_TABLE config_nfs_hybrid.asm:47
+dircbuf          = $FF10 = 65296  _JUMP_TABLE config_nfs_hybrid.asm:48
 dircio           = $DED4 = 57044  _TEXT       bdos.asm:428
 dirdma           = $E1E0 = 57824  _TEXT       bdos.asm:1034
 dirdma1          = $E1E3 = 57827  _TEXT       bdos.asm:1039
@@ -9038,7 +9046,7 @@ gtnext5          = $E5B6 = 58806  _TEXT       bdos.asm:1743
 home             = $EAD9 = 60121  _TEXT       bios.asm:204
 homedrv          = $DFA1 = 57249  _TEXT       bdos.asm:564
 inbuff           = $D403 = 54275  _TEXT       zcpr1_ccp_nfs.asm:554
-intvec           = $FF00 = 65280  _JUMP_TABLE config_nfs_hybrid.asm:46
+intvec           = $FF00 = 65280  _JUMP_TABLE config_nfs_hybrid.asm:47
 iobyte           = $0003 =     3  _TEXT       zcpr1_ccp_nfs.asm:9
 ioerr1           = $DF05 = 57093  _TEXT       bdos.asm:471
 ioret            = $DFBB = 57275  _TEXT       bdos.asm:584
@@ -9058,62 +9066,62 @@ movedir          = $E1E9 = 57833  _TEXT       bdos.asm:1046
 moveword         = $E494 = 58516  _TEXT       bdos.asm:1572
 newline          = $DDB1 = 56753  _TEXT       bdos.asm:258
 newln1           = $DDB9 = 56761  _TEXT       bdos.asm:261
-nf_asva          = $F9B8 = 63928  _BSS        nabu_fdc.asm:34
-nf_asvb          = $F9D2 = 63954  _BSS        nabu_fdc.asm:35
-nf_atla          = $0041 =    65  _TEXT       nabu_fdc.asm:46
-nf_ayda          = $0040 =    64  _TEXT       nabu_fdc.asm:45
-nf_busy          = $F91B = 63771  _TEXT       nabu_fdc.asm:532
-nf_cach          = $FA0A = 64010  _BSS        nabu_fdc.asm:39
-nf_ccp           = $F8A0 = 63648  _TEXT       nabu_fdc.asm:428 (unused)
-nf_csva          = $F9EC = 63980  _BSS        nabu_fdc.asm:36
-nf_csvb          = $F9FB = 63995  _BSS        nabu_fdc.asm:37
+nf_asva          = $FDB8 = 64952  _NOINIT     nabu_fdc.asm:38
+nf_asvb          = $FDD2 = 64978  _NOINIT     nabu_fdc.asm:39
+nf_atla          = $0041 =    65  _TEXT       nabu_fdc.asm:49
+nf_ayda          = $0040 =    64  _TEXT       nabu_fdc.asm:48
+nf_busy          = $F91B = 63771  _TEXT       nabu_fdc.asm:535
+nf_cach          = $F9B8 = 63928  _BSS        nabu_fdc.asm:34
+nf_ccp           = $F8A0 = 63648  _TEXT       nabu_fdc.asm:431 (unused)
+nf_csva          = $FDEC = 65004  _NOINIT     nabu_fdc.asm:40
+nf_csvb          = $FDFB = 65019  _NOINIT     nabu_fdc.asm:41
 nf_curd          = $F9B3 = 63923  _BSS        nabu_fdc.asm:28
-nf_dint          = $F926 = 63782  _TEXT       nabu_fdc.asm:548
+nf_dint          = $F926 = 63782  _TEXT       nabu_fdc.asm:551
 nf_dirt          = $F9B7 = 63927  _BSS        nabu_fdc.asm:32
-nf_dpb           = $F6EC = 63212  _TEXT       nabu_fdc.asm:73
-nf_dpha          = $F6CC = 63180  _TEXT       nabu_fdc.asm:57
-nf_dphb          = $F6DC = 63196  _TEXT       nabu_fdc.asm:65
-nf_dvsc          = $F904 = 63748  _TEXT       nabu_fdc.asm:513
-nf_dvsl          = $F90A = 63754  _TEXT       nabu_fdc.asm:516
-nf_eint          = $F92F = 63791  _TEXT       nabu_fdc.asm:557
-nf_grb           = $F899 = 63641  _TEXT       nabu_fdc.asm:423 (unused)
-nf_home          = $F73E = 63294  _TEXT       nabu_fdc.asm:147
+nf_dpb           = $F6EC = 63212  _TEXT       nabu_fdc.asm:76
+nf_dpha          = $F6CC = 63180  _TEXT       nabu_fdc.asm:60
+nf_dphb          = $F6DC = 63196  _TEXT       nabu_fdc.asm:68
+nf_dvsc          = $F904 = 63748  _TEXT       nabu_fdc.asm:516
+nf_dvsl          = $F90A = 63754  _TEXT       nabu_fdc.asm:519
+nf_eint          = $F92F = 63791  _TEXT       nabu_fdc.asm:560
+nf_grb           = $F899 = 63641  _TEXT       nabu_fdc.asm:426 (unused)
+nf_home          = $F73E = 63294  _TEXT       nabu_fdc.asm:150
 nf_inco          = $F9B6 = 63926  _BSS        nabu_fdc.asm:31
-nf_ini1          = $F719 = 63257  _TEXT       nabu_fdc.asm:111
-nf_ini2          = $F727 = 63271  _TEXT       nabu_fdc.asm:122
-nf_init          = $F713 = 63251  _TEXT       nabu_fdc.asm:106
+nf_ini1          = $F719 = 63257  _TEXT       nabu_fdc.asm:114
+nf_ini2          = $F727 = 63271  _TEXT       nabu_fdc.asm:125
+nf_init          = $F713 = 63251  _TEXT       nabu_fdc.asm:109
 nf_io            = $F9B1 = 63921  _BSS        nabu_fdc.asm:25
-nf_r2k           = $F8A5 = 63653  _TEXT       nabu_fdc.asm:433
-nf_r2k0          = $F8CE = 63694  _TEXT       nabu_fdc.asm:462
+nf_r2k           = $F8A5 = 63653  _TEXT       nabu_fdc.asm:436
+nf_r2k0          = $F8CE = 63694  _TEXT       nabu_fdc.asm:465
 nf_r2ks          = $F9B2 = 63922  _BSS        nabu_fdc.asm:26
-nf_rdsk          = $0002 =     2  _TEXT       nabu_fdc.asm:42
-nf_rdw0          = $F81E = 63518  _TEXT       nabu_fdc.asm:322
-nf_rdw1          = $F82C = 63532  _TEXT       nabu_fdc.asm:329
-nf_rdwr          = $F7FF = 63487  _TEXT       nabu_fdc.asm:301
-nf_read          = $F831 = 63537  _TEXT       nabu_fdc.asm:335
-nf_rph1          = $F8EE = 63726  _TEXT       nabu_fdc.asm:495
-nf_rph2          = $F8FC = 63740  _TEXT       nabu_fdc.asm:504
-nf_rphy          = $F8E2 = 63714  _TEXT       nabu_fdc.asm:485
-nf_sel           = $F756 = 63318  _TEXT       nabu_fdc.asm:170
-nf_sel0          = $F770 = 63344  _TEXT       nabu_fdc.asm:189
-nf_sel1          = $F78A = 63370  _TEXT       nabu_fdc.asm:203
-nf_sel2          = $F79C = 63388  _TEXT       nabu_fdc.asm:216
-nf_selc          = $F77D = 63357  _TEXT       nabu_fdc.asm:197 (unused)
-nf_seld          = $F761 = 63329  _TEXT       nabu_fdc.asm:178
-nf_ssec          = $F7E0 = 63456  _TEXT       nabu_fdc.asm:274
-nf_stal          = $F921 = 63777  _TEXT       nabu_fdc.asm:540
-nf_str0          = $F7C3 = 63427  _TEXT       nabu_fdc.asm:248
-nf_strk          = $F7AA = 63402  _TEXT       nabu_fdc.asm:229
+nf_rdsk          = $0002 =     2  _TEXT       nabu_fdc.asm:45
+nf_rdw0          = $F81E = 63518  _TEXT       nabu_fdc.asm:325
+nf_rdw1          = $F82C = 63532  _TEXT       nabu_fdc.asm:332
+nf_rdwr          = $F7FF = 63487  _TEXT       nabu_fdc.asm:304
+nf_read          = $F831 = 63537  _TEXT       nabu_fdc.asm:338
+nf_rph1          = $F8EE = 63726  _TEXT       nabu_fdc.asm:498
+nf_rph2          = $F8FC = 63740  _TEXT       nabu_fdc.asm:507
+nf_rphy          = $F8E2 = 63714  _TEXT       nabu_fdc.asm:488
+nf_sel           = $F756 = 63318  _TEXT       nabu_fdc.asm:173
+nf_sel0          = $F770 = 63344  _TEXT       nabu_fdc.asm:192
+nf_sel1          = $F78A = 63370  _TEXT       nabu_fdc.asm:206
+nf_sel2          = $F79C = 63388  _TEXT       nabu_fdc.asm:219
+nf_selc          = $F77D = 63357  _TEXT       nabu_fdc.asm:200 (unused)
+nf_seld          = $F761 = 63329  _TEXT       nabu_fdc.asm:181
+nf_ssec          = $F7E0 = 63456  _TEXT       nabu_fdc.asm:277
+nf_stal          = $F921 = 63777  _TEXT       nabu_fdc.asm:543
+nf_str0          = $F7C3 = 63427  _TEXT       nabu_fdc.asm:251
+nf_strk          = $F7AA = 63402  _TEXT       nabu_fdc.asm:232
 nf_subs          = $F9B4 = 63924  _BSS        nabu_fdc.asm:29
 nf_sync          = $F9B5 = 63925  _BSS        nabu_fdc.asm:30
-nf_udsl          = $F909 = 63753  _TEXT       nabu_fdc.asm:515
-nf_wde1          = $F86F = 63599  _TEXT       nabu_fdc.asm:385
-nf_wde2          = $F87D = 63613  _TEXT       nabu_fdc.asm:394
-nf_wde3          = $F891 = 63633  _TEXT       nabu_fdc.asm:414
-nf_wde4          = $F894 = 63636  _TEXT       nabu_fdc.asm:417
-nf_wdef          = $F851 = 63569  _TEXT       nabu_fdc.asm:365
-nf_writ          = $F839 = 63545  _TEXT       nabu_fdc.asm:343
-nfddev           = $F6FB = 63227  _TEXT       nabu_fdc.asm:90
+nf_udsl          = $F909 = 63753  _TEXT       nabu_fdc.asm:518
+nf_wde1          = $F86F = 63599  _TEXT       nabu_fdc.asm:388
+nf_wde2          = $F87D = 63613  _TEXT       nabu_fdc.asm:397
+nf_wde3          = $F891 = 63633  _TEXT       nabu_fdc.asm:417
+nf_wde4          = $F894 = 63636  _TEXT       nabu_fdc.asm:420
+nf_wdef          = $F851 = 63569  _TEXT       nabu_fdc.asm:368
+nf_writ          = $F839 = 63545  _TEXT       nabu_fdc.asm:346
+nfddev           = $F6FB = 63227  _TEXT       nabu_fdc.asm:93
 nfsdev           = $EF70 = 61296  _TEXT       nabu_nfs.asm:73
 nfuncts          = $0029 =    41  _TEXT       bdos.asm:74
 ns_ace0          = $F1F4 = 61940  _TEXT       nabu_nfs.asm:594
@@ -9329,8 +9337,8 @@ readran          = $E793 = 59283  _TEXT       bdos.asm:2042
 readseq          = $E8E0 = 59616  _TEXT       bdos.asm:2281
 relblock         = $E9D7 = 59863  _TEXT       bdos.asm:2477
 renfile          = $E8F5 = 59637  _TEXT       bdos.asm:2297
-resccp           = $EB6A = 60266  _TEXT       config_nfs_hybrid.asm:150
-resgrb           = $EB6D = 60269  _TEXT       config_nfs_hybrid.asm:156
+resccp           = $EB6A = 60266  _TEXT       config_nfs_hybrid.asm:151
+resgrb           = $EB6D = 60269  _TEXT       config_nfs_hybrid.asm:157
 rodisk           = $DC0D = 56333  _TEXT       bdos.asm:35
 rofile           = $DC0F = 56335  _TEXT       bdos.asm:36
 rstdsk           = $E883 = 59523  _TEXT       bdos.asm:2225
@@ -9403,7 +9411,7 @@ subhl            = $E195 = 57749  _TEXT       bdos.asm:974
 swindi0          = $EB31 = 60209  _TEXT       bios.asm:311
 swindi1          = $EB37 = 60215  _TEXT       bios.asm:315
 swindir          = $EB2D = 60205  _TEXT       bios.asm:309
-syshook          = $EB67 = 60263  _TEXT       config_nfs_hybrid.asm:128
+syshook          = $EB67 = 60263  _TEXT       config_nfs_hybrid.asm:129
 tab              = $0009 =     9  _TEXT       zcpr1_ccp_nfs.asm:25
 tbase            = $0100 =   256  _TEXT       zcpr1_ccp_nfs.asm:18 (unused)
 tbuff            = $0080 =   128  _TEXT       zcpr1_ccp_nfs.asm:17
@@ -9509,7 +9517,7 @@ userdma          = $E9B1 = 59825  _TEXT       bdos.asm:2443
 userno           = $DF41 = 57153  _TEXT       bdos.asm:488
 usrstack         = $DF0F = 57103  _TEXT       bdos.asm:482
 vdpdev           = $EBC0 = 60352  _TEXT       nabu_vdp.asm:51
-wbinit           = $EB4F = 60239  _TEXT       config_nfs_hybrid.asm:66
+wbinit           = $EB4F = 60239  _TEXT       config_nfs_hybrid.asm:67
 wboot            = $EA46 = 59974  _TEXT       bios.asm:62
 wboot0           = $EA6D = 60013  _TEXT       bios.asm:99
 wbootin          = $EA03 = 59907  _TEXT       bios.asm:22
@@ -9538,5 +9546,5 @@ wtspecl          = $E99B = 59803  _TEXT       bdos.asm:2426
 xlate            = $E9D0 = 59856  _TEXT       bdos.asm:2469
 
 
-total time: 0.0680 sec.
+total time: 0.0844 sec.
 no errors

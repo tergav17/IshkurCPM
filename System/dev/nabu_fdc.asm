@@ -31,12 +31,15 @@ nf_sync:defs	1	; Set if disk needs to be rehomed
 nf_inco:defs	1	; Set if sector is in core already
 nf_dirt:defs	1	; Set if cache is dirty
 
+nf_cach:defs	1024	; Sector cache
+
+.area	_NOINIT
+
 nf_asva:defs	26	; Misc CP/M buffer
 nf_asvb:defs	26
 nf_csva:defs	15
 nf_csvb:defs	15
 
-nf_cach:defs	1024	; Sector cache
 .area	_TEXT
 
 nf_rdsk	equ	2	; Defines which drives contains system

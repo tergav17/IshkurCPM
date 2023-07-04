@@ -30,8 +30,12 @@ nd_tran:defs	1	; Transfer count
 nd_csec:defs	1	; Current sector (1b)
 nd_ctrk:defs	2	; Current track (2b)
 nd_buff:defs	64	; Buffer (64b)
-nd_asva:defs	129	; ASV #1 (129b)
-nd_asvb:defs	129	; ASV #1 (129b)
+
+.area	_NOINIT
+
+nd_alva:defs	129	; ALV #1 (129b)
+nd_alvb:defs	129	; ALV #2 (129b)
+
 .area	_TEXT
 
 nd_ayda	equ	0x40		; AY-3-8910 data port
@@ -55,14 +59,14 @@ nd_dpha:defw	0,0,0,0
 	defw	dircbuf	; DIRBUF
 	defw	nd_dpb	; DPB
 	defw	0	; CSV
-	defw	nd_asva	; ALV (129 bytes)
+	defw	nd_alva	; ALV (129 bytes)
 	
 ; Disk B DPH
 nd_dphb:defw	0,0,0,0
 	defw	dircbuf	; DIRBUF
 	defw	nd_dpb	; DPB
 	defw	0	; CSV
-	defw	nd_asvb	; ALV (129 bytes)
+	defw	nd_alvb	; ALV (129 bytes)
 	
 ; NSHD8 format
 nd_dpb:	defw	64	; # sectors per track
@@ -140,7 +144,7 @@ nd_sel:	push	hl
 ; bc = Track, starts at 0
 ; hl = Call argument
 ;
-; uses: nonoe
+; uses: hl
 nd_strk:ld	h,b
 	ld	l,c
 	ld	(nd_ctrk),hl
