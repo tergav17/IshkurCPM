@@ -36,6 +36,9 @@ id_rdsk	equ	0xE0	; Defines which drives contains system
 			; resources (0xE0 = Master, 0xF0 = Slave)
 			
 id_base	equ	0xC0
+
+id_ayda	equ	0x40		; AY-3-8910 data port
+id_atla	equ	0x41		; AY-3-8910 latch port
 ;
 ;**************************************************************
 ;*
@@ -108,8 +111,23 @@ idedev:	or	a
 	jp	id_writ
 	
 ; Initialize device
-; Not needed in current implementation
-id_init:ret
+; There is a bug where interrupts need to be set up to use device
+id_init:ld	a,0x07
+	out	(id_atla),a	; AY register = 7
+	in	a,(id_ayda)
+	and	0x3F
+	or	0x40
+	out	(id_ayda),a	; Configure AY port I/O
+	
+	ld	a,0x0E
+	out	(id_atla),a	; AY register = 14
+	ld	a,0xB0
+	out	(id_ayda),a	; Enable HCCA receive and but not send, plus key and VDP
+	
+	ld	a,0x0F		
+	out	(id_atla),a	; AY register = 15
+	
+	ret
 
 ; Sets "track" back to zero
 ;
@@ -315,8 +333,9 @@ id_ccp:	ld	c,5
 
 ; Reads in a 2K bytes, starting at track 0, sector (id_r2ks)
 ; This is placed into the cbase
-id_r2k: ld	a,id_rdsk
+id_r2k:	ld	a,0xE0
 	out	(id_base+0xC),a
+	
 	ld	b,10
 	call	id_stal
 
@@ -327,13 +346,13 @@ id_r2k: ld	a,id_rdsk
 	out	(id_base+0x8),a
 	out	(id_base+0xA),a
 	
-id_r2k0:ld	a,c
+id_r2k1:ld	a,c
 	out	(id_base+0x6),a
 	push	bc
 	call	id_rphy
 	pop	bc
 	inc	c
-	djnz	id_r2k0
+	djnz	id_r2k1
 	ret
 
 
