@@ -61,6 +61,7 @@ base:
 	ld	b,10
 	call	id_stal
 
+	; Set up registers
 	xor	a
 	out	(id_base+0x6),a
 	out	(id_base+0x8),a
@@ -69,7 +70,16 @@ base:
 	out	(id_base+0x4),a
 	ld	hl,0xC000
 
+	; Read physical
 	call	id_rphy
+
+	; Check magic
+	ld	hl,(0xC000)
+	ld	de,0x0618
+	or	a
+	sbc	hl,de
+	jp	nz,0
+
 	jp	0xC000
 	
 ; Executes a read command

@@ -142,7 +142,7 @@ modrec0:call	hccarea
 ; Uses: af
 hccared:call	hccarea		; Reads 2 bytes, discards 1
 hccarea:push	de
-	ld	de,0xFFFF
+	ld	de,0x2FFF
 hccare0:dec	de
 	ld	a,e
 	or	d
