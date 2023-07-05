@@ -1,6 +1,6 @@
               	; --------------------------------------
               	; zasm: assemble "boot\boot_net_ide.asm"
-              	; date: 2023-07-05 13:30:14
+              	; date: 2023-07-05 16:07:33
               	; --------------------------------------
 
 
@@ -47,7 +47,7 @@ B00E: 2A0130  		ld hl, (scratch + 1)           ; Load return address from stack,
 B011: 111300  		ld de, code_start-$ + 3        ; DE = address of bootloader relative to the call 0 return address
 B014: 19      		add hl, de                     ; HL = absolute address where bootloader is currently residing
 B015: 1100B0  		ld de, entry                   ; DE = address to copy bootloader to.
-B018: 016A00  		ld bc, code_length             ; BC = length of bootloader
+B018: 017300  		ld bc, code_length             ; BC = length of bootloader
 B01B: EDB0    		ldir                           ; Relocate ourselves to known address
 B01D: 2100B0  		ld hl, entry                   ; HL = entry point of bootloader
 B020: E9      		jp (hl)                        ; Jump to bootloader
@@ -65,119 +65,123 @@ B023: 3100B0  		ld	sp,base
 B026: 3EE0    		ld	a,0xE0
 B028: D3CC    		out	(id_base+0xC),a
 B02A: 060A    		ld	b,10
-B02C: CD65B0  		call	id_stal
+B02C: CD6EB0  		call	id_stal
+B02F: DBCC    		in	a,(id_base+0xC)
+B031: E6F0    		and	0xF0
+B033: FEE0    		cp	0xE0
+B035: C20000  		jp	nz,0
               	
               		; Set up registers
-B02F: AF      		xor	a
-B030: D3C6    		out	(id_base+0x6),a
-B032: D3C8    		out	(id_base+0x8),a
-B034: D3CA    		out	(id_base+0xA),a
-B036: 3C      		inc	a
-B037: D3C4    		out	(id_base+0x4),a
-B039: 2100C0  		ld	hl,0xC000
+B038: AF      		xor	a
+B039: D3C6    		out	(id_base+0x6),a
+B03B: D3C8    		out	(id_base+0x8),a
+B03D: D3CA    		out	(id_base+0xA),a
+B03F: 3C      		inc	a
+B040: D3C4    		out	(id_base+0x4),a
+B042: 2100C0  		ld	hl,0xC000
               	
               		; Read physical
-B03C: CD2DB0  		call	id_rphy
+B045: CD36B0  		call	id_rphy
               	
               		; Check magic
-B03F: 2A00C0  		ld	hl,(0xC000)
-B042: 111806  		ld	de,0x0618
-B045: B7      		or	a
-B046: ED52    		sbc	hl,de
-B048: C20000  		jp	nz,0
+B048: 2A00C0  		ld	hl,(0xC000)
+B04B: 111806  		ld	de,0x0618
+B04E: B7      		or	a
+B04F: ED52    		sbc	hl,de
+B051: C20000  		jp	nz,0
               	
-B04B: C300C0  		jp	0xC000
+B054: C300C0  		jp	0xC000
               		
               	; Executes a read command
               	; hl = Destination of data
               	;
               	; Returns hl += 512
               	; uses: af, bc, d, hl
-B04E: CD58B0  	id_rphy:call	id_busy
-B051: 3E20    		ld	a,0x20
-B053: CD50B0  		call	id_comm
-B056: CD49B0  		call	id_wdrq
-B059: 1600    		ld	d,0
-B05B: 0EC0    		ld	c,id_base
-B05D: EDA2    	id_rph0:ini
-B05F: 0C      		inc	c
-B060: EDA2    		ini
-B062: 0D      		dec	c
-B063: 15      		dec	d
-B064: 20F7    		jr	nz,id_rph0
-B066: CD58B0  		call	id_busy
-B069: C9      		ret
+B057: CD61B0  	id_rphy:call	id_busy
+B05A: 3E20    		ld	a,0x20
+B05C: CD59B0  		call	id_comm
+B05F: CD52B0  		call	id_wdrq
+B062: 1600    		ld	d,0
+B064: 0EC0    		ld	c,id_base
+B066: EDA2    	id_rph0:ini
+B068: 0C      		inc	c
+B069: EDA2    		ini
+B06B: 0D      		dec	c
+B06C: 15      		dec	d
+B06D: 20F7    		jr	nz,id_rph0
+B06F: CD61B0  		call	id_busy
+B072: C9      		ret
               	
               	; Waits for a DRQ (Data Request)
               	;
               	; uses: af
-B06A: DBCE    	id_wdrq:in	a,(id_base+0xE)
-B06C: CB5F    		bit	3,a
-B06E: 28FA    		jr	z,id_wdrq
-B070: C9      		ret
+B073: DBCE    	id_wdrq:in	a,(id_base+0xE)
+B075: CB5F    		bit	3,a
+B077: 28FA    		jr	z,id_wdrq
+B079: C9      		ret
               		
               	; Issues an IDE command
               	; a = Command to issue
               	;
               	; uses: af
-B071: F5      	id_comm:push	af
-B072: CD58B0  		call	id_busy
-B075: F1      		pop	af
-B076: D3CE    		out	(id_base+0xE),a
-B078: C9      		ret
+B07A: F5      	id_comm:push	af
+B07B: CD61B0  		call	id_busy
+B07E: F1      		pop	af
+B07F: D3CE    		out	(id_base+0xE),a
+B081: C9      		ret
               		
               		
               	; Waits for the IDE drive to no longer be busy
               	;
               	; Resets flag z on error
-B079: DBCE    	id_busy:in	a,(id_base+0xE)
-B07B: CB77    		bit	6,a
-B07D: 28FA    		jr	z,id_busy
-B07F: CB7F    		bit	7,a
-B081: 20F6    		jr	nz,id_busy
-B083: CB47    		bit	0,a
-B085: C9      		ret
+B082: DBCE    	id_busy:in	a,(id_base+0xE)
+B084: CB77    		bit	6,a
+B086: 28FA    		jr	z,id_busy
+B088: CB7F    		bit	7,a
+B08A: 20F6    		jr	nz,id_busy
+B08C: CB47    		bit	0,a
+B08E: C9      		ret
               	
               	
               	; Waits a little bit
               	;
               	; uses: b
-B086: C5      	id_stal:push	bc
-B087: C1      		pop	bc
-B088: 10FC    		djnz	id_stal
-B08A: C9      		ret
+B08F: C5      	id_stal:push	bc
+B090: C1      		pop	bc
+B091: 10FC    		djnz	id_stal
+B093: C9      		ret
               		
               	
-006A:         	code_length: equ $$-code_start
+0073:         	code_length: equ $$-code_start
               	.DEPHASE
 
 
 ; +++ segments +++
 
-#CODE          = $B000 = 45056,  size = $008B =   139
+#CODE          = $B000 = 45056,  size = $0094 =   148
 
 ; +++ global symbols +++
 
-_end        = $B08B = 45195          boot\boot_net_ide.asm:30 (unused)
-_size       = $008B =   139          boot\boot_net_ide.asm:30 (unused)
+_end        = $B094 = 45204          boot\boot_net_ide.asm:30 (unused)
+_size       = $0094 =   148          boot\boot_net_ide.asm:30 (unused)
 aydata      = $0040 =    64          boot\boot_net_ide.asm:18 (unused)
 aylatc      = $0041 =    65          boot\boot_net_ide.asm:19 (unused)
 base        = $B000 = 45056          boot\boot_net_ide.asm:53
-code_length = $006A =   106          boot\boot_net_ide.asm:145
+code_length = $0073 =   115          boot\boot_net_ide.asm:149
 code_start  = $B021 = 45089          boot\boot_net_ide.asm:50
 entry       = $B000 = 45056          boot\boot_net_ide.asm:26
 id_base     = $00C0 =   192          boot\boot_net_ide.asm:21
-id_busy     = $B058 = 45144          boot\boot_net_ide.asm:127
-id_comm     = $B050 = 45136          boot\boot_net_ide.asm:117
-id_rph0     = $B03C = 45116          boot\boot_net_ide.asm:96
-id_rphy     = $B02D = 45101          boot\boot_net_ide.asm:90
-id_stal     = $B065 = 45157          boot\boot_net_ide.asm:139
-id_wdrq     = $B049 = 45129          boot\boot_net_ide.asm:108
+id_busy     = $B061 = 45153          boot\boot_net_ide.asm:131
+id_comm     = $B059 = 45145          boot\boot_net_ide.asm:121
+id_rph0     = $B045 = 45125          boot\boot_net_ide.asm:100
+id_rphy     = $B036 = 45110          boot\boot_net_ide.asm:94
+id_stal     = $B06E = 45166          boot\boot_net_ide.asm:143
+id_wdrq     = $B052 = 45138          boot\boot_net_ide.asm:112
 mem         = $0037 =    55          boot\boot_net_ide.asm:15 (unused)
 nsec        = $0006 =     6          boot\boot_net_ide.asm:13 (unused)
 scratch     = $3000 = 12288          boot\boot_net_ide.asm:24
 start       = $B003 = 45059          boot\boot_net_ide.asm:35 (unused)
 
 
-total time: 0.0029 sec.
+total time: 0.0028 sec.
 no errors
