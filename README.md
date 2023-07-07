@@ -56,6 +56,11 @@ In order to boot NFS from NHACP, the following files must be setup from the `Out
 ### NFS NDSK + FDC (Hybrid)
 Similar to NDSK hybrid. Logical drives C: and D: are mapped to floppy drive 0 and 1 respectively. 
 
+### NABU-IDE
+Unlike the other builds, there is no disk image available to install this version. Instead, the `IDEGEN.COM` utility must be used to generate a system on the attached IDE drive. When the program is run, the user will be prompted to choose a system image. It is recommended that the `IDE + NFS` system is built first so that software can be downloaded onto the IDE drive later. Formatting can be disabled to allow user data to persist during a system generate.
+
+Currently, the IDE driver allocates 32MB of the disk. This is divided up into four 8MB partitions, and mapped to A: - D: respectivly. The IDE drive must be at least 32MB in size, and free of any errors. 
+
 ## Building
 ### Windows
 In order to build on Windows, ensure the following programs are installed:
