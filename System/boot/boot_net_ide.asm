@@ -60,6 +60,10 @@ base:
 	out	(id_base+0xC),a
 	ld	b,10
 	call	id_stal
+	in	a,(id_base+0xC)
+	and	0xF0
+	cp	0xE0
+	jp	nz,0
 
 	; Set up registers
 	xor	a
