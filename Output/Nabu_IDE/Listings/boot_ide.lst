@@ -1,0 +1,302 @@
+              	; --------------------------------------
+              	; zasm: assemble "boot\boot_ide.asm"
+              	; date: 2023-07-09 14:12:58
+              	; --------------------------------------
+
+
+              	;
+              	;**************************************************************
+              	;*
+              	;*        I S H K U R   I D E   B O O T S T R A P
+              	;*
+              	;**************************************************************
+              	;
+              	
+00C0:         	id_base	equ	0xC0
+              	
+0040:         	aydata	equ	0x40		; AY-3-8910 data port
+0041:         	aylatc	equ	0x41		; AY-3-8910 latch port
+0080:         	hcca	equ	0x80		; Modem data port
+00A0:         	tmdata	equ	0xA0		; TMS9918 data port
+00A1:         	tmlatc	equ	0xA1		; TMS9918 latch port
+              	
+8000:         	buffer	equ	0x8000		; General purpose memory buffer
+              	
+              		; NABU bootstrap loads in at 0xC000
+C000:         		org	0xC000
+              		
+              	; First 8 bytes should not be changed
+              	; The JR instruction doubles as a magic number
+              	; The other 6 bytes can be used as parameters during system generation
+C000: 1806    	base:	jr	start
+C002: 0000    	ldaddr:	defw	0
+C004: 00      	nsec:	defb	0
+C005: 00      		defb	0
+C006: 0000    		defw	0
+C008: 1803    	start:	jr	tmsini
+              	
+              	; Panic!
+              	; Just jump to the start of ROM at this point
+C00A: C30000  	panic:	jp	0
+              		
+              		; Change TMS color mode to indicate successful boot
+C00D: DBA1    	tmsini:	in	a,(0xA1)
+C00F: 3EE1    		ld	a,0xE1
+C011: D3A1    		out	(0xA1),a
+C013: 3E87    		ld	a,0x87
+C015: D3A1    		out	(0xA1),a
+              	
+              		; The system may still expect NHACP to be set up
+              	
+              		; Set up the HCCA modem connection
+C017: 3E07    		ld	a,0x07
+C019: D341    		out	(aylatc),a	; AY register = 7
+C01B: 3E7F    		ld	a,0x7F
+C01D: D340    		out	(aydata),a	; Configure AY port I/O
+              		
+C01F: 3E0E    		ld	a,0x0E
+C021: D341    		out	(aylatc),a	; AY register = 14
+C023: 3EC0    		ld	a,0xC0
+C025: D340    		out	(aydata),a	; Enable HCCA receive and send
+              		
+C027: 3E0F    		ld	a,0x0F
+C029: D341    		out	(aylatc),a	; AY register = 15
+              		
+              		; Send "HELLO" to NHACP server
+C02B: 210FC1  		ld	hl,m_start
+C02E: 0608    		ld	b,8
+C030: CD6CC0  		call	modsend
+              		
+              		; Get confirmation
+C033: CD85C0  		call	modrecb
+C036: 3A0080  		ld	a,(buffer)
+              		
+              		; We don't really care if it worked or not, lets load the CP/M image off of the IDE drive
+              		
+C039: 3EE0    	ideboot:ld	a,0xE0
+C03B: D3CC    		out	(id_base+0xC),a
+C03D: 060A    		ld	b,10
+C03F: CD0AC1  		call	id_stal
+C042: DBCC    		in	a,(id_base+0xC)
+C044: 3C      		inc	a
+C045: CA0AC0  		jp	z,panic		; Can't select disk, panic!
+              	
+              		; Load nsec number of sectors into ldaddr
+C048: 2A02C0  		ld	hl,(ldaddr)
+C04B: 3A04C0  		ld	a,(nsec)
+C04E: 47      		ld	b,a
+C04F: 0E09    		ld	c,9
+C051: AF      		xor	a
+C052: D3C8    		out	(id_base+0x8),a
+C054: D3CA    		out	(id_base+0xA),a
+              		
+C056: 79      	id_load:ld	a,c
+C057: D3C6    		out	(id_base+0x6),a
+C059: C5      		push	bc
+C05A: CDCEC0  		call	id_rphy
+C05D: C1      		pop	bc
+C05E: C20AC0  		jp	nz,panic
+C061: 0C      		inc	c
+C062: 10F2    		djnz	id_load
+              		
+              		; Jump to system
+C064: 2A02C0  		ld	hl,(ldaddr)
+C067: 11000E  		ld	de,0xE00
+C06A: 19      		add	hl,de
+C06B: E9      		jp	(hl)
+              		
+              		
+              	; Sends a message to the HCCA modem
+              	; b = # of bytes to send
+              	; hl = pointer to address
+              	;
+              	; uses: af, b, hl
+C06C: 3E8F    	modsend:ld	a,0x8F		; Send NHACP message
+C06E: CDB2C0  		call	hccawri
+C071: AF      		xor	a		; Send session
+C072: CDB2C0  		call	hccawri
+C075: 78      		ld	a,b
+C076: CDB2C0  		call	hccawri		; Send size of packet
+C079: AF      		xor	a
+C07A: CDB2C0  		call	hccawri
+C07D: 7E      	modsen0:ld	a,(hl)
+C07E: CDB2C0  		call	hccawri
+C081: 23      		inc	hl
+C082: 10F9    		djnz	modsen0
+C084: C9      		ret
+              		
+              	; Receives a message back from the HCCA
+              	; hl = pointer to address
+              	;
+              	; uses: af, b, hl
+C085: 210080  	modrecb:ld	hl,buffer	; Read directly into buffer
+C088: CD9AC0  	modrece:call	hccarea
+C08B: 47      		ld	b,a
+C08C: CD9AC0  		call	hccarea
+C08F: CD9AC0  	modrec0:call	hccarea
+C092: 77      		ld	(hl),a
+C093: 23      		inc	hl
+C094: 10F9    		djnz	modrec0
+C096: C9      		ret
+              	
+              	
+              	; Read from the HCCA port
+              	; Assumes AY is set to reg 15
+              	; Will panic on timeout
+              	;
+              	; Returns return in a
+              	; Uses: af
+C097: CD9AC0  	hccared:call	hccarea		; Reads 2 bytes, discards 1
+C09A: D5      	hccarea:push	de
+C09B: 11FF2F  		ld	de,0x2FFF
+C09E: 1B      	hccare0:dec	de
+C09F: 7B      		ld	a,e
+C0A0: B2      		or	d
+C0A1: CA39C0  		jp	z,ideboot	; Timed out waiting, do an ide boot instead
+C0A4: DB40    		in	a,(aydata)
+C0A6: CB47    		bit	0,a
+C0A8: 28F4    		jr	z,hccare0	; Await an interrupt
+C0AA: CB4F    		bit	1,a
+C0AC: 20F0    		jr	nz,hccare0
+C0AE: DB80    	hccare1:in	a,(hcca)
+C0B0: D1      		pop	de
+C0B1: C9      		ret
+              		
+              	; Write to the HCCA port
+              	; Assumes AY is set to reg 15
+              	; Will panic on timeout
+              	; a = Character to write
+              	;
+              	; Uses: none
+C0B2: D5      	hccawri:push	de
+C0B3: F5      		push	af
+C0B4: 11FFFF  		ld	de,0xFFFF
+C0B7: DB40    	hccawr0:in	a,(aydata)
+C0B9: CB47    		bit	0,a
+C0BB: 28FA    		jr	z,hccawr0	; Await an interrupt
+C0BD: CB4F    		bit	1,a
+C0BF: 2008    		jr	nz,hccawr1
+C0C1: 1B      		dec	de
+C0C2: 7B      		ld	a,e
+C0C3: B2      		or	d
+C0C4: 20F1    		jr	nz,hccawr0
+C0C6: C30AC0  		jp	panic		; Timed out waiting
+C0C9: F1      	hccawr1:pop	af
+C0CA: D380    		out	(hcca),a
+C0CC: D1      		pop	de
+C0CD: C9      		ret
+              		
+              		
+              	; Executes a read command
+              	; hl = Destination of data
+              	;
+              	; Returns hl += 512
+              	; uses: af, bc, d, hl
+C0CE: 3E01    	id_rphy:ld	a,1
+C0D0: D3C4    		out	(id_base+0x04),a
+C0D2: CDFDC0  		call	id_busy
+C0D5: 3E20    		ld	a,0x20
+C0D7: CDF5C0  		call	id_comm
+C0DA: CDEEC0  		call	id_wdrq
+C0DD: 1600    		ld	d,0
+C0DF: 0EC0    		ld	c,id_base
+C0E1: EDA2    	id_rph0:ini
+C0E3: 0C      		inc	c
+C0E4: EDA2    		ini
+C0E6: 0D      		dec	c
+C0E7: 15      		dec	d
+C0E8: 20F7    		jr	nz,id_rph0
+C0EA: CDFDC0  		call	id_busy
+C0ED: C9      		ret
+              	
+              	; Waits for a DRQ (Data Request)
+              	;
+              	; uses: af
+C0EE: DBCE    	id_wdrq:in	a,(id_base+0xE)
+C0F0: CB5F    		bit	3,a
+C0F2: 28FA    		jr	z,id_wdrq
+C0F4: C9      		ret
+              		
+              	; Issues an IDE command
+              	; a = Command to issue
+              	;
+              	; uses: af
+C0F5: F5      	id_comm:push	af
+C0F6: CDFDC0  		call	id_busy
+C0F9: F1      		pop	af
+C0FA: D3CE    		out	(id_base+0xE),a
+C0FC: C9      		ret
+              		
+              		
+              	; Waits for the IDE drive to no longer be busy
+              	;
+              	; Resets flag z on error
+C0FD: DBCE    	id_busy:in	a,(id_base+0xE)
+C0FF: CB77    		bit	6,a
+C101: 28FA    		jr	z,id_busy
+C103: CB7F    		bit	7,a
+C105: 20F6    		jr	nz,id_busy
+C107: CB47    		bit	0,a
+C109: C9      		ret
+              	
+              	
+              	; Waits a little bit
+              	;
+              	; uses: b
+C10A: C5      	id_stal:push	bc
+C10B: C1      		pop	bc
+C10C: 10FC    		djnz	id_stal
+C10E: C9      		ret
+              		
+              	; NHACP start message
+              	; Disables CRC mode
+C10F: 00414350	m_start:defb	0x00,'ACP',0x01,0x00,0x00,0x00
+C113: 01000000	
+
+
+; +++ segments +++
+
+#CODE          = $C000 = 49152,  size = $0117 =   279
+
+; +++ global symbols +++
+
+_end    = $C117 = 49431          boot\boot_ide.asm:20 (unused)
+_size   = $0117 =   279          boot\boot_ide.asm:20 (unused)
+aydata  = $0040 =    64          boot\boot_ide.asm:11
+aylatc  = $0041 =    65          boot\boot_ide.asm:12
+base    = $C000 = 49152          boot\boot_ide.asm:25 (unused)
+buffer  = $8000 = 32768          boot\boot_ide.asm:17
+hcca    = $0080 =   128          boot\boot_ide.asm:13
+hccare0 = $C09E = 49310          boot\boot_ide.asm:146
+hccare1 = $C0AE = 49326          boot\boot_ide.asm:155 (unused)
+hccarea = $C09A = 49306          boot\boot_ide.asm:144
+hccared = $C097 = 49303          boot\boot_ide.asm:143 (unused)
+hccawr0 = $C0B7 = 49335          boot\boot_ide.asm:168
+hccawr1 = $C0C9 = 49353          boot\boot_ide.asm:178
+hccawri = $C0B2 = 49330          boot\boot_ide.asm:165
+id_base = $00C0 =   192          boot\boot_ide.asm:9
+id_busy = $C0FD = 49405          boot\boot_ide.asm:228
+id_comm = $C0F5 = 49397          boot\boot_ide.asm:218
+id_load = $C056 = 49238          boot\boot_ide.asm:87
+id_rph0 = $C0E1 = 49377          boot\boot_ide.asm:197
+id_rphy = $C0CE = 49358          boot\boot_ide.asm:189
+id_stal = $C10A = 49418          boot\boot_ide.asm:240
+id_wdrq = $C0EE = 49390          boot\boot_ide.asm:209
+ideboot = $C039 = 49209          boot\boot_ide.asm:70
+ldaddr  = $C002 = 49154          boot\boot_ide.asm:26
+m_start = $C10F = 49423          boot\boot_ide.asm:247
+modrec0 = $C08F = 49295          boot\boot_ide.asm:130
+modrecb = $C085 = 49285          boot\boot_ide.asm:126
+modrece = $C088 = 49288          boot\boot_ide.asm:127 (unused)
+modsen0 = $C07D = 49277          boot\boot_ide.asm:116
+modsend = $C06C = 49260          boot\boot_ide.asm:108
+nsec    = $C004 = 49156          boot\boot_ide.asm:27
+panic   = $C00A = 49162          boot\boot_ide.asm:34
+start   = $C008 = 49160          boot\boot_ide.asm:30
+tmdata  = $00A0 =   160          boot\boot_ide.asm:14 (unused)
+tmlatc  = $00A1 =   161          boot\boot_ide.asm:15 (unused)
+tmsini  = $C00D = 49165          boot\boot_ide.asm:37
+
+
+total time: 0.0022 sec.
+no errors

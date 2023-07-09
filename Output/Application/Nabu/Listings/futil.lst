@@ -1,0 +1,1156 @@
+              	; --------------------------------------
+              	; zasm: assemble "futil.asm"
+              	; date: 2023-07-09 14:12:58
+              	; --------------------------------------
+
+
+              	;
+              	;**************************************************************
+              	;*
+              	;*       N A B U   F D C   I M A G E   U T I L I T Y
+              	;*
+              	;*     This utility allows for floppy disk data to be
+              	;*     directly interacted with by the user. Disks can
+              	;*     be imaged, formatted, or re-imaged. At the moment,
+              	;*     only .IMG style images are supported.
+              	;*
+              	;**************************************************************
+              	;
+              	
+              	; Equates
+0005:         	bdos	equ	0x0005
+005C:         	fcb	equ	0x005C
+              	
+0001:         	b_coin	equ	0x01
+0002:         	b_cout	equ	0x02
+0009:         	b_print	equ	0x09
+000F:         	b_open	equ	0x0F
+0010:         	b_close	equ	0x10
+0014:         	b_read	equ	0x14
+0015:         	b_write	equ	0x15
+0016:         	b_make	equ	0x16
+001A:         	b_dma	equ	0x1A
+              	
+              	; Program start
+0100:         		org	0x0100
+              		
+              		
+              		; Print banner
+0100: F3      	start:	di	
+0101: 0E09    		ld	c,b_print
+0103: 114705  		ld	de,splash
+0106: CD0500  		call	bdos
+              	
+              		; Look for the FDC
+0109: 0ECF    		ld	c,0xCF
+010B: ED78    	search:	in	a,(c)
+010D: FE10    		cp	0x10
+010F: 2814    		jr	z,foundit
+0111: 0C      		inc	c
+0112: 2806    		jr	z,nofdc
+0114: 3E0F    		ld	a,0x0F
+0116: 81      		add	a,c
+0117: 4F      		ld	c,a
+0118: 18F1    		jr	search
+              		
+              		; No FDC found!
+011A: 0E09    	nofdc:	ld	c,b_print
+011C: 117606  		ld	de,nfdcmsg
+011F: CD0500  		call	bdos
+0122: C36304  		jp	waitex
+              		
+              		; Place address in nf_io, and get the user profile
+0125: 79      	foundit:ld	a,c
+0126: D60F    		sub	15
+0128: 4F      		ld	c,a
+0129: 321E05  		ld	(nf_io),a
+              	
+              		; Get user profile
+012C: 0E09    	getpro: ld	c,b_print
+012E: 117A05  		ld	de,cfgmsg
+0131: CD0500  		call	bdos
+0134: CDC904  		call	getopt
+              		
+              		; Exit option
+0137: FE39    		cp	'9'
+0139: 280F    		jr	z,exit
+              		
+              		; Profile 1 (5.25 SSDD)
+013B: 210004  		ld	hl,1024	; length of sector
+013E: 0E28    		ld	c,40	; blocks per track
+0140: 1605    		ld	d,5	; sectors per track
+0142: 1E28    		ld	e,40	; tracks 
+0144: FE31    		cp	'1'
+0146: 2807    		jr	z,setpro
+              	
+              	
+              		; Invalid, reprompt
+0148: 18E2    		jr	getpro
+              	
+              		; Soft reboot
+014A: 0E00    	exit:	ld	c,0x00
+014C: C30500  		jp	bdos
+              		
+              		
+              		; Set profile variables
+014F: 321705  	setpro:	ld	(profile),a
+0152: 221805  		ld	(seclen),hl
+0155: 79      		ld	a,c
+0156: 321B05  		ld	(blkcnt),a
+0159: 7A      		ld	a,d
+015A: 321A05  		ld	(seccnt),a
+015D: 7B      		ld	a,e
+015E: 321C05  		ld	(trkcnt),a
+              		
+              		; Now lets get the logical drive #
+0161: 0E09    	getcurd:ld	c,b_print
+0163: 11DF05  		ld	de,drvmsg
+0166: CD0500  		call	bdos
+0169: CDC904  		call	getopt
+              		
+016C: 0602    		ld	b,2
+016E: FE30    		cp	'0'
+0170: 2808    		jr	z,setcurd
+0172: 0604    		ld	b,4
+0174: FE31    		cp	'1'
+0176: 2802    		jr	z,setcurd
+0178: 18E7    		jr	getcurd
+              		
+017A: 78      	setcurd:ld	a,b
+017B: 321D05  		ld	(nf_curd),a
+              		
+              		; Finally, we get the actual operation
+017E: 0E09    	getcmd:	ld	c,b_print
+0180: 11F905  		ld	de,cmdmsg
+0183: CD0500  		call	bdos
+0186: CDC904  		call	getopt
+              		
+0189: FE52    		cp	'R'
+018B: CAEB02  		jp	z,read
+              		
+018E: FE57    		cp	'W'
+0190: CA4D02  		jp	z,write
+              		
+0193: FE46    		cp	'F'
+0195: CA9A01  		jp	z,format
+              		
+0198: 18E4    		jr	getcmd
+              		
+              		
+              	; Format operation
+              	; First, make sure user is read
+              	; Then start formatting
+019A: 0E09    	format:	ld	c,b_print
+019C: 112106  		ld	de,readymsg
+019F: CD0500  		call	bdos
+01A2: CDC904  		call	getopt
+01A5: FE59    		cp	'Y'
+01A7: C22C01  		jp	nz,getpro
+              		
+              		; Ready the disk 
+01AA: CD2604  		call	dskrdy
+              	
+              		; Set the starting track
+01AD: AF      		xor	a
+01AE: 321F05  		ld	(curtrk),a
+              		
+              		; Print out the current track	
+01B1: 0E09    	formr0:	ld	c,b_print
+01B3: 111E07  		ld	de,frmtmsg
+01B6: CD0500  		call	bdos
+01B9: 3A1F05  		ld	a,(curtrk)
+01BC: 6F      		ld	l,a
+01BD: 2600    		ld	h,0
+01BF: CDDF04  		call	putd
+              		
+              		; Set current sector to 1
+01C2: 3E01    		ld	a,1
+01C4: 322005  		ld	(cursec),a
+              		
+              		; Set track done to false
+01C7: 322105  		ld	(trkdone),a
+              		
+              		; Start write track command
+01CA: 3A1E05  		ld	a,(nf_io)
+01CD: 4F      		ld	c,a
+01CE: 3EF0    		ld	a,0xF0
+01D0: ED79    		out	(c),a
+              		
+              		; What type are we formatting?
+01D2: 3A1705  		ld	a,(profile)
+01D5: FE31    		cp	'1'
+01D7: CAF701  		jp	z,dofm1
+              		
+              		
+              		; All done, move on to next track
+01DA: 3A1C05  	formnx:	ld	a,(trkcnt)
+01DD: 47      		ld	b,a
+01DE: 3A1F05  		ld	a,(curtrk)
+01E1: 3C      		inc	a
+01E2: B8      		cp	b
+01E3: CA9903  		jp	z,alldone	; No more tracks
+01E6: 321F05  		ld	(curtrk),a
+              		
+              		; Step in 1 track
+              		; This should be BDOS load code
+01E9: 3A1E05  		ld	a,(nf_io)
+01EC: 4F      		ld	c,a
+01ED: 3E59    		ld	a,0x59
+01EF: ED79    		out	(c),a
+01F1: CDBE04  		call	nf_busy
+              		
+              		; Format another track
+01F4: C3B101  		jp	formr0
+              		
+              	; Does format for disk format 1
+01F7: 212305  	dofm1:	ld	hl,fm1_pre
+01FA: CDF903  		call	nf_bloc
+              		
+              		; Start writing a sector
+01FD: 212E05  	dofm10:	ld	hl,fm1_sec1
+0200: CDF903  		call	nf_bloc
+              		
+              		; Write track, size, sector
+0203: 3A1F05  		ld	a,(curtrk)
+0206: 57      		ld	d,a
+0207: CD0704  		call	nf_bout
+020A: 1600    		ld	d,0
+020C: CD0704  		call	nf_bout
+020F: 3A2005  		ld	a,(cursec)
+0212: 57      		ld	d,a
+0213: CD0704  		call	nf_bout
+              		
+0216: 213505  		ld	hl,fm1_sec2
+0219: CDF903  		call	nf_bloc
+              		
+              		; Write data (all E5)
+021C: 2A1805  		ld	hl,(seclen)
+021F: 16E5    		ld	d,0xE5
+              		
+0221: CDF903  	dofm11:	call	nf_bloc
+0224: 2B      		dec	hl
+0225: 7D      		ld	a,l
+0226: B4      		or	h
+0227: 20F8    		jr	nz,dofm11
+              		
+0229: 214205  		ld	hl,fm1_sec3
+022C: CDF903  		call	nf_bloc
+              	
+              		; Check to see if there are more sectors to write
+022F: 3A1A05  		ld	a,(seccnt)
+0232: 47      		ld	b,a
+0233: 3A2005  		ld	a,(cursec)
+0236: B8      		cp	b
+0237: 2806    		jr	z,dofm12
+0239: 3C      		inc	a
+023A: 3A2005  		ld	a,(cursec)
+023D: 18BE    		jr	dofm10
+              		
+              		; Write 4E till done
+023F: 164E    	dofm12:	ld	d,0x4E
+0241: CD0704  		call	nf_bout
+0244: 3A2105  		ld	a,(trkdone)
+0247: B7      		or	a
+0248: 20F5    		jr	nz,dofm12
+              	
+              	
+024A: C3DA01  		jp	formnx
+              	
+              	; Write operation
+              	; First, make sure user is ready
+              	; Second, the defined file will be opened
+024D: 0E09    	write:	ld	c,b_print
+024F: 112106  		ld	de,readymsg
+0252: CD0500  		call	bdos
+0255: CDC904  		call	getopt
+0258: FE59    		cp	'Y'
+025A: C22C01  		jp	nz,getpro
+              		
+              		; If there is a file, try to open it
+025D: 0E0F    		ld	c,b_open
+025F: 115C00  		ld	de,fcb
+0262: CD0500  		call	bdos
+              		
+              		; Did it work?
+0265: B7      		or	a
+0266: F26C02  		jp	p,writr
+              		
+              		; Nope, error!
+0269: C35804  		jp	ferror
+              		
+              		; Write (real)
+              		; Start by readying the disk
+026C: CD2604  	writr:	call	dskrdy
+              	
+              		; Set the starting track
+026F: AF      		xor	a
+0270: 321F05  		ld	(curtrk),a
+              		
+              		; Print out the current track	
+0273: 0E09    	writr1:	ld	c,b_print
+0275: 11FF06  		ld	de,fetcmsg
+0278: CD0500  		call	bdos
+027B: 3A1F05  		ld	a,(curtrk)
+027E: 6F      		ld	l,a
+027F: 2600    		ld	h,0
+0281: CDDF04  		call	putd
+              		
+              		; Get the track to write into memory
+0284: 114C07  		ld	de,top
+0287: 3A1B05  		ld	a,(blkcnt)
+              		
+              		; Loop to read from disk
+028A: F5      	writr2:	push	af
+028B: D5      		push	de
+              		
+028C: 0E1A    		ld	c,b_dma
+028E: CD0500  		call	bdos
+0291: 0E14    		ld	c,b_read
+0293: 115C00  		ld	de,fcb
+0296: CD0500  		call	bdos
+              		
+0299: D1      		pop	de
+029A: F1      		pop	af
+029B: 218000  		ld	hl,128
+029E: 19      		add	hl,de
+029F: EB      		ex	de,hl
+02A0: 3D      		dec	a
+02A1: 20E7    		jr	nz,writr2
+              		
+              		; Print write message
+02A3: 0E09    		ld	c,b_print
+02A5: 111107  		ld	de,writmsg
+02A8: CD0500  		call	bdos
+              		
+              		; Start at sector 1
+02AB: 3E01    		ld	a,1
+02AD: 322005  		ld	(cursec),a
+              		
+              		; Where do we want to input?
+02B0: 214C07  		ld	hl,top
+              		
+              		; Write the sector out
+02B3: 3A1E05  	writr3:	ld	a,(nf_io)
+02B6: 4F      		ld	c,a
+02B7: CDD403  		call	nf_wphy
+02BA: B7      		or	a
+02BB: C48204  		call	nz,ioerror
+              		
+              		; Do we need to read another in?
+02BE: 3A1A05  		ld	a,(seccnt)
+02C1: 47      		ld	b,a
+02C2: 3A2005  		ld	a,(cursec)
+02C5: B8      		cp	b
+02C6: 2806    		jr	z,writr4
+02C8: 3C      		inc	a
+02C9: 322005  		ld	(cursec),a
+02CC: 18E5    		jr	writr3
+              		
+              		; All done, move on to next track
+02CE: 3A1C05  	writr4:	ld	a,(trkcnt)
+02D1: 47      		ld	b,a
+02D2: 3A1F05  		ld	a,(curtrk)
+02D5: 3C      		inc	a
+02D6: B8      		cp	b
+02D7: CA9903  		jp	z,alldone	; No more tracks
+02DA: 321F05  		ld	(curtrk),a
+              		
+              		; Step in 1 track
+              		; This should be BDOS load code
+02DD: 3A1E05  		ld	a,(nf_io)
+02E0: 4F      		ld	c,a
+02E1: 3E59    		ld	a,0x59
+02E3: ED79    		out	(c),a
+02E5: CDBE04  		call	nf_busy
+              		
+              		; Read another track
+02E8: C37302  		jp	writr1
+              		
+              	; Read operation
+              	; First, make sure user is ready
+              	; Second, the defined file will be opened (and maybe created)
+02EB: 0E09    	read:	ld	c,b_print
+02ED: 112106  		ld	de,readymsg
+02F0: CD0500  		call	bdos
+02F3: CDC904  		call	getopt
+02F6: FE59    		cp	'Y'
+02F8: C22C01  		jp	nz,getpro
+              	
+              		; Alright, we are commited
+              	
+02FB: 3A5D00  		ld	a,(fcb+1)
+02FE: FE30    		cp	'0'
+0300: DA5804  		jp	c,ferror
+              	
+              		; There is a file, try to open it
+0303: 0E0F    		ld	c,b_open
+0305: 115C00  		ld	de,fcb
+0308: CD0500  		call	bdos
+              		
+              		; Did it work?
+030B: B7      		or	a
+030C: F21B03  		jp	p,readr
+030F: 0E16    		ld	c,b_make
+0311: 115C00  		ld	de,fcb
+0314: CD0500  		call	bdos
+0317: B7      		or	a
+0318: FA5804  		jp	m,ferror
+              		
+              		; Read (real)
+              		; Start by readying the disk
+031B: CD2604  	readr:	call	dskrdy
+              		
+              		; Set the starting track
+031E: AF      		xor	a
+031F: 321F05  		ld	(curtrk),a
+              		
+              		; Print out current track
+0322: 0E09    	readr0:	ld	c,b_print
+0324: 11E106  		ld	de,readmsg
+0327: CD0500  		call	bdos
+032A: 3A1F05  		ld	a,(curtrk)
+032D: 6F      		ld	l,a
+032E: 2600    		ld	h,0
+0330: CDDF04  		call	putd
+              	
+0333: 3E01    		ld	a,1
+0335: 322005  		ld	(cursec),a
+              		
+              		; Where do we want to output?
+0338: 214C07  		ld	hl,top
+              		
+              		; Read the sector in
+033B: 3A1E05  	readr1:	ld	a,(nf_io)
+033E: 4F      		ld	c,a
+033F: CDAF03  		call	nf_rphy
+0342: B7      		or	a
+0343: C48204  		call 	nz,ioerror
+              		
+              		; Do we need to read another in?
+0346: 3A1A05  		ld	a,(seccnt)
+0349: 47      		ld	b,a
+034A: 3A2005  		ld	a,(cursec)
+034D: B8      		cp	b
+034E: 2806    		jr	z,readr2
+0350: 3C      		inc	a
+0351: 322005  		ld	(cursec),a
+0354: 18E5    		jr	readr1
+              		
+              		; Write track to storage and continue
+0356: 0E09    	readr2: ld	c,b_print
+0358: 11F206  		ld	de,stormsg
+035B: CD0500  		call	bdos
+              		
+035E: 114C07  		ld	de,top
+0361: 3A1B05  		ld	a,(blkcnt)
+              		
+              		; Loop to write to disk
+0364: F5      	readr3:	push	af
+0365: D5      		push	de
+              		
+0366: 0E1A    		ld	c,b_dma
+0368: CD0500  		call	bdos
+036B: 0E15    		ld	c,b_write
+036D: 115C00  		ld	de,fcb
+0370: CD0500  		call	bdos
+              		
+0373: D1      		pop	de
+0374: F1      		pop	af
+0375: 218000  		ld	hl,128
+0378: 19      		add	hl,de
+0379: EB      		ex	de,hl
+037A: 3D      		dec	a
+037B: 20E7    		jr	nz,readr3
+              		
+              		; Read next track
+037D: 3A1C05  		ld	a,(trkcnt)
+0380: 47      		ld	b,a
+0381: 3A1F05  		ld	a,(curtrk)
+0384: 3C      		inc	a
+0385: B8      		cp	b
+0386: 2811    		jr	z,alldone	; No more tracks
+0388: 321F05  		ld	(curtrk),a
+              		
+              		; Step in 1 track
+              		; This should be BDOS load code
+038B: 3A1E05  		ld	a,(nf_io)
+038E: 4F      		ld	c,a
+038F: 3E59    		ld	a,0x59
+0391: ED79    		out	(c),a
+0393: CDBE04  		call	nf_busy
+              		
+              		; Read another track
+0396: C32203  		jp	readr0
+              		
+              		; Operation is done
+0399: CD7004  	alldone:call	nf_udsl
+              	
+              		; State all done!
+039C: 0E09    		ld	c,b_print
+039E: 113207  		ld	de,donemsg
+03A1: CD0500  		call	bdos
+              		
+              		; Close file
+03A4: 0E10    		ld	c,b_close
+03A6: 115C00  		ld	de,fcb
+03A9: CD0500  		call	bdos
+              		
+03AC: C34A01  		jp	exit
+              	
+              	
+              	; Reads a physical sector
+              	; Track should be set up
+              	; (cursec) = Sector to read
+              	; c = FDC command address
+              	; hl = memory location of result
+              	;
+              	; Returns a=0 if successful
+              	; uses: af, bc, de, hl
+03AF: 59      	nf_rphy:ld	e,c
+03B0: 0C      		inc	c
+03B1: 0C      		inc	c
+03B2: 3A2005  		ld	a,(cursec)
+03B5: ED79    		out	(c),a
+03B7: 0C      		inc	c
+03B8: 51      		ld	d,c
+03B9: 4B      		ld	c,e
+              		
+              		; Read command
+03BA: 3E88    		ld	a,0x88
+03BC: ED79    		out	(c),a
+03BE: ED78    	nf_rph1:in	a,(c)
+03C0: 1F      		rra	
+03C1: 3009    		jr	nc,nf_rph2
+03C3: 1F      		rra
+03C4: 30F8    		jr	nc,nf_rph1
+03C6: 4A      		ld	c,d
+03C7: EDA2    		ini
+03C9: 4B      		ld	c,e
+03CA: 18F2    		jr	nf_rph1
+03CC: ED78    	nf_rph2:in	a,(c)
+03CE: 322205  		ld	(lastfdc),a
+03D1: E6FC    		and	0xFC
+03D3: C9      		ret
+              		
+              	; Writes a physical sector
+              	; Track should be set up
+              	; (cursec) = Sector to write
+              	; c = FDC command address
+              	; hl = memory location to store
+              	;
+              	; Returns a=0 if successful
+              	; uses: af, bc, de, hl
+03D4: 59      	nf_wphy:ld	e,c
+03D5: 0C      		inc	c
+03D6: 0C      		inc	c
+03D7: 3A2005  		ld	a,(cursec)
+03DA: ED79    		out	(c),a
+03DC: 0C      		inc	c
+03DD: 51      		ld	d,c
+03DE: 4B      		ld	c,e
+              		
+              		; Read command
+03DF: 3EA8    		ld	a,0xA8
+03E1: ED79    		out	(c),a
+03E3: ED78    	nf_wph1:in	a,(c)
+03E5: 1F      		rra	
+03E6: 3009    		jr	nc,nf_wph2
+03E8: 1F      		rra
+03E9: 30F8    		jr	nc,nf_wph1
+03EB: 4A      		ld	c,d
+03EC: EDA3    		outi
+03EE: 4B      		ld	c,e
+03EF: 18F2    		jr	nf_wph1
+03F1: ED78    	nf_wph2:in	a,(c)
+03F3: 322205  		ld	(lastfdc),a
+03F6: E6FC    		and	0xFC
+03F8: C9      		ret
+              		
+              	; Writes out of block of bytes during a track write operation
+              	; c = FDC command address
+              	; hl = block address
+03F9: 7E      	nf_bloc:ld	a,(hl)
+03FA: B7      		or	a
+03FB: C8      		ret	z
+03FC: 47      		ld	b,a
+03FD: 23      		inc	hl
+03FE: 56      		ld	d,(hl)
+03FF: 23      		inc	hl
+0400: CD0704  	nf_blo0:call	nf_bout
+0403: 10FB    		djnz	nf_blo0
+0405: 18F2    		jr	nf_bloc
+              		
+              	; Writes a byte during a track write operation
+              	; c = FDC command address
+              	; d = Byte to write
+              	;
+              	; uses: af
+0407: ED78    	nf_bout:in	a,(c)
+0409: 1F      		rra	
+040A: 300C    		jr	nc,nf_bou1
+040C: 1F      		rra
+040D: 30F8    		jr	nc,nf_bout
+040F: 0C      		inc	c
+0410: 0C      		inc	c
+0411: 0C      		inc	c
+0412: ED51    		out	(c),d
+0414: 0D      		dec	c
+0415: 0D      		dec	c
+0416: 0D      		dec	c
+0417: C9      		ret
+0418: ED78    	nf_bou1:in	a,(c)		; Operation is complete?
+041A: 322205  		ld	(lastfdc),a
+041D: E6FC    		and	0xFC
+041F: C48204  		call	nz,ioerror	; Error!
+0422: 322105  		ld	(trkdone),a
+0425: C9      		ret
+              	
+              	
+              	; Gets the drive ready, this means:
+              	; 1. Force an interrupt
+              	; 2. Make sure that there is actually a disk in the drive
+              	; 3. Move the drive to track 0
+              	;
+              	; uses: af, bc, d
+0426: 16FF    	dskrdy:	ld	d,255
+0428: CD6B04  		call	nf_dvsc
+042B: 3A1E05  		ld	a,(nf_io)
+042E: 4F      		ld	c,a
+042F: 3ED0    		ld	a,0xD0
+0431: ED79    		out	(c),a		; Force FDC interrupt
+0433: CDC404  	dskrdy0:call	nf_stal
+0436: ED78    		in	a,(c)
+0438: E602    		and	0x02
+043A: 2010    		jr	nz,dskrdy1
+043C: 15      		dec	d
+043D: 20F4    		jr	nz,dskrdy0
+              		
+              		; No disk!
+043F: CD7004  		call	nf_udsl
+              		
+0442: 0E09    		ld	c,b_print
+0444: 118F06  		ld	de,nrdymsg
+0447: CD0500  		call	bdos
+044A: 1817    		jr	waitex
+              	
+              		; Found disk
+              		; Restore to track 0
+044C: 3A1E05  	dskrdy1:ld	a,(nf_io)
+044F: 4F      		ld	c,a
+0450: 3E09    		ld	a,0x09
+0452: ED79    		out	(c),a 
+0454: CDBE04  		call	nf_busy
+              		
+0457: C9      		ret
+              	
+              	; "Handle" a file error
+              	; Complain to user and exit out
+0458: CD7004  	ferror:	call	nf_udsl
+              	
+045B: 0E09    		ld	c,b_print
+045D: 113B06  		ld	de,ferrmsg
+0460: CD0500  		call	bdos
+              		
+0463: 0E01    	waitex:	ld	c,b_coin
+0465: CD0500  		call	bdos
+              		
+0468: C34A01  		jp	exit
+              		
+              	; Selects or deselects a drive
+              	; a = Drive density / selection
+              	;
+              	; uses: af
+046B: 3A1D05  	nf_dvsc:ld	a,(nf_curd)	; Select current drive
+046E: 1801    		jr	nf_dvsl
+0470: AF      	nf_udsl:xor	a		; Unselects a drive
+0471: C5      	nf_dvsl:push	bc
+0472: 47      		ld	b,a
+0473: 3A1E05  		ld	a,(nf_io)
+0476: C60F    		add	a,0x0F
+0478: 4F      		ld	c,a
+0479: ED41    		out	(c),b
+047B: 06FF    		ld	b,0xFF
+047D: CDC404  		call	nf_stal
+0480: C1      		pop	bc
+0481: C9      		ret
+              		
+              	; Prints out an I/O error
+              	;
+              	; uses: does not matter
+0482: F3      	ioerror:di
+0483: CD7004  		call	nf_udsl
+              	
+              		; Print error message
+0486: 0E09    		ld	c,b_print
+0488: 11A706  		ld	de,iomsg
+048B: CD0500  		call	bdos
+              		
+              		; Print error number
+048E: 3A2205  		ld	a,(lastfdc)
+0491: 6F      		ld	l,a
+0492: AF      		xor	a
+0493: 67      		ld	h,a
+0494: CDDF04  		call	putd
+              		
+              		; Print stack #1
+0497: 0E09    		ld	c,b_print
+0499: 11D106  		ld	de,stckmsg
+049C: CD0500  		call	bdos
+049F: E1      		pop	hl
+04A0: CDDF04  		call	putd
+              		
+              		; Print stack #2
+04A3: 0E09    		ld	c,b_print
+04A5: 11D106  		ld	de,stckmsg
+04A8: CD0500  		call	bdos
+04AB: E1      		pop	hl
+04AC: CDDF04  		call	putd
+              		
+              		; Print stack #3
+04AF: 0E09    		ld	c,b_print
+04B1: 11D106  		ld	de,stckmsg
+04B4: CD0500  		call	bdos
+04B7: E1      		pop	hl
+04B8: CDDF04  		call	putd
+04BB: C36304  		jp	waitex
+              		
+              	; Waits until FDC is not busy
+              	; c = FDC command address
+              	;
+              	; uses: af
+04BE: ED78    	nf_busy:in	a,(c)
+04C0: 1F      		rra
+04C1: 38FB    		jr	c,nf_busy
+04C3: C9      		ret
+              		
+              	; Waits a little bit
+              	;
+              	; uses: b
+04C4: C5      	nf_stal:push	bc
+04C5: C1      		pop	bc
+04C6: 10FC    		djnz	nf_stal
+04C8: C9      		ret
+              		
+              	; Gets a single character option from the user
+              	; Letters will be converted to upper case
+              	;
+              	; Returns character in A
+              	; uses: all
+04C9: 0E0A    	getopt:	ld	c,0x0A
+04CB: 114807  		ld	de,inpbuf
+04CE: CD0500  		call	bdos
+04D1: 3A4A07  		ld	a,(inpbuf+2)
+              		
+              	; Converts lowercase to uppercase
+              	; a = Character to convert
+              	;
+              	; Returns uppercase in A
+              	; uses: af
+04D4: E67F    	ltou:	and	0x7F
+04D6: FE61    		cp	0x61		; 'a'
+04D8: D8      		ret	c
+04D9: FE7B    		cp	0x7B		; '{'
+04DB: D0      		ret	nc
+04DC: D620    		sub	0x20
+04DE: C9      		ret
+              		
+              	; Print decimal
+              	; hl = value to print
+              	;
+              	; uses: all
+04DF: 1630    	putd:	ld	d,'0'
+04E1: 01F0D8  		ld	bc,0-10000
+04E4: CDFD04  		call	putd0
+04E7: 0118FC  		ld	bc,0-1000
+04EA: CDFD04  		call	putd0
+04ED: 019CFF  		ld	bc,0-100
+04F0: CDFD04  		call	putd0
+04F3: 01F6FF  		ld	bc,0-10
+04F6: CDFD04  		call	putd0
+04F9: 01FFFF  		ld	bc,0-1
+04FC: 15      		dec	d
+04FD: 3E2F    	putd0:	ld	a,'0'-1		; get character
+04FF: 3C      	putd1:	inc	a
+0500: 09      		add	hl,bc
+0501: 38FC    		jr	c,putd1
+0503: ED42    		sbc	hl,bc
+0505: 47      		ld	b,a
+0506: BA      		cp	d		; check for leading zeros
+0507: C8      		ret	z
+0508: 15      		dec	d
+              		
+              		; Actually print character out
+0509: C5      		push	bc
+050A: D5      		push	de
+050B: E5      		push	hl
+050C: 58      		ld	e,b
+050D: 0E02    		ld	c,b_cout
+050F: CD0500  		call	bdos
+0512: E1      		pop	hl
+0513: D1      		pop	de
+0514: C1      		pop	bc
+0515: C9      		ret
+              		
+              	; Variables
+              		
+0516:         	iocnt:
+0516: 00      		defb	0x00
+              	
+0517:         	profile:
+0517: 00      		defb	0x00
+              		
+0518:         	seclen:
+0518: 0000    		defw	0x0000
+              		
+051A:         	seccnt:
+051A: 00      		defb	0x00
+              		
+051B:         	blkcnt:
+051B: 00      		defb	0x00
+              		
+051C:         	trkcnt:
+051C: 00      		defb	0x00
+              		
+051D:         	nf_curd:
+051D: 00      		defb	0x00
+              		
+051E:         	nf_io:
+051E: 00      		defb	0x00
+              		
+051F:         	curtrk:
+051F: 00      		defb	0x00
+              		
+0520:         	cursec:
+0520: 00      		defb	0x00
+              		
+0521:         	trkdone:
+0521: 00      		defb	0x00
+              		
+0522:         	lastfdc:
+0522: FF      		defb	0xFF
+              		
+              	; Disk format
+              	
+0523:         	fm1_pre:	; Disk preamble
+0523: 504E    		defb	80,0x4E
+0525: 0C00    		defb	12,0x00
+0527: 03F6    		defb	3,0xF6
+0529: 01FC    		defb	1,0xFC
+052B: 324E    		defb	50,0x4E
+052D: 00      		defb	0
+              		
+052E:         	fm1_sec1:	; First part of sector
+052E: 0C00    		defb	12,0x00
+0530: 03F5    		defb	3,0xF5
+0532: 01FE    		defb	1,0xFE
+0534: 00      		defb	0
+              		
+0535:         	fm1_sec2:	; Second part of sector
+0535: 0101    		defb	1,0x01
+0537: 01F7    		defb	1,0xF7
+0539: 164E    		defb	22,0x4E
+053B: 0C00    		defb	12,0x00
+053D: 03F5    		defb	3,0xF5
+053F: 01FB    		defb	1,0xFB
+0541: 00      		defb	0
+              	
+0542:         	fm1_sec3:	; Thrid part of sector
+0542: 01F7    		defb	1,0xF7
+0544: 364E    		defb	54,0x4E
+0546: 00      		defb	0
+              	
+              	; Strings
+              		
+0547:         	splash:
+0547: 4E414255		defb	'NABU FDC Image Utility',0x0A,0x0D
+054B: 20464443	
+054F: 20496D61	
+0553: 67652055	
+0557: 74696C69	
+055B: 74790A0D	
+055F: 52657620		defb	'Rev 1a, tergav17 (Gavin)',0x0A,0x0D,'$'
+0563: 31612C20	
+0567: 74657267	
+056B: 61763137	
+056F: 20284761	
+0573: 76696E29	
+0577: 0A0D24  	
+              	
+057A:         	cfgmsg:
+057A: 0A0D5365		defb	0x0A,0x0D,'Select a disk profile:',0x0A,0x0A,0x0D
+057E: 6C656374	
+0582: 20612064	
+0586: 69736B20	
+058A: 70726F66	
+058E: 696C653A	
+0592: 0A0A0D  	
+              		
+0595: 20202020		defb	'    1: NABU 5.25 SSDD (Len=1024, Sec=5, Track=40)',0x0A,0x0D
+0599: 313A204E	
+059D: 41425520	
+05A1: 352E3235	
+05A5: 20535344	
+05A9: 4420284C	
+05AD: 656E3D31	
+05B1: 3032342C	
+05B5: 20536563	
+05B9: 3D352C20	
+05BD: 54726163	
+05C1: 6B3D3430	
+05C5: 290A0D  	
+05C8: 20202020		defb	'    9: Exit',0x0A,0x0A,0x0D
+05CC: 393A2045	
+05D0: 7869740A	
+05D4: 0A0D    	
+05D6: 4F707469		defb	'Option: $'
+05DA: 6F6E3A20	
+05DE: 24      	
+              		
+              		
+05DF:         	drvmsg:	
+05DF: 0A0D4C6F		defb	0x0A,0x0D,'Logical Drive # (0,1): $'
+05E3: 67696361	
+05E7: 6C204472	
+05EB: 69766520	
+05EF: 23202830	
+05F3: 2C31293A	
+05F7: 2024    	
+              		
+05F9:         	cmdmsg:	
+05F9: 0A0D436F		defb	0x0A,0x0D,'Command ([R]ead, [W]rite, [F]ormat): $'
+05FD: 6D6D616E	
+0601: 6420285B	
+0605: 525D6561	
+0609: 642C205B	
+060D: 575D7269	
+0611: 74652C20	
+0615: 5B465D6F	
+0619: 726D6174	
+061D: 293A2024	
+              		
+0621:         	readymsg:	
+0621: 0A0D5265		defb	0x0A,0x0D,'Ready to begin? (Y,N): $'
+0625: 61647920	
+0629: 746F2062	
+062D: 6567696E	
+0631: 3F202859	
+0635: 2C4E293A	
+0639: 2024    	
+              	
+063B:         	ferrmsg:	
+063B: 0A0D4572		defb	0x0A,0x0D,'Error! Cannot open image file'
+063F: 726F7221	
+0643: 2043616E	
+0647: 6E6F7420	
+064B: 6F70656E	
+064F: 20696D61	
+0653: 67652066	
+0657: 696C65  	
+065A: 0A0D5573		defb	0x0A,0x0D,'Usage: FUTIL [Image file]$'
+065E: 6167653A	
+0662: 20465554	
+0666: 494C205B	
+066A: 496D6167	
+066E: 65206669	
+0672: 6C655D24	
+              		
+0676:         	nfdcmsg:	
+0676: 0A0D4572		defb	0x0A,0x0D,'Error! No FDC detected$'
+067A: 726F7221	
+067E: 204E6F20	
+0682: 46444320	
+0686: 64657465	
+068A: 63746564	
+068E: 24      	
+              		
+068F:         	nrdymsg:	
+068F: 0A0D4572		defb	0x0A,0x0D,'Error! Disk Not Ready$'
+0693: 726F7221	
+0697: 20446973	
+069B: 6B204E6F	
+069F: 74205265	
+06A3: 61647924	
+              		
+06A7:         	iomsg:
+06A7: 0A0D4572		defb	0x0A,0x0D,'Error! I/O Operation Failed'
+06AB: 726F7221	
+06AF: 20492F4F	
+06B3: 204F7065	
+06B7: 72617469	
+06BB: 6F6E2046	
+06BF: 61696C65	
+06C3: 64      	
+06C4: 0A0D4644		defb	0x0A,0x0D,'FDC Code: $'
+06C8: 4320436F	
+06CC: 64653A20	
+06D0: 24      	
+              		
+06D1:         	stckmsg:
+06D1: 0A0D5374		defb	0x0A,0x0D,'Stack Trace: $'
+06D5: 61636B20	
+06D9: 54726163	
+06DD: 653A2024	
+              	
+06E1:         	readmsg:	
+06E1: 0A0D5265		defb	0x0A,0x0D,'Reading Track $'
+06E5: 6164696E	
+06E9: 67205472	
+06ED: 61636B20	
+06F1: 24      	
+              		
+06F2:         	stormsg:	
+06F2: 2053746F		defb	' Storing... $'
+06F6: 72696E67	
+06FA: 2E2E2E20	
+06FE: 24      	
+              		
+06FF:         	fetcmsg:	
+06FF: 0A0D4665		defb	0x0A,0x0D,'Fetching Track $'
+0703: 74636869	
+0707: 6E672054	
+070B: 7261636B	
+070F: 2024    	
+              		
+0711:         	writmsg:	
+0711: 20577269		defb	' Writing... $'
+0715: 74696E67	
+0719: 2E2E2E20	
+071D: 24      	
+              		
+071E:         	frmtmsg:	
+071E: 0A0D466F		defb	0x0A,0x0D,'Formatting Track $'
+0722: 726D6174	
+0726: 74696E67	
+072A: 20547261	
+072E: 636B2024	
+              		
+0732:         	donemsg:	
+0732: 0A0D4F70		defb	0x0A,0x0D,'Operation Complete!$'
+0736: 65726174	
+073A: 696F6E20	
+073E: 436F6D70	
+0742: 6C657465	
+0746: 2124    	
+              	
+              	
+              		
+              	; Input buffer
+0748: 02000000	inpbuf:	defb	0x02, 0x00, 0x00, 0x00
+              		
+              	; Top of program, use it to store stuff
+074C:         	top:
+
+
+; +++ segments +++
+
+#CODE          = $0100 =   256,  size = $064C =  1612
+
+; +++ global symbols +++
+
+_end     = $074C =  1868          futil.asm:29 (unused)
+_size    = $064C =  1612          futil.asm:29 (unused)
+alldone  = $0399 =   921          futil.asm:480
+b_close  = $0010 =    16          futil.asm:22
+b_coin   = $0001 =     1          futil.asm:18
+b_cout   = $0002 =     2          futil.asm:19
+b_dma    = $001A =    26          futil.asm:26
+b_make   = $0016 =    22          futil.asm:25
+b_open   = $000F =    15          futil.asm:21
+b_print  = $0009 =     9          futil.asm:20
+b_read   = $0014 =    20          futil.asm:23
+b_write  = $0015 =    21          futil.asm:24
+bdos     = $0005 =     5          futil.asm:15
+blkcnt   = $051B =  1307          futil.asm:802
+cfgmsg   = $057A =  1402          futil.asm:862
+cmdmsg   = $05F9 =  1529          futil.asm:873
+cursec   = $0520 =  1312          futil.asm:817
+curtrk   = $051F =  1311          futil.asm:814
+dofm1    = $01F7 =   503          futil.asm:200
+dofm10   = $01FD =   509          futil.asm:204
+dofm11   = $0221 =   545          futil.asm:224
+dofm12   = $023F =   575          futil.asm:244
+donemsg  = $0732 =  1842          futil.asm:911
+drvmsg   = $05DF =  1503          futil.asm:870
+dskrdy   = $0426 =  1062          futil.asm:609
+dskrdy0  = $0433 =  1075          futil.asm:615
+dskrdy1  = $044C =  1100          futil.asm:632
+exit     = $014A =   330          futil.asm:85
+fcb      = $005C =    92          futil.asm:16
+ferrmsg  = $063B =  1595          futil.asm:879
+ferror   = $0458 =  1112          futil.asm:642
+fetcmsg  = $06FF =  1791          futil.asm:902
+fm1_pre  = $0523 =  1315          futil.asm:828
+fm1_sec1 = $052E =  1326          futil.asm:836
+fm1_sec2 = $0535 =  1333          futil.asm:842
+fm1_sec3 = $0542 =  1346          futil.asm:851
+format   = $019A =   410          futil.asm:137
+formnx   = $01DA =   474          futil.asm:180
+formr0   = $01B1 =   433          futil.asm:152
+foundit  = $0125 =   293          futil.asm:57
+frmtmsg  = $071E =  1822          futil.asm:908
+getcmd   = $017E =   382          futil.asm:117
+getcurd  = $0161 =   353          futil.asm:100
+getopt   = $04C9 =  1225          futil.asm:733
+getpro   = $012C =   300          futil.asm:63
+inpbuf   = $0748 =  1864          futil.asm:917
+iocnt    = $0516 =  1302          futil.asm:790 (unused)
+ioerror  = $0482 =  1154          futil.asm:674
+iomsg    = $06A7 =  1703          futil.asm:889
+lastfdc  = $0522 =  1314          futil.asm:823
+ltou     = $04D4 =  1236          futil.asm:743 (unused)
+nf_blo0  = $0400 =  1024          futil.asm:573
+nf_bloc  = $03F9 =  1017          futil.asm:566
+nf_bou1  = $0418 =  1048          futil.asm:595
+nf_bout  = $0407 =  1031          futil.asm:582
+nf_busy  = $04BE =  1214          futil.asm:715
+nf_curd  = $051D =  1309          futil.asm:808
+nf_dvsc  = $046B =  1131          futil.asm:657
+nf_dvsl  = $0471 =  1137          futil.asm:660
+nf_io    = $051E =  1310          futil.asm:811
+nf_rph1  = $03BE =   958          futil.asm:515
+nf_rph2  = $03CC =   972          futil.asm:524
+nf_rphy  = $03AF =   943          futil.asm:503
+nf_stal  = $04C4 =  1220          futil.asm:723
+nf_udsl  = $0470 =  1136          futil.asm:659
+nf_wph1  = $03E3 =   995          futil.asm:549
+nf_wph2  = $03F1 =  1009          futil.asm:558
+nf_wphy  = $03D4 =   980          futil.asm:537
+nfdcmsg  = $0676 =  1654          futil.asm:883
+nofdc    = $011A =   282          futil.asm:51
+nrdymsg  = $068F =  1679          futil.asm:886
+profile  = $0517 =  1303          futil.asm:793
+putd     = $04DF =  1247          futil.asm:755
+putd0    = $04FD =  1277          futil.asm:766
+putd1    = $04FF =  1279          futil.asm:767
+read     = $02EB =   747          futil.asm:366
+readmsg  = $06E1 =  1761          futil.asm:896
+readr    = $031B =   795          futil.asm:395
+readr0   = $0322 =   802          futil.asm:402
+readr1   = $033B =   827          futil.asm:417
+readr2   = $0356 =   854          futil.asm:434
+readr3   = $0364 =   868          futil.asm:442
+readymsg = $0621 =  1569          futil.asm:876
+search   = $010B =   267          futil.asm:40
+seccnt   = $051A =  1306          futil.asm:799
+seclen   = $0518 =  1304          futil.asm:796
+setcurd  = $017A =   378          futil.asm:113
+setpro   = $014F =   335          futil.asm:90
+splash   = $0547 =  1351          futil.asm:858
+start    = $0100 =   256          futil.asm:33 (unused)
+stckmsg  = $06D1 =  1745          futil.asm:893
+stormsg  = $06F2 =  1778          futil.asm:899
+top      = $074C =  1868          futil.asm:920
+trkcnt   = $051C =  1308          futil.asm:805
+trkdone  = $0521 =  1313          futil.asm:820
+waitex   = $0463 =  1123          futil.asm:648
+write    = $024D =   589          futil.asm:256
+writmsg  = $0711 =  1809          futil.asm:905
+writr    = $026C =   620          futil.asm:277
+writr1   = $0273 =   627          futil.asm:284
+writr2   = $028A =   650          futil.asm:297
+writr3   = $02B3 =   691          futil.asm:327
+writr4   = $02CE =   718          futil.asm:344
+
+
+total time: 0.0047 sec.
+no errors
