@@ -61,6 +61,8 @@ Unlike the other builds, there is no disk image available to install this versio
 
 Currently, the IDE driver allocates 32MB of the disk. This is divided up into four 8MB partitions, and mapped to A: - D: respectivly. The IDE drive must be at least 32MB in size, and free of any errors. 
 
+The bootstrap and driver code expect the NABU-IDE to have a I/O base of `0xC0`. Therefore, the card must be placed in the first slot / be the first card in the daisy chain.
+
 ## Building
 ### Windows
 In order to build on Windows, ensure the following programs are installed:
