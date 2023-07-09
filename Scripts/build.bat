@@ -34,6 +34,11 @@ REM IDE + NFS kernel
 move cpm22.bin ..\..\Output\Nabu_IDE\ide_nfs_cpm22.bin >NUL
 move *.lst ..\..\Output\Nabu_IDE\Listings >NUL
 
+REM IDE + FDC kernel
+..\..\Build\zasm config_ide_fdc.asm -u -w -b cpm22.bin
+move cpm22.bin ..\..\Output\Nabu_IDE\ide_fdc_cpm22.bin >NUL
+move *.lst ..\..\Output\Nabu_IDE\Listings >NUL
+
 REM Move resource into outputs
 cd ..
 copy res\licca_font.bin ..\Output\FONT.GRB >NUL
@@ -85,6 +90,7 @@ cd ..\..
 cd Misc\IDEGen
 ..\..\..\Build\zasm idegen.asm -u -w -b idegen.com
 copy txtfix.lst ..\..\..\Output\Application\Nabu\Listings >NUL
+copy idegen.com ..\..\..\Output\Nabu_IDE >NUL
 cd ..\..
 
 REM Assemble the disk image

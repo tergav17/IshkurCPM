@@ -51,6 +51,11 @@ getsys: ld	c,b_print
 	ld	hl,sys_ide_nfs	; pointer to image
 	cp	'1'
 	jr	z,setsys
+	
+	; System Option #2
+	ld	hl,sys_ide_fdc	; pointer to image
+	cp	'2'
+	jr	z,setsys
 
 
 	; Invalid, reprompt
@@ -389,6 +394,7 @@ cfgmsg:
 	defb	0x0A,0x0D,'Select a System Image:',0x0A,0x0A,0x0D
 	
 	defb	'    1: IshkurCP/M IDE + NFS',0x0A,0x0D
+	defb	'    2: IshkurCP/M IDE + FDC',0x0A,0x0D
 	defb	'    9: Exit',0x0A,0x0A,0x0D
 	defb	'Option: $'
 	
@@ -437,6 +443,11 @@ sys_ide_nfs:
 	defw	0xDC00		; Load in address
 	defb	19		; Sectors to write
 #insert "../../../Output/Nabu_IDE/ide_nfs_cpm22.bin"
+
+sys_ide_fdc:
+	defw	0xDC00		; Load in address
+	defb	17		; Sectors to write
+#insert "../../../Output/Nabu_IDE/ide_fdc_cpm22.bin"
 	
 ; Top of program, use it to store stuff
 top:
