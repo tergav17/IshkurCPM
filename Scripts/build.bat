@@ -39,6 +39,11 @@ REM IDE + FDC kernel
 move cpm22.bin ..\..\Output\Nabu_IDE\ide_fdc_cpm22.bin >NUL
 move *.lst ..\..\Output\Nabu_IDE\Listings >NUL
 
+REM IDE kernel
+..\..\Build\zasm config_ide.asm -u -w -b cpm22.bin
+move cpm22.bin ..\..\Output\Nabu_IDE\ide_cpm22.bin >NUL
+move *.lst ..\..\Output\Nabu_IDE\Listings >NUL
+
 REM Move resource into outputs
 cd ..
 copy res\licca_font.bin ..\Output\FONT.GRB >NUL
