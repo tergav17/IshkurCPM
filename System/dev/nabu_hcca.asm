@@ -10,7 +10,6 @@
 ;* 
 ;**************************************************************
 
-
 ; Set up the HCCA modem connection
 ; Configures the AY-3-8910 to monitor correct interrupts
 ; and leaves it in a state where the interrupt port is
@@ -31,6 +30,12 @@ hc_hini:ld	a,0x07
 	ld	hl,hc_wirq
 	ld	(intvec+2),hl
 	pop	hl
+	
+	; Record default interrupt modes
+	ld	a,0x0E
+	out	(hc_atla),a	; AY register = 14
+	in	a,(hc_atla)
+	ld	(hc_intm),a
 	
 ; Set interrupts to their default state
 ;
@@ -292,6 +297,10 @@ hc_wirq:push	af
 	pop	af
 	ei
 	ret
+	
+; Interrupt modes
+hc_intm:
+	defb	0
 	
 ; Message prototype to read a block
 ; Total length: 12 bytes
