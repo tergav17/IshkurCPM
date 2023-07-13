@@ -1,6 +1,6 @@
               	; --------------------------------------
               	; zasm: assemble "config_ndsk.asm"
-              	; date: 2023-07-10 22:15:26
+              	; date: 2023-07-12 23:39:54
               	; --------------------------------------
 
 
@@ -47,8 +47,8 @@
               	
               	#target	BIN			; Set up memory segments
 DC00:         	#code	_TEXT,(mem)*1024
-FAC5:         	#data	_BSS,_TEXT_end
-FB35:         	#data	_NOINIT,_BSS_end
+FAEB:         	#data	_BSS,_TEXT_end
+FB5B:         	#data	_NOINIT,_BSS_end
 FF00:         	#data	_JUMP_TABLE,0xFF00
 FF00: 00000000	intvec:	defs	16
 FF04: 00...   	
@@ -5166,9 +5166,9 @@ F25D: F3      	wbootr:	di
               		
               		; Zero out BSS
 F25E: AF      		xor	a
-F25F: 21C5FA  		ld	hl,_TEXT_end
+F25F: 21EBFA  		ld	hl,_TEXT_end
 F262: 77      		ld	(hl),a
-F263: 11C6FA  		ld	de,_TEXT_end+1
+F263: 11ECFA  		ld	de,_TEXT_end+1
 F266: 017000  		ld	bc,_BSS_size
 F269: EDB0    		ldir
               	
@@ -5509,19 +5509,19 @@ F367: C9      	syshook:ret
               		
               	; One of the block devices needs to have the responsibiliy
               	; of loading the CCP into memory. Define the jump vector here
-F368: C33FF8  	resccp:	jp	nd_ccp
+F368: C365F8  	resccp:	jp	nd_ccp
               	
               	; Additionally, if Ishkur is using a graphical device, that
               	; device may temporarily need to access the Graphical Resource
               	; Block (GRB) to load in fonts and such. This is up to 2k in
               	; size, and goes in the location that the CCP resides
-F36B: C344F8  	resgrb:	jp	nd_grb
+F36B: C36AF8  	resgrb:	jp	nd_grb
               	
               	; A device of "0" will be read as a non-existant device
               	; The 'init' signal can be sent to the same devices many 
               	; times if it has multipe entires in this table.
-F36E: 7DF70000	bdevsw:	defw	ndkdev,	0	; 'A'
-F372: 7DF70100		defw	ndkdev,	1	; 'B'
+F36E: A3F70000	bdevsw:	defw	ndkdev,	0	; 'A'
+F372: A3F70100		defw	ndkdev,	1	; 'B'
 F376: 00000000		defw	0,	0	; 'C'
 F37A: 00000000		defw	0,	0	; 'D'
 F37E: 00000000		defw	0,	0	; 'E'
@@ -5559,9 +5559,9 @@ F3AA: 00000000		defw	0,	0	; 'P'
               	; A device of "0" will be read as a non-existant device
               	; The 'init' signal can be sent to the same devices many 
               	; times if it has multipe entires in this table.
-F3AE: 37FA0000	cdevsw:	defw	siodev,	0	; TTY device
+F3AE: 5DFA0000	cdevsw:	defw	siodev,	0	; TTY device
 F3B2: BEF30000		defw	vdpdev,	0	; Console device
-F3B6: 0DFA0000		defw	prtdev,	0	; Aux I/O device #1 (LPT)
+F3B6: 33FA0000		defw	prtdev,	0	; Aux I/O device #1 (LPT)
 F3BA: 00000000		defw	0,	0	; Aux I/O device #2 (GEN)
               	
               	;
@@ -5594,12 +5594,12 @@ F3BA: 00000000		defw	0,	0	; Aux I/O device #2 (GEN)
               	;
               	; BSS Segment Variables
               	.area	_BSS
-FAC5: 00      	tm_outc:defs	1	; Output character
-FAC6: 00      	tm_scro:defs	1	; Scroll width
-FAC7: 00      	tm_escs:defs	1	; Escape state
-FAC8: 00      	tm_last:defs	1	; Last character read
-FAC9: 00000000	tm_cbuf:defs	40	; 40 byte character buffer
-FACD: 00...   	
+FAEB: 00      	tm_outc:defs	1	; Output character
+FAEC: 00      	tm_scro:defs	1	; Scroll width
+FAED: 00      	tm_escs:defs	1	; Escape state
+FAEE: 00      	tm_last:defs	1	; Last character read
+FAEF: 00000000	tm_cbuf:defs	40	; 40 byte character buffer
+FAF3: 00...   	
               	.area	_TEXT
               	
               	; TMS9918 Configuration
@@ -5665,23 +5665,23 @@ F3DC: C9      		ret
               	;
               	; Returns a=0xFF if there is a key to read 
               	; uses: af, bc, de, hl
-F3DD: CD2BF7  	tm_stat:call	tm_dint
+F3DD: CD51F7  	tm_stat:call	tm_dint
 F3E0: CDE9F3  		call	tm_sta0
 F3E3: F5      		push	af
-F3E4: CD3BF7  		call	tm_eint
+F3E4: CD61F7  		call	tm_eint
 F3E7: F1      		pop	af
 F3E8: C9      		ret 
-F3E9: 3AC8FA  	tm_sta0:ld	a,(tm_last)
+F3E9: 3AEEFA  	tm_sta0:ld	a,(tm_last)
 F3EC: FEE4    		cp	0xE4
 F3EE: 2871    		jr	z,tm_scri
 F3F0: FEE5    		cp	0xE5
 F3F2: 287F    		jr	z,tm_sclf
-F3F4: 3AC5FA  	tm_sta1:ld	a,(tm_outc)
+F3F4: 3AEBFA  	tm_sta1:ld	a,(tm_outc)
 F3F7: 3C      		inc	a
 F3F8: 3EFF    		ld	a,0xFF
 F3FA: C0      		ret	nz
-F3FB: CD3AF6  		call	tm_getc
-F3FE: 32C5FA  		ld	(tm_outc),a
+F3FB: CD60F6  		call	tm_getc
+F3FE: 32EBFA  		ld	(tm_outc),a
 F401: 3C      		inc	a
 F402: C8      		ret	z
 F403: 3EFF    		ld	a,0xFF
@@ -5695,9 +5695,9 @@ F406: CD6BF3  	tm_init:call	resgrb
 F409: CD7DF4  		call	tm_setp
               		
               		; Set up interrupt vectors (if needed)
-F40C: 2125F7  		ld	hl,tm_virq
+F40C: 214BF7  		ld	hl,tm_virq
 F40F: 2206FF  		ld	(intvec+6),hl
-F412: 2158F6  		ld	hl,tm_kirq
+F412: 217EF6  		ld	hl,tm_kirq
 F415: 2204FF  		ld	(intvec+4),hl
               		
               		; Set TMS pattern generator block to 0
@@ -5709,7 +5709,7 @@ F41F: D3A1    		out	(tm_latc),a
               		
               		; Write the GRB
 F421: 010040  		ld	bc,0x4000
-F424: CD1AF7  		call	tm_addr
+F424: CD40F7  		call	tm_addr
 F427: 2100DC  		ld	hl,cbase
 F42A: 0EA0    		ld	c,tm_data
 F42C: 3E08    		ld	a,8	; Transfer 8*256 = 2048
@@ -5719,13 +5719,13 @@ F433: 3D      		dec	a
 F434: 20F8    		jr	nz,tm_ini0
               		
               		; Cold boot?
-F436: 3A4DF7  		ld	a,(tm_cold)
+F436: 3A73F7  		ld	a,(tm_cold)
 F439: B7      		or	a
 F43A: 2012    		jr	nz,tm_ini1
               		
               		; Check serial #
 F43C: 01FE17  		ld	bc,0x17FE
-F43F: CD1AF7  		call	tm_addr
+F43F: CD40F7  		call	tm_addr
 F442: ED78    		in	a,(c)
 F444: FEE5    		cp	0xE5
 F446: 2006    		jr	nz,tm_ini1
@@ -5734,11 +5734,11 @@ F44A: FE81    		cp	0x81
 F44C: 280D    		jr	z,tm_cloc
               		
               		; Reset the terminal
-F44E: CDFDF6  	tm_ini1:call	tm_cls
+F44E: CD23F7  	tm_ini1:call	tm_cls
 F451: AF      		xor	a
-F452: 324BF7  		ld	(tm_curx),a
-F455: 324CF7  		ld	(tm_cury),a
-F458: 324DF7  		ld	(tm_cold),a
+F452: 3271F7  		ld	(tm_curx),a
+F455: 3272F7  		ld	(tm_cury),a
+F458: 3273F7  		ld	(tm_cold),a
               		
               		; Fall to tm_cloc
               		
@@ -5746,22 +5746,22 @@ F458: 324DF7  		ld	(tm_cold),a
               	;
               	; uses: af
 F45B: 3EFF    	tm_cloc:ld	a,0xFF
-F45D: 32C5FA  		ld	(tm_outc),a
+F45D: 32EBFA  		ld	(tm_outc),a
               	
 F460: C9      		ret
               		
               	; Scroll left / scroll right
               	;
               	; uses: af, bc, de, hl
-F461: 3AC6FA  	tm_scri:ld	a,(tm_scro)
+F461: 3AECFA  	tm_scri:ld	a,(tm_scro)
 F464: B7      		or	a
 F465: FE28    		cp	40
 F467: 2808    		jr	z,tm_scr1
 F469: C604    		add	a,4
-F46B: 32C6FA  	tm_scr0:ld	(tm_scro),a
-F46E: CDDAF6  		call	tm_usco
+F46B: 32ECFA  	tm_scr0:ld	(tm_scro),a
+F46E: CD00F7  		call	tm_usco
 F471: 1881    	tm_scr1:jr	tm_sta1
-F473: 3AC6FA  	tm_sclf:ld	a,(tm_scro)
+F473: 3AECFA  	tm_sclf:ld	a,(tm_scro)
 F476: B7      		or	a
 F477: 28F8    		jr	z,tm_scr1
 F479: D604    		sub	4
@@ -5771,7 +5771,7 @@ F47B: 18EE    		jr	tm_scr0
               	; used to change between 40-col and 80-col
               	;
               	; uses: af, hl
-F47D: 2A46F7  	tm_setp:ld	hl,(tm_mode)
+F47D: 2A6CF7  	tm_setp:ld	hl,(tm_mode)
               	
               		; Set TMS to text mode
 F480: DBA1    		in	a,(tm_latc)
@@ -5787,7 +5787,7 @@ F491: D3A1    		out	(tm_latc),a
               		
               		; Set TMS color
 F493: DBA1    		in	a,(tm_latc)
-F495: 3A48F7  		ld	a,(tm_colr)
+F495: 3A6EF7  		ld	a,(tm_colr)
 F498: D3A1    		out	(tm_latc),a
 F49A: 3E87    		ld	a,0x87
 F49C: D3A1    		out	(tm_latc),a
@@ -5804,19 +5804,19 @@ F4A7: C9      		ret
               	;
               	; Returns ASCII key in A
               	; uses: af, bc, de, hl
-F4A8: CD2BF7  	tm_read:call	tm_dint
+F4A8: CD51F7  	tm_read:call	tm_dint
 F4AB: CDB4F4  		call	tm_rea0
 F4AE: F5      		push	af
-F4AF: CD3BF7  		call	tm_eint
+F4AF: CD61F7  		call	tm_eint
 F4B2: F1      		pop	af
 F4B3: C9      		ret 
-F4B4: 3A4BF7  	tm_rea0:ld	a,(tm_curx)
+F4B4: 3A71F7  	tm_rea0:ld	a,(tm_curx)
 F4B7: 4F      		ld	c,a
-F4B8: 3A4CF7  		ld	a,(tm_cury)
+F4B8: 3A72F7  		ld	a,(tm_cury)
 F4BB: 57      		ld	d,a
 F4BC: 210010  		ld	hl,0x1000
 F4BF: 3E50    		ld	a,80
-F4C1: CDB6F6  		call	tm_chat
+F4C1: CDDCF6  		call	tm_chat
 F4C4: DBA0    		in	a,(tm_data)	; char is in A
 F4C6: 57      		ld	d,a		; char key
 F4C7: 5F      		ld	e,a		; blinking char
@@ -5829,7 +5829,7 @@ F4CF: 3C      		inc	a
 F4D0: 200D    		jr	nz,tm_rea2
 F4D2: 5A      		ld	e,d
 F4D3: CDEFF4  		call	tm_rea3
-F4D6: 3AC5FA  		ld	a,(tm_outc)
+F4D6: 3AEBFA  		ld	a,(tm_outc)
 F4D9: 47      		ld	b,a
 F4DA: CD5BF4  		call	tm_cloc
 F4DD: 78      		ld	a,b
@@ -5846,11 +5846,11 @@ F4ED: 18DB    		jr	tm_rea1
               	
               	
 F4EF: D5      	tm_rea3:push	de
-F4F0: 3A4BF7  		ld	a,(tm_curx)
+F4F0: 3A71F7  		ld	a,(tm_curx)
 F4F3: 4F      		ld	c,a
-F4F4: 3A4CF7  		ld	a,(tm_cury)
+F4F4: 3A72F7  		ld	a,(tm_cury)
 F4F7: 57      		ld	d,a
-F4F8: CD92F6  		call	tm_putc
+F4F8: CDB8F6  		call	tm_putc
 F4FB: D1      		pop	de
 F4FC: C9      		ret
               	
@@ -5871,18 +5871,18 @@ F505: C9      		ret
               	;
               	; Returns c,b as next position 
               	; uses: af, bc, de, hl
-F506: CD2BF7  	tm_writ:call	tm_dint
+F506: CD51F7  	tm_writ:call	tm_dint
 F509: 59      		ld	e,c
-F50A: 3A4BF7  		ld	a,(tm_curx)
+F50A: 3A71F7  		ld	a,(tm_curx)
 F50D: 4F      		ld	c,a
-F50E: 3A4CF7  		ld	a,(tm_cury)
+F50E: 3A72F7  		ld	a,(tm_cury)
 F511: 57      		ld	d,a
 F512: CD21F5  		call	tm_wri0
 F515: 78      		ld	a,b
-F516: 324CF7  		ld	(tm_cury),a
+F516: 3272F7  		ld	(tm_cury),a
 F519: 79      		ld	a,c
-F51A: 324BF7  		ld	(tm_curx),a
-F51D: CD3BF7  		call	tm_eint
+F51A: 3271F7  		ld	(tm_curx),a
+F51D: CD61F7  		call	tm_eint
 F520: C9      		ret
               		
               	; Write helper routine
@@ -5892,14 +5892,14 @@ F520: C9      		ret
               	;
               	; Returns c,b as next position
 F521: 42      	tm_wri0:ld	b,d		; c = X, b = Y
-F522: 3AC7FA  		ld	a,(tm_escs)
+F522: 3AEDFA  		ld	a,(tm_escs)
 F525: B7      		or	a		; Process escape code
-F526: C28EF5  		jp	nz,tm_esc
+F526: C293F5  		jp	nz,tm_esc
 F529: 3E1F    		ld	a,0x1F
 F52B: BB      		cp	e
 F52C: D260F5  		jp	nc,tm_wri1	; Process control code
 F52F: C5      		push	bc
-F530: CD92F6  		call	tm_putc		; Write character
+F530: CDB8F6  		call	tm_putc		; Write character
 F533: C1      		pop	bc
               		
               		; Increment character
@@ -5914,7 +5914,7 @@ F53C: 3E18    		ld	a,24
 F53E: B8      		cp	b
 F53F: C0      		ret	nz
 F540: C5      		push	bc
-F541: CD14F6  		call	tm_dsco
+F541: CD3AF6  		call	tm_dsco
 F544: C1      		pop	bc
 F545: 05      		dec	b
 F546: C9      		ret
@@ -5935,153 +5935,175 @@ F555: B8      		cp	b
 F556: C8      		ret	z
 F557: 05      		dec	b
 F558: C9      		ret
-F559: CDFDF6  	tm_cshm:call	tm_cls
+F559: CD23F7  	tm_cshm:call	tm_cls
 F55C: AF      	tm_home:xor	a
 F55D: 47      		ld	b,a
 F55E: 4F      		ld	c,a
 F55F: C9      		ret
               	
 F560: 7B      	tm_wri1:ld	a,e
-F561: FE08    		cp	0x08	; '\b' (Cursor left)
-F563: 28E5    		jr	z,tm_bs
-F565: FE12    		cp	0x12	; Cursor right
-F567: 28CB    		jr	z,tm_ri
-F569: FE0A    		cp	0x0A	; '\n' (Cursor down)
-F56B: 28CE    		jr	z,tm_lf
-F56D: FE0B    		cp	0x0B	; Cursor up
-F56F: 28E3    		jr	z,tm_up
-F571: FE0D    		cp	0x0D	; '\r' 
-F573: 28D2    		jr	z,tm_cr
-F575: FE17    		cp	0x17	; Clear end of screen
-F577: 2856    		jr	z,tm_cles
-F579: FE18    		cp	0x18	; Clear end of line
-F57B: 2854    		jr	z,tm_clea
-F57D: FE1A    		cp	0x1A	; Clear screen, home cursor
-F57F: 28D8    		jr	z,tm_cshm
-F581: FE1E    		cp	0x1E	; Home cursor
-F583: 28D7    		jr	z,tm_home
-F585: FE1B    		cp	0x1B	; Escape
-F587: C0      		ret	nz
-F588: 3E01    		ld	a,1
-F58A: 32C7FA  		ld	(tm_escs),a
-F58D: C9      		ret
+F561: FE07    		cp	0x07	; Bell
+F563: CA19F6  		jp	z,tm_bell
+F566: FE08    		cp	0x08	; '\b' (Cursor left)
+F568: 28E0    		jr	z,tm_bs
+F56A: FE12    		cp	0x12	; Cursor right
+F56C: 28C6    		jr	z,tm_ri
+F56E: FE0A    		cp	0x0A	; '\n' (Cursor down)
+F570: 28C9    		jr	z,tm_lf
+F572: FE0B    		cp	0x0B	; Cursor up
+F574: 28DE    		jr	z,tm_up
+F576: FE0D    		cp	0x0D	; '\r' 
+F578: 28CD    		jr	z,tm_cr
+F57A: FE17    		cp	0x17	; Clear end of screen
+F57C: 2856    		jr	z,tm_cles
+F57E: FE18    		cp	0x18	; Clear end of line
+F580: 2854    		jr	z,tm_clea
+F582: FE1A    		cp	0x1A	; Clear screen, home cursor
+F584: 28D3    		jr	z,tm_cshm
+F586: FE1E    		cp	0x1E	; Home cursor
+F588: 28D2    		jr	z,tm_home
+F58A: FE1B    		cp	0x1B	; Escape
+F58C: C0      		ret	nz
+F58D: 3E01    		ld	a,1
+F58F: 32EDFA  		ld	(tm_escs),a
+F592: C9      		ret
               		
               		; Handle escape sequence
-F58E: 3D      	tm_esc:	dec	a
-F58F: 280E    		jr	z,tm_esc0
-F591: 3D      		dec	a
-F592: 2825    		jr	z,tm_esc1
-F594: 3D      		dec	a
-F595: 282D    		jr	z,tm_esc2
-F597: 3D      		dec	a
-F598: 2871    		jr	z,tm_updc
-F59A: AF      	tm_escd:xor	a	; Escape done
-F59B: 32C7FA  	tm_escr:ld	(tm_escs),a
-F59E: C9      		ret
-F59F: 3EFF    	tm_esc0:ld	a,0xFF	; Do 40-col
-F5A1: BB      		cp	e
-F5A2: 2850    		jr	z,tm_40c
-F5A4: 3EFE    		ld	a,0xFE	; Do 80-col
+F593: 3D      	tm_esc:	dec	a
+F594: 280E    		jr	z,tm_esc0
+F596: 3D      		dec	a
+F597: 2825    		jr	z,tm_esc1
+F599: 3D      		dec	a
+F59A: 282D    		jr	z,tm_esc2
+F59C: 3D      		dec	a
+F59D: 2871    		jr	z,tm_updc
+F59F: AF      	tm_escd:xor	a	; Escape done
+F5A0: 32EDFA  	tm_escr:ld	(tm_escs),a
+F5A3: C9      		ret
+F5A4: 3EFF    	tm_esc0:ld	a,0xFF	; Do 40-col
 F5A6: BB      		cp	e
-F5A7: 2858    		jr	z,tm_80c
-F5A9: 3EFD    		ld	a,0xFD	; Set color
+F5A7: 2850    		jr	z,tm_40c
+F5A9: 3EFE    		ld	a,0xFE	; Do 80-col
 F5AB: BB      		cp	e
-F5AC: 2859    		jr	z,tm_scol
-F5AE: 3E3D    		ld	a,0x3D	; '='
+F5AC: 2858    		jr	z,tm_80c
+F5AE: 3EFD    		ld	a,0xFD	; Set color
 F5B0: BB      		cp	e
-F5B1: 20E7    		jr	nz,tm_escd
-F5B3: 3AC7FA  	tm_esci:ld	a,(tm_escs)
-F5B6: 3C      		inc	a
-F5B7: 18E2    		jr	tm_escr
-F5B9: 7B      	tm_esc1:ld	a,e
-F5BA: 1E20    		ld	e,0x20
-F5BC: 93      		sub	e
-F5BD: FE18    		cp	24
-F5BF: 30D9    		jr	nc,tm_escd
-F5C1: 47      		ld	b,a
-F5C2: 18EF    		jr	tm_esci
-F5C4: 7B      	tm_esc2:ld	a,e
-F5C5: 1E20    		ld	e,0x20
-F5C7: 93      		sub	e
-F5C8: FE50    		cp	80
-F5CA: 30CE    		jr	nc,tm_escd
-F5CC: 4F      		ld	c,a
-F5CD: 18CB    		jr	tm_escd
+F5B1: 2859    		jr	z,tm_scol
+F5B3: 3E3D    		ld	a,0x3D	; '='
+F5B5: BB      		cp	e
+F5B6: 20E7    		jr	nz,tm_escd
+F5B8: 3AEDFA  	tm_esci:ld	a,(tm_escs)
+F5BB: 3C      		inc	a
+F5BC: 18E2    		jr	tm_escr
+F5BE: 7B      	tm_esc1:ld	a,e
+F5BF: 1E20    		ld	e,0x20
+F5C1: 93      		sub	e
+F5C2: FE18    		cp	24
+F5C4: 30D9    		jr	nc,tm_escd
+F5C6: 47      		ld	b,a
+F5C7: 18EF    		jr	tm_esci
+F5C9: 7B      	tm_esc2:ld	a,e
+F5CA: 1E20    		ld	e,0x20
+F5CC: 93      		sub	e
+F5CD: FE50    		cp	80
+F5CF: 30CE    		jr	nc,tm_escd
+F5D1: 4F      		ld	c,a
+F5D2: 18CB    		jr	tm_escd
               		
               		; Clear segment
               		; B = ending line
-F5CF: 0617    	tm_cles:ld	b,23
-F5D1: 04      	tm_clea:inc	b
-F5D2: 1E00    		ld	e,0
-F5D4: C5      		push	bc
-F5D5: D5      		push	de
-F5D6: 3E50    		ld	a,80
-F5D8: 210050  		ld	hl,0x5000
-F5DB: CDB6F6  		call	tm_chat
-F5DE: D1      		pop	de
-F5DF: C1      		pop	bc
-F5E0: AF      	tm_cle0:xor	a
-F5E1: D3A0    		out	(tm_data),a
-F5E3: 0C      		inc	c
-F5E4: 3E50    		ld	a,80
-F5E6: B9      		cp	c
-F5E7: 20F7    		jr	nz,tm_cle0
-F5E9: 14      		inc	d
-F5EA: AF      		xor	a
-F5EB: 4F      		ld	c,a
-F5EC: 7A      		ld	a,d
-F5ED: B8      		cp	b
-F5EE: 20F0    		jr	nz,tm_cle0
-F5F0: D1      		pop	de	; Do not update character
-F5F1: C3DAF6  		jp	tm_usco
+F5D4: 0617    	tm_cles:ld	b,23
+F5D6: 04      	tm_clea:inc	b
+F5D7: 1E00    		ld	e,0
+F5D9: C5      		push	bc
+F5DA: D5      		push	de
+F5DB: 3E50    		ld	a,80
+F5DD: 210050  		ld	hl,0x5000
+F5E0: CDDCF6  		call	tm_chat
+F5E3: D1      		pop	de
+F5E4: C1      		pop	bc
+F5E5: AF      	tm_cle0:xor	a
+F5E6: D3A0    		out	(tm_data),a
+F5E8: 0C      		inc	c
+F5E9: 3E50    		ld	a,80
+F5EB: B9      		cp	c
+F5EC: 20F7    		jr	nz,tm_cle0
+F5EE: 14      		inc	d
+F5EF: AF      		xor	a
+F5F0: 4F      		ld	c,a
+F5F1: 7A      		ld	a,d
+F5F2: B8      		cp	b
+F5F3: 20F0    		jr	nz,tm_cle0
+F5F5: D1      		pop	de	; Do not update character
+F5F6: C300F7  		jp	tm_usco
               		
-F5F4: E5      	tm_40c:	push	hl
-F5F5: 210200  		ld	hl,0x0002
-F5F8: 2246F7  	tm_cupd:ld	(tm_mode),hl
-F5FB: CD7DF4  		call	tm_setp
-F5FE: E1      		pop	hl
-F5FF: 1899    		jr	tm_escd
+F5F9: E5      	tm_40c:	push	hl
+F5FA: 210200  		ld	hl,0x0002
+F5FD: 226CF7  	tm_cupd:ld	(tm_mode),hl
+F600: CD7DF4  		call	tm_setp
+F603: E1      		pop	hl
+F604: 1899    		jr	tm_escd
               		
-F601: E5      	tm_80c:	push	hl
-F602: 210704  		ld	hl,0x0407
-F605: 18F1    		jr	tm_cupd
+F606: E5      	tm_80c:	push	hl
+F607: 210704  		ld	hl,0x0407
+F60A: 18F1    		jr	tm_cupd
               		
               		; Set color command
-F607: 3E04    	tm_scol:ld	a,4
-F609: 1890    		jr	tm_escr
+F60C: 3E04    	tm_scol:ld	a,4
+F60E: 1890    		jr	tm_escr
               		
               		; Update color here
-F60B: 7B      	tm_updc:ld	a,e
-F60C: 3248F7  		ld	(tm_colr),a
-F60F: CD7DF4  		call	tm_setp
-F612: 1886    		jr	tm_escd
+F610: 7B      	tm_updc:ld	a,e
+F611: 326EF7  		ld	(tm_colr),a
+F614: CD7DF4  		call	tm_setp
+F617: 1886    		jr	tm_escd
+              	
+              		; Ring the bell
+F619: AF      	tm_bell:xor	a
+F61A: D3A1    		out	(tm_latc),a
+F61C: D3A0    		out	(tm_data),a
+F61E: 3C      		inc	a
+F61F: D3A1    		out	(tm_latc),a
+F621: 3E80    		ld	a,0x80
+F623: D3A0    		out	(tm_data),a
+F625: 3E07    		ld	a,7
+F627: D3A1    		out	(tm_latc),a
+F629: DBA0    		in	a,(tm_data)
+F62B: E6C0    		and	0xC0
+F62D: F63E    		or	0x3E
+F62F: D3A0    		out	(tm_data),a
+F631: 3E08    		ld	a,8
+F633: D3A1    		out	(tm_latc),a
+F635: 3E0F    		ld	a,0x0F
+F637: D3A0    		out	(tm_data),a
+F639: C9      		ret
               		
-              		
+              	
               		
               	; Scroll both frame buffers down one
               	;
               	; uses: af, bc, de, hl
-F614: 212808  	tm_dsco:ld	hl,0x0800+40
-F617: 110048  		ld	de,0x4800
-F61A: 0618    		ld	b,24
-F61C: CD27F6  		call	tm_dsc0
-F61F: 215010  		ld	hl,0x1000+80
-F622: 110050  		ld	de,0x5000
-F625: 0630    		ld	b,48
-F627: C5      	tm_dsc0:push	bc
-F628: D5      		push	de
-F629: E5      		push	hl
-F62A: CDC2F6  		call	tm_vcpy
-F62D: E1      		pop	hl
-F62E: D1      		pop	de
-F62F: 012800  		ld	bc,40
-F632: 09      		add	hl,bc
-F633: EB      		ex	de,hl
-F634: 09      		add	hl,bc
-F635: EB      		ex	de,hl
-F636: C1      		pop	bc
-F637: 10EE    		djnz	tm_dsc0
-F639: C9      		ret
+F63A: 212808  	tm_dsco:ld	hl,0x0800+40
+F63D: 110048  		ld	de,0x4800
+F640: 0618    		ld	b,24
+F642: CD4DF6  		call	tm_dsc0
+F645: 215010  		ld	hl,0x1000+80
+F648: 110050  		ld	de,0x5000
+F64B: 0630    		ld	b,48
+F64D: C5      	tm_dsc0:push	bc
+F64E: D5      		push	de
+F64F: E5      		push	hl
+F650: CDE8F6  		call	tm_vcpy
+F653: E1      		pop	hl
+F654: D1      		pop	de
+F655: 012800  		ld	bc,40
+F658: 09      		add	hl,bc
+F659: EB      		ex	de,hl
+F65A: 09      		add	hl,bc
+F65B: EB      		ex	de,hl
+F65C: C1      		pop	bc
+F65D: 10EE    		djnz	tm_dsc0
+F65F: C9      		ret
               		
               	
               	; Grabs the latest key pressed by the keyboard
@@ -6089,37 +6111,37 @@ F639: C9      		ret
               	; Returns key in A, or 0xFF if none
               	;
               	; uses: af, bc, de, hl
-F63A: 3A4AF7  	tm_getc:ld	a,(tm_inf)
-F63D: B7      		or	a
-F63E: 3E00    		ld	a,0
-F640: 324AF7  		ld	(tm_inf),a
-F643: 3A49F7  		ld	a,(tm_inb)
-F646: 2008    		jr	nz,tm_get0
+F660: 3A70F7  	tm_getc:ld	a,(tm_inf)
+F663: B7      		or	a
+F664: 3E00    		ld	a,0
+F666: 3270F7  		ld	(tm_inf),a
+F669: 3A6FF7  		ld	a,(tm_inb)
+F66C: 2008    		jr	nz,tm_get0
               	
-F648: DB91    		in	a,(tm_keys)
-F64A: E602    		and	2
-F64C: 3D      		dec	a
-F64D: F8      		ret	m
+F66E: DB91    		in	a,(tm_keys)
+F670: E602    		and	2
+F672: 3D      		dec	a
+F673: F8      		ret	m
               		
               		; Grab the key
-F64E: DB90    		in	a,(tm_keyd)
-F650: 32C8FA  	tm_get0:ld	(tm_last),a
-F653: CD66F6  		call	tm_map
-F656: 79      		ld	a,c
-F657: C9      		ret
+F674: DB90    		in	a,(tm_keyd)
+F676: 32EEFA  	tm_get0:ld	(tm_last),a
+F679: CD8CF6  		call	tm_map
+F67C: 79      		ld	a,c
+F67D: C9      		ret
               		
               	; Handles a keyboard interrupt for the VDP terminal driver
               	; Keypress stored in tm_inb and tm_inf flag is set
               	; 
               	; uses: none
-F658: F5      	tm_kirq:push	af
-F659: DB90    		in	a,(tm_keyd)
-F65B: 3249F7  		ld	(tm_inb),a
-F65E: 3E01    		ld	a,1
-F660: 324AF7  		ld	(tm_inf),a
-F663: F1      		pop	af
-F664: FB      		ei
-F665: C9      		ret
+F67E: F5      	tm_kirq:push	af
+F67F: DB90    		in	a,(tm_keyd)
+F681: 326FF7  		ld	(tm_inb),a
+F684: 3E01    		ld	a,1
+F686: 3270F7  		ld	(tm_inf),a
+F689: F1      		pop	af
+F68A: FB      		ei
+F68B: C9      		ret
               		
               		
               	; Maps keyboard input to ASCII
@@ -6127,41 +6149,41 @@ F665: C9      		ret
               	;
               	; Returns mapped key in c
               	; uses: af, c
-F666: 4F      	tm_map:	ld	c,a
+F68C: 4F      	tm_map:	ld	c,a
               		
               		; Mapping function
-F667: 217DF6  		ld	hl,tm_mapt
-F66A: 7E      	tm_map0:ld	a,(hl)
-F66B: B7      		or	a
-F66C: 2808    		jr	z,tm_map2
-F66E: B9      		cp	c
-F66F: 23      		inc	hl
-F670: 7E      		ld	a,(hl)
-F671: 23      		inc	hl
-F672: 20F6    		jr	nz,tm_map0
-F674: 4F      		ld	c,a
-F675: C9      		ret
+F68D: 21A3F6  		ld	hl,tm_mapt
+F690: 7E      	tm_map0:ld	a,(hl)
+F691: B7      		or	a
+F692: 2808    		jr	z,tm_map2
+F694: B9      		cp	c
+F695: 23      		inc	hl
+F696: 7E      		ld	a,(hl)
+F697: 23      		inc	hl
+F698: 20F6    		jr	nz,tm_map0
+F69A: 4F      		ld	c,a
+F69B: C9      		ret
               		
               		
               		; Filter non-ASCII
-F676: 79      	tm_map2:ld	a,c
-F677: E680    		and	0x80	
-F679: C8      		ret	z
-F67A: 0EFF    		ld	c,0xFF
-F67C: C9      		ret
+F69C: 79      	tm_map2:ld	a,c
+F69D: E680    		and	0x80	
+F69F: C8      		ret	z
+F6A0: 0EFF    		ld	c,0xFF
+F6A2: C9      		ret
               		
               	; Map table
-F67D: 7F08    	tm_mapt:defb	0x7F,0x08	; DEL -> BS
-F67F: E108    		defb	0xE1,0x08	; '<-' -> BS
-F681: EA7F    		defb	0xEA,0x7F	; TV -> DEL
-F683: E00C    		defb	0xE0,0x0C	; '->' -> Right
-F685: E20B    		defb	0xE2,0x0B	; '/\' -> Up
-F687: E30A    		defb	0xE3,0x0A	; '\/' -> Linefeed 
-F689: E95C    		defb	0xE9,0x5C	; PAUSE -> '\'
-F68B: E860    		defb	0xE8,0x60	; SYM -> '@'
-F68D: E67C    		defb	0xE6,0x7C	; NO -> '|'
-F68F: E77E    		defb	0xE7,0x7E	; YES -> '~'
-F691: 00      		defb	0
+F6A3: 7F08    	tm_mapt:defb	0x7F,0x08	; DEL -> BS
+F6A5: E108    		defb	0xE1,0x08	; '<-' -> BS
+F6A7: EA7F    		defb	0xEA,0x7F	; TV -> DEL
+F6A9: E00C    		defb	0xE0,0x0C	; '->' -> Right
+F6AB: E20B    		defb	0xE2,0x0B	; '/\' -> Up
+F6AD: E30A    		defb	0xE3,0x0A	; '\/' -> Linefeed 
+F6AF: E95C    		defb	0xE9,0x5C	; PAUSE -> '\'
+F6B1: E860    		defb	0xE8,0x60	; SYM -> '@'
+F6B3: E67C    		defb	0xE6,0x7C	; NO -> '|'
+F6B5: E77E    		defb	0xE7,0x7E	; YES -> '~'
+F6B7: 00      		defb	0
               	
               	; Puts a character on the screen
               	; c = X position
@@ -6169,27 +6191,27 @@ F691: 00      		defb	0
               	; e = Character to put
               	;
               	; uses: af, bc, de, hl
-F692: 210050  	tm_putc:ld	hl,0x5000
-F695: 3E50    		ld	a,80
-F697: C5      		push	bc
-F698: D5      		push	de
-F699: CDB6F6  		call	tm_chat	; Place it in the 80 col buffer
-F69C: ED59    		out	(c),e
-F69E: D1      		pop	de
-F69F: C1      		pop	bc
-F6A0: 3AC6FA  	tm_putf:ld	a,(tm_scro)	; Place into frame buffer
-F6A3: 47      		ld	b,a
-F6A4: 79      		ld	a,c
-F6A5: 90      		sub	b	; If character is less than scroll...
-F6A6: 4F      		ld	c,a
-F6A7: F8      		ret	m
-F6A8: FE28    		cp	40	; If desired position is 40 or more
-F6AA: D0      		ret	nc
-F6AB: 210048  		ld	hl,0x4800
-F6AE: 3E28    		ld	a,40
-F6B0: CDB6F6  		call	tm_chat	; Place it in the 40 col screen buffer
-F6B3: ED59    		out	(c),e
-F6B5: C9      		ret
+F6B8: 210050  	tm_putc:ld	hl,0x5000
+F6BB: 3E50    		ld	a,80
+F6BD: C5      		push	bc
+F6BE: D5      		push	de
+F6BF: CDDCF6  		call	tm_chat	; Place it in the 80 col buffer
+F6C2: ED59    		out	(c),e
+F6C4: D1      		pop	de
+F6C5: C1      		pop	bc
+F6C6: 3AECFA  	tm_putf:ld	a,(tm_scro)	; Place into frame buffer
+F6C9: 47      		ld	b,a
+F6CA: 79      		ld	a,c
+F6CB: 90      		sub	b	; If character is less than scroll...
+F6CC: 4F      		ld	c,a
+F6CD: F8      		ret	m
+F6CE: FE28    		cp	40	; If desired position is 40 or more
+F6D0: D0      		ret	nc
+F6D1: 210048  		ld	hl,0x4800
+F6D4: 3E28    		ld	a,40
+F6D6: CDDCF6  		call	tm_chat	; Place it in the 40 col screen buffer
+F6D9: ED59    		out	(c),e
+F6DB: C9      		ret
               	
               	; Sets the TMS address to a character at x,y
               	; a = Line width
@@ -6198,15 +6220,15 @@ F6B5: C9      		ret
               	; hl = Buffer address
               	;
               	; uses: af, bc, d, hl
-F6B6: 0600    	tm_chat:ld	b,0
-F6B8: 09      		add	hl,bc
-F6B9: 4F      		ld	c,a
-F6BA: AF      		xor	a
-F6BB: BA      		cp	d
-F6BC: 285A    	tm_cha0:jr	z,tm_addh
-F6BE: 09      		add	hl,bc
-F6BF: 15      		dec	d
-F6C0: 18FA    		jr	tm_cha0
+F6DC: 0600    	tm_chat:ld	b,0
+F6DE: 09      		add	hl,bc
+F6DF: 4F      		ld	c,a
+F6E0: AF      		xor	a
+F6E1: BA      		cp	d
+F6E2: 285A    	tm_cha0:jr	z,tm_addh
+F6E4: 09      		add	hl,bc
+F6E5: 15      		dec	d
+F6E6: 18FA    		jr	tm_cha0
               	
               	; Copies VRAM from one location to another
               	; Transfers occur in blocks of 40 bytes
@@ -6215,119 +6237,119 @@ F6C0: 18FA    		jr	tm_cha0
               	;
               	; b = 0 on return
               	; uses: af, bc, de, hl
-F6C2: CD18F7  	tm_vcpy:call	tm_addh
-F6C5: 0628    		ld	b,40
-F6C7: 21C9FA  		ld	hl,tm_cbuf
-F6CA: CDD4F3  		call	tm_inir
-F6CD: EB      		ex	de,hl
-F6CE: CD18F7  		call	tm_addh
-F6D1: 0628    		ld	b,40
-F6D3: 21C9FA  		ld	hl,tm_cbuf
-F6D6: CDCBF3  		call	tm_otir
-F6D9: C9      		ret
+F6E8: CD3EF7  	tm_vcpy:call	tm_addh
+F6EB: 0628    		ld	b,40
+F6ED: 21EFFA  		ld	hl,tm_cbuf
+F6F0: CDD4F3  		call	tm_inir
+F6F3: EB      		ex	de,hl
+F6F4: CD3EF7  		call	tm_addh
+F6F7: 0628    		ld	b,40
+F6F9: 21EFFA  		ld	hl,tm_cbuf
+F6FC: CDCBF3  		call	tm_otir
+F6FF: C9      		ret
               		
               	; Updates the frame buffer based on the scroll position
               	;
               	; uses: af, bc, de, hl
-F6DA: 210010  	tm_usco:ld	hl,0x1000
-F6DD: 110048  		ld	de,0x4800
-F6E0: 3AC6FA  		ld	a,(tm_scro)
-F6E3: 0600    		ld	b,0
-F6E5: 4F      		ld	c,a
-F6E6: 09      		add	hl,bc
-F6E7: 0618    		ld	b,24
-F6E9: C5      	tm_usc0:push	bc
-F6EA: D5      		push	de
-F6EB: E5      		push	hl
-F6EC: CDC2F6  		call	tm_vcpy
-F6EF: E1      		pop	hl
-F6F0: D1      		pop	de
-F6F1: 0E50    		ld	c,80
-F6F3: 09      		add	hl,bc
-F6F4: EB      		ex	de,hl
-F6F5: 0E28    		ld	c,40
-F6F7: 09      		add	hl,bc
-F6F8: EB      		ex	de,hl
-F6F9: C1      		pop	bc
-F6FA: 10ED    		djnz	tm_usc0
-F6FC: C9      		ret
+F700: 210010  	tm_usco:ld	hl,0x1000
+F703: 110048  		ld	de,0x4800
+F706: 3AECFA  		ld	a,(tm_scro)
+F709: 0600    		ld	b,0
+F70B: 4F      		ld	c,a
+F70C: 09      		add	hl,bc
+F70D: 0618    		ld	b,24
+F70F: C5      	tm_usc0:push	bc
+F710: D5      		push	de
+F711: E5      		push	hl
+F712: CDE8F6  		call	tm_vcpy
+F715: E1      		pop	hl
+F716: D1      		pop	de
+F717: 0E50    		ld	c,80
+F719: 09      		add	hl,bc
+F71A: EB      		ex	de,hl
+F71B: 0E28    		ld	c,40
+F71D: 09      		add	hl,bc
+F71E: EB      		ex	de,hl
+F71F: C1      		pop	bc
+F720: 10ED    		djnz	tm_usc0
+F722: C9      		ret
               		
               	
               	; Clears out screen buffer and offscreen buffer
               	; Also includes clear limited function
               	;
               	; uses: af, bc, de
-F6FD: 010048  	tm_cls:	ld	bc,0x4800
-F700: 11FE0F  		ld	de,0x1000-2
-F703: CD1AF7  		call	tm_addr
-F706: ED71    	tm_cls0:out	(c),0
-F708: 1B      		dec	de
-F709: 7A      		ld	a,d
-F70A: B3      		or	e
-F70B: 20F9    		jr	nz,tm_cls0
+F723: 010048  	tm_cls:	ld	bc,0x4800
+F726: 11FE0F  		ld	de,0x1000-2
+F729: CD40F7  		call	tm_addr
+F72C: ED71    	tm_cls0:out	(c),0
+F72E: 1B      		dec	de
+F72F: 7A      		ld	a,d
+F730: B3      		or	e
+F731: 20F9    		jr	nz,tm_cls0
               		
               		; Write super special serial #
-F70D: 3EE5    		ld	a,0xE5
-F70F: ED79    		out	(c),a
-F711: F5      		push	af
-F712: F1      		pop	af
-F713: 3E81    		ld	a,0x81
-F715: ED79    		out	(c),a
-F717: C9      		ret
+F733: 3EE5    		ld	a,0xE5
+F735: ED79    		out	(c),a
+F737: F5      		push	af
+F738: F1      		pop	af
+F739: 3E81    		ld	a,0x81
+F73B: ED79    		out	(c),a
+F73D: C9      		ret
               	
               	; Sets the TMS address for either reading or writing
               	; bc = Address 
               	;
               	; Returns tm_data in c
               	; uses: af, bc
-F718: 44      	tm_addh:ld	b,h		; Does HL instead of BC
-F719: 4D      		ld	c,l
-F71A: DBA1    	tm_addr:in	a,(tm_latc)
-F71C: 79      		ld	a,c
-F71D: D3A1    		out	(tm_latc),a
-F71F: 78      		ld	a,b
-F720: D3A1    		out	(tm_latc),a
-F722: 0EA0    		ld	c,tm_data
-F724: C9      		ret
+F73E: 44      	tm_addh:ld	b,h		; Does HL instead of BC
+F73F: 4D      		ld	c,l
+F740: DBA1    	tm_addr:in	a,(tm_latc)
+F742: 79      		ld	a,c
+F743: D3A1    		out	(tm_latc),a
+F745: 78      		ld	a,b
+F746: D3A1    		out	(tm_latc),a
+F748: 0EA0    		ld	c,tm_data
+F74A: C9      		ret
               		
               	; Handles a TMS9918 irq
-F725: F5      	tm_virq:push	af
-F726: DBA1    		in	a,(tm_latc)
-F728: F1      		pop	af
-F729: FB      		ei
-F72A: C9      		ret
+F74B: F5      	tm_virq:push	af
+F74C: DBA1    		in	a,(tm_latc)
+F74E: F1      		pop	af
+F74F: FB      		ei
+F750: C9      		ret
               		
               		
               	; Disables all interrupts while VDP operations occur
               	;
               	; uses: a
-F72B: 3EC9    	tm_dint:ld	a,0xC9
-F72D: 323800  		ld	(0x38),a
-F730: ED56    		im	1
-F732: 3E0E    		ld	a,0x0E
-F734: D341    		out	(tm_atla),a	; AY register = 14
-F736: 3E00    		ld	a,0x00
-F738: D340    		out	(tm_ayda),a	
-F73A: C9      		ret
+F751: 3EC9    	tm_dint:ld	a,0xC9
+F753: 323800  		ld	(0x38),a
+F756: ED56    		im	1
+F758: 3E0E    		ld	a,0x0E
+F75A: D341    		out	(tm_atla),a	; AY register = 14
+F75C: 3E00    		ld	a,0x00
+F75E: D340    		out	(tm_ayda),a	
+F760: C9      		ret
               		
               	; Enables interrupts again
               	;
               	; uses: a
-F73B: 3E0E    	tm_eint:ld	a,0x0E
-F73D: D341    		out	(tm_atla),a	; AY register = 14
-F73F: 3EB0    		ld	a,0xB0
-F741: D340    		out	(tm_ayda),a
-F743: ED5E    		im	2
-F745: C9      		ret
+F761: 3E0E    	tm_eint:ld	a,0x0E
+F763: D341    		out	(tm_atla),a	; AY register = 14
+F765: 3EB0    		ld	a,0xB0
+F767: D340    		out	(tm_ayda),a
+F769: ED5E    		im	2
+F76B: C9      		ret
               		
               	; Variables
-F746: 0200    	tm_mode:defw	0x0002
-F748: E1      	tm_colr:defb	0xE1
-F749: 00      	tm_inb:	defb	0
-F74A: 00      	tm_inf:	defb	0
-F74B: 00      	tm_curx:defb	0
-F74C: 00      	tm_cury:defb	0
-F74D: 01      	tm_cold:defb	1
+F76C: 0200    	tm_mode:defw	0x0002
+F76E: E1      	tm_colr:defb	0xE1
+F76F: 00      	tm_inb:	defb	0
+F770: 00      	tm_inf:	defb	0
+F771: 00      	tm_curx:defb	0
+F772: 00      	tm_cury:defb	0
+F773: 01      	tm_cold:defb	1
               	#include "../dev/nabu_ndsk.asm"
               	;
               	;**************************************************************
@@ -6357,18 +6379,18 @@ F74D: 01      	tm_cold:defb	1
               	;
               	; BSS Segment Variables
               	.area	_BSS
-FAF1: 00      	nd_tran:defs	1	; Transfer count
-FAF2: 00      	nd_csec:defs	1	; Current sector (1b)
-FAF3: 0000    	nd_ctrk:defs	2	; Current track (2b)
-FAF5: 00000000	nd_buff:defs	64	; Buffer (64b)
-FAF9: 00...   	
+FB17: 00      	nd_tran:defs	1	; Transfer count
+FB18: 00      	nd_csec:defs	1	; Current sector (1b)
+FB19: 0000    	nd_ctrk:defs	2	; Current track (2b)
+FB1B: 00000000	nd_buff:defs	64	; Buffer (64b)
+FB1F: 00...   	
               	
               	.area	_NOINIT
               	
-FB35: 00000000	nd_alva:defs	129	; ALV #1 (129b)
-FB39: 00...   	
-FBB6: 00000000	nd_alvb:defs	129	; ALV #2 (129b)
-FBBA: 00...   	
+FB5B: 00000000	nd_alva:defs	129	; ALV #1 (129b)
+FB5F: 00...   	
+FBDC: 00000000	nd_alvb:defs	129	; ALV #2 (129b)
+FBE0: 00...   	
               	
               	.area	_TEXT
               	
@@ -6389,153 +6411,153 @@ FBBA: 00...
               	;
               	
               	; Disk A DPH
-F74E: 00000000	nd_dpha:defw	0,0,0,0
-F752: 00000000	
-F756: 10FF    		defw	dircbuf	; DIRBUF
-F758: 6EF7    		defw	nd_dpb	; DPB
-F75A: 0000    		defw	0	; CSV
-F75C: 35FB    		defw	nd_alva	; ALV (129 bytes)
+F774: 00000000	nd_dpha:defw	0,0,0,0
+F778: 00000000	
+F77C: 10FF    		defw	dircbuf	; DIRBUF
+F77E: 94F7    		defw	nd_dpb	; DPB
+F780: 0000    		defw	0	; CSV
+F782: 5BFB    		defw	nd_alva	; ALV (129 bytes)
               		
               	; Disk B DPH
-F75E: 00000000	nd_dphb:defw	0,0,0,0
-F762: 00000000	
-F766: 10FF    		defw	dircbuf	; DIRBUF
-F768: 6EF7    		defw	nd_dpb	; DPB
-F76A: 0000    		defw	0	; CSV
-F76C: B6FB    		defw	nd_alvb	; ALV (129 bytes)
+F784: 00000000	nd_dphb:defw	0,0,0,0
+F788: 00000000	
+F78C: 10FF    		defw	dircbuf	; DIRBUF
+F78E: 94F7    		defw	nd_dpb	; DPB
+F790: 0000    		defw	0	; CSV
+F792: DCFB    		defw	nd_alvb	; ALV (129 bytes)
               		
               	; NSHD8 format
-F76E: 4000    	nd_dpb:	defw	64	; # sectors per track
-F770: 06      		defb	6	; BSH
-F771: 3F      		defb	63	; BLM
-F772: 03      		defb	3	; EXM
-F773: FF03    		defw	1023	; DSM
-F775: FF00    		defw	255	; DRM
-F777: 80      		defb	0x80	; AL0
-F778: 00      		defb	0	; AL1
-F779: 0000    		defw	0	; Size of directory check vector
-F77B: 0000    		defw	0	; Number of reserved tracks at the beginning of disk
+F794: 4000    	nd_dpb:	defw	64	; # sectors per track
+F796: 06      		defb	6	; BSH
+F797: 3F      		defb	63	; BLM
+F798: 03      		defb	3	; EXM
+F799: FF03    		defw	1023	; DSM
+F79B: FF00    		defw	255	; DRM
+F79D: 80      		defb	0x80	; AL0
+F79E: 00      		defb	0	; AL1
+F79F: 0000    		defw	0	; Size of directory check vector
+F7A1: 0000    		defw	0	; Number of reserved tracks at the beginning of disk
               	
               	; Driver entry point
               	; a = Command #
               	;
               	; uses: all
-F77D: B7      	ndkdev:	or	a
-F77E: 2815    		jr	z,nd_init
-F780: 3D      		dec	a
-F781: 2813    		jr	z,nd_home
-F783: 3D      		dec	a
-F784: 2817    		jr	z,nd_sel
-F786: 3D      		dec	a
-F787: CAC7F7  		jp	z,nd_strk
-F78A: 3D      		dec	a
-F78B: CACDF7  		jp	z,nd_ssec
-F78E: 3D      		dec	a
-F78F: CAD2F7  		jp	z,nd_read
-F792: C3E3F7  		jp	nd_writ
+F7A3: B7      	ndkdev:	or	a
+F7A4: 2815    		jr	z,nd_init
+F7A6: 3D      		dec	a
+F7A7: 2813    		jr	z,nd_home
+F7A9: 3D      		dec	a
+F7AA: 2817    		jr	z,nd_sel
+F7AC: 3D      		dec	a
+F7AD: CAEDF7  		jp	z,nd_strk
+F7B0: 3D      		dec	a
+F7B1: CAF3F7  		jp	z,nd_ssec
+F7B4: 3D      		dec	a
+F7B5: CAF8F7  		jp	z,nd_read
+F7B8: C309F8  		jp	nd_writ
               		
               	; Inits the device
               	; Not really needed atm
               	; hl = Call argument
               	;
               	; uses: none
-F795: C9      	nd_init:ret
+F7BB: C9      	nd_init:ret
               	
               	; Sets "track" back to zero
               	;
               	; uses: none
-F796: 210000  	nd_home:ld	hl,0
-F799: 22F3FA  		ld	(nd_ctrk),hl
-F79C: C9      		ret
+F7BC: 210000  	nd_home:ld	hl,0
+F7BF: 2219FB  		ld	(nd_ctrk),hl
+F7C2: C9      		ret
               	
               	; Selects the drive
               	; c = Logging status
               	; hl = Call argument
               	;
               	; uses: hl
-F79D: E5      	nd_sel:	push	hl
-F79E: CD04F8  		call	nd_hini
-F7A1: E1      		pop	hl
-F7A2: E5      		push	hl
-F7A3: 7D      		ld	a,l
-F7A4: C641    		add	a,0x41		; Convert to ASCII
-F7A6: 32CFF9  		ld	(nd_p2im),a
-F7A9: 21CAF9  		ld	hl,nd_p2
-F7AC: 11DEF9  		ld	de,nd_m0na
-F7AF: 010B00  		ld	bc,11
-F7B2: EDB0    		ldir
-F7B4: CD68F8  		call	nd_open		; Open the file
-F7B7: E1      		pop	hl		; Select DPH
-F7B8: 7D      		ld	a,l
-F7B9: B7      		or	a
-F7BA: 214EF7  		ld	hl,nd_dpha
-F7BD: C8      		ret	z
-F7BE: 3D      		dec	a
-F7BF: 215EF7  		ld	hl,nd_dphb
-F7C2: C8      		ret	z
-F7C3: 210000  		ld	hl,0
-F7C6: C9      		ret
+F7C3: E5      	nd_sel:	push	hl
+F7C4: CD2AF8  		call	nd_hini
+F7C7: E1      		pop	hl
+F7C8: E5      		push	hl
+F7C9: 7D      		ld	a,l
+F7CA: C641    		add	a,0x41		; Convert to ASCII
+F7CC: 32F5F9  		ld	(nd_p2im),a
+F7CF: 21F0F9  		ld	hl,nd_p2
+F7D2: 1104FA  		ld	de,nd_m0na
+F7D5: 010B00  		ld	bc,11
+F7D8: EDB0    		ldir
+F7DA: CD8EF8  		call	nd_open		; Open the file
+F7DD: E1      		pop	hl		; Select DPH
+F7DE: 7D      		ld	a,l
+F7DF: B7      		or	a
+F7E0: 2174F7  		ld	hl,nd_dpha
+F7E3: C8      		ret	z
+F7E4: 3D      		dec	a
+F7E5: 2184F7  		ld	hl,nd_dphb
+F7E8: C8      		ret	z
+F7E9: 210000  		ld	hl,0
+F7EC: C9      		ret
               		
               	; Sets the track of the selected block device
               	; bc = Track, starts at 0
               	; hl = Call argument
               	;
               	; uses: hl
-F7C7: 60      	nd_strk:ld	h,b
-F7C8: 69      		ld	l,c
-F7C9: 22F3FA  		ld	(nd_ctrk),hl
-F7CC: C9      		ret
+F7ED: 60      	nd_strk:ld	h,b
+F7EE: 69      		ld	l,c
+F7EF: 2219FB  		ld	(nd_ctrk),hl
+F7F2: C9      		ret
               	
               	; Sets the sector of the selected block device
               	; bc = Sector, starts at 0
               	; hl = Call argument
               	;
               	; uses: none
-F7CD: 79      	nd_ssec:ld	a,c
-F7CE: 32F2FA  		ld	(nd_csec),a
-F7D1: C9      		ret
+F7F3: 79      	nd_ssec:ld	a,c
+F7F4: 3218FB  		ld	(nd_csec),a
+F7F7: C9      		ret
               	
               	; Reads a sector and DMA transfers it to memory
               	;
               	; uses: af
-F7D2: CD04F8  	nd_read:call	nd_hini
-F7D5: CDF4F7  		call	nd_gbno
-F7D8: 2A4DF3  		ld	hl,(biodma)
-F7DB: CD85F8  		call	nd_getb
-F7DE: 3E01    		ld	a,1
-F7E0: D8      		ret	c
-F7E1: AF      		xor	a
-F7E2: C9      		ret
+F7F8: CD2AF8  	nd_read:call	nd_hini
+F7FB: CD1AF8  		call	nd_gbno
+F7FE: 2A4DF3  		ld	hl,(biodma)
+F801: CDABF8  		call	nd_getb
+F804: 3E01    		ld	a,1
+F806: D8      		ret	c
+F807: AF      		xor	a
+F808: C9      		ret
               		
               	; Write a sector from DMA
               	;
               	; uses: af
-F7E3: CD04F8  	nd_writ:call	nd_hini
-F7E6: CDF4F7  		call	nd_gbno
-F7E9: 2A4DF3  		ld	hl,(biodma)
-F7EC: CDC6F8  		call	nd_putb
-F7EF: 3E01    		ld	a,1
-F7F1: D8      		ret	c
-F7F2: AF      		xor	a
-F7F3: C9      		ret
+F809: CD2AF8  	nd_writ:call	nd_hini
+F80C: CD1AF8  		call	nd_gbno
+F80F: 2A4DF3  		ld	hl,(biodma)
+F812: CDECF8  		call	nd_putb
+F815: 3E01    		ld	a,1
+F817: D8      		ret	c
+F818: AF      		xor	a
+F819: C9      		ret
               		
               		
               	; Gets the block # for read / write operations
               	;
               	; Returns block # in de
               	; uses: af, de, hl 
-F7F4: 2AF3FA  	nd_gbno:ld	hl,(nd_ctrk)
-F7F7: 29      		add	hl,hl
-F7F8: 29      		add	hl,hl
-F7F9: 29      		add	hl,hl
-F7FA: 29      		add	hl,hl
-F7FB: 29      		add	hl,hl
-F7FC: 29      		add	hl,hl
-F7FD: 3AF2FA  		ld	a,(nd_csec)
-F800: B5      		or	l
-F801: 6F      		ld	l,a
-F802: EB      		ex	de,hl
-F803: C9      		ret
+F81A: 2A19FB  	nd_gbno:ld	hl,(nd_ctrk)
+F81D: 29      		add	hl,hl
+F81E: 29      		add	hl,hl
+F81F: 29      		add	hl,hl
+F820: 29      		add	hl,hl
+F821: 29      		add	hl,hl
+F822: 29      		add	hl,hl
+F823: 3A18FB  		ld	a,(nd_csec)
+F826: B5      		or	l
+F827: 6F      		ld	l,a
+F828: EB      		ex	de,hl
+F829: C9      		ret
               		
               	
               	; Set up the HCCA modem connection
@@ -6544,90 +6566,90 @@ F803: C9      		ret
               	; exposed
               	;
               	; uses: a, b
-F804: 3E07    	nd_hini:ld	a,0x07
-F806: D341    		out	(nd_atla),a	; AY register = 7
-F808: DB40    		in	a,(nd_ayda)
-F80A: E63F    		and	0x3F
-F80C: F640    		or	0x40
-F80E: D340    		out	(nd_ayda),a	; Configure AY port I/O
+F82A: 3E07    	nd_hini:ld	a,0x07
+F82C: D341    		out	(nd_atla),a	; AY register = 7
+F82E: DB40    		in	a,(nd_ayda)
+F830: E63F    		and	0x3F
+F832: F640    		or	0x40
+F834: D340    		out	(nd_ayda),a	; Configure AY port I/O
               		
               		; Claim interrupt vectors
-F810: E5      		push	hl
-F811: 215AF9  		ld	hl,nd_rirq
-F814: 2200FF  		ld	(intvec),hl
-F817: 21A1F9  		ld	hl,nd_wirq
-F81A: 2202FF  		ld	(intvec+2),hl
-F81D: E1      		pop	hl
+F836: E5      		push	hl
+F837: 2180F9  		ld	hl,nd_rirq
+F83A: 2200FF  		ld	(intvec),hl
+F83D: 21C7F9  		ld	hl,nd_wirq
+F840: 2202FF  		ld	(intvec+2),hl
+F843: E1      		pop	hl
               		
               	; Set interrupts to their default state
               	;
               	; uses: a
-F81E: 3E0E    	nd_dflt:ld	a,0x0E
-F820: D341    		out	(nd_atla),a	; AY register = 14
-F822: 3EB0    		ld	a,0xB0
-F824: D340    		out	(nd_ayda),a	; Enable HCCA receive and but not send, plus key and VDP
+F844: 3E0E    	nd_dflt:ld	a,0x0E
+F846: D341    		out	(nd_atla),a	; AY register = 14
+F848: 3EB0    		ld	a,0xB0
+F84A: D340    		out	(nd_ayda),a	; Enable HCCA receive and but not send, plus key and VDP
               		
-F826: 3E0F    	nd_dfl0:ld	a,0x0F		
-F828: D341    		out	(nd_atla),a	; AY register = 15
+F84C: 3E0F    	nd_dfl0:ld	a,0x0F		
+F84E: D341    		out	(nd_atla),a	; AY register = 15
               		
-F82A: C9      		ret
+F850: C9      		ret
               	
               	; Set receive and send interrupts
               	;
               	; uses: a
-F82B: 3E0E    	nd_esnd:ld	a,0x0E
-F82D: D341    		out	(nd_atla),a	; AY register = 14
-F82F: 3EC0    		ld	a,0xC0
-F831: D340    		out	(nd_ayda),a	; Enable HCCA receive and send
-F833: 18F1    		jr	nd_dfl0
+F851: 3E0E    	nd_esnd:ld	a,0x0E
+F853: D341    		out	(nd_atla),a	; AY register = 14
+F855: 3EC0    		ld	a,0xC0
+F857: D340    		out	(nd_ayda),a	; Enable HCCA receive and send
+F859: 18F1    		jr	nd_dfl0
               		
               	; Set receive but not send interrupt
               	;
               	; uses: a
-F835: 3E0E    	nd_dsnd:ld	a,0x0E
-F837: D341    		out	(nd_atla),a	; AY register = 14
-F839: 3E80    		ld	a,0x80
-F83B: D340    		out	(nd_ayda),a	; Enable HCCA receive and but not send
-F83D: 18E7    		jr	nd_dfl0
+F85B: 3E0E    	nd_dsnd:ld	a,0x0E
+F85D: D341    		out	(nd_atla),a	; AY register = 14
+F85F: 3E80    		ld	a,0x80
+F861: D340    		out	(nd_ayda),a	; Enable HCCA receive and but not send
+F863: 18E7    		jr	nd_dfl0
               	
               	
               	; Loads the CCP into the CCP space
-F83F: 21B6F9  	nd_ccp:	ld	hl,nd_p0
-F842: 1803    		jr	nd_grb0
+F865: 21DCF9  	nd_ccp:	ld	hl,nd_p0
+F868: 1803    		jr	nd_grb0
               		
               	; Loads the GRB into the CCP space
-F844: 21C0F9  	nd_grb:	ld	hl,nd_p1
-F847: 11DEF9  	nd_grb0:ld	de,nd_m0na
-F84A: 010A00  		ld	bc,10
-F84D: EDB0    		ldir			; Copy name to file open
-F84F: CD04F8  		call	nd_hini		; Go to HCCA mode
-F852: 210000  		ld	hl,0x0000	; O_RDONLY
-F855: CD6BF8  		call	nd_opef		; Open the file
-F858: 110000  		ld	de,0
-F85B: 2100DC  		ld	hl,cbase
-F85E: CD85F8  	nd_grb1:call	nd_getb
-F861: 1C      		inc	e
-F862: 3E10    		ld	a,16
-F864: BB      		cp	e
-F865: 20F7    		jr	nz,nd_grb1
-F867: C9      		ret
+F86A: 21E6F9  	nd_grb:	ld	hl,nd_p1
+F86D: 1104FA  	nd_grb0:ld	de,nd_m0na
+F870: 010A00  		ld	bc,10
+F873: EDB0    		ldir			; Copy name to file open
+F875: CD2AF8  		call	nd_hini		; Go to HCCA mode
+F878: 210000  		ld	hl,0x0000	; O_RDONLY
+F87B: CD91F8  		call	nd_opef		; Open the file
+F87E: 110000  		ld	de,0
+F881: 2100DC  		ld	hl,cbase
+F884: CDABF8  	nd_grb1:call	nd_getb
+F887: 1C      		inc	e
+F888: 3E10    		ld	a,16
+F88A: BB      		cp	e
+F88B: 20F7    		jr	nz,nd_grb1
+F88D: C9      		ret
               		
               	
               	; Open the prepared file
               	; Closes the existing file too
               	;
               	; uses: af, b, hl
-F868: 210100  	nd_open:ld	hl,0x0001	; O_RDWR
-F86B: 22DBF9  	nd_opef:ld	(nd_m0fl),hl
-F86E: 21EDF9  		ld	hl,nd_m1
-F871: 0606    		ld	b,6
-F873: CD12F9  		call	nd_send
-F876: 21D5F9  		ld	hl,nd_m0
-F879: 0617    		ld	b,23
-F87B: CD12F9  		call	nd_send
-F87E: 21F5FA  		ld	hl,nd_buff
-F881: CDF4F8  		call	nd_rece
-F884: C9      		ret
+F88E: 210100  	nd_open:ld	hl,0x0001	; O_RDWR
+F891: 2201FA  	nd_opef:ld	(nd_m0fl),hl
+F894: 2113FA  		ld	hl,nd_m1
+F897: 0606    		ld	b,6
+F899: CD38F9  		call	nd_send
+F89C: 21FBF9  		ld	hl,nd_m0
+F89F: 0617    		ld	b,23
+F8A1: CD38F9  		call	nd_send
+F8A4: 211BFB  		ld	hl,nd_buff
+F8A7: CD1AF9  		call	nd_rece
+F8AA: C9      		ret
               		
               	; Gets a block from the currently open file
               	; and places it in (hl)
@@ -6637,41 +6659,41 @@ F884: C9      		ret
               	; Returns location directly after in hl
               	; Carry flag set on error
               	; uses: af, b, hl
-F885: CD8BF8  	nd_getb:call	nd_get0
-F888: C31EF8  		jp	nd_dflt
-F88B: EB      	nd_get0:ex	de,hl
-F88C: 22FBF9  		ld	(nd_m2bn),hl
-F88F: EB      		ex	de,hl
-F890: E5      		push	hl
-F891: 21F5F9  		ld	hl,nd_m2
-F894: 060C    		ld	b,12
-F896: CD12F9  		call	nd_send
-F899: E1      		pop	hl
-F89A: D8      		ret	c
-F89B: CD1BF9  		call	nd_hcrd
-F89E: CD1EF9  		call	nd_hcre
-F8A1: D8      		ret	c
-F8A2: FE84    		cp	0x84
-F8A4: 37      		scf
-F8A5: 2017    		jr	nz,nd_get2
-F8A7: CD1EF9  		call	nd_hcre
-F8AA: 32F1FA  		ld	(nd_tran),a
-F8AD: 47      		ld	b,a
-F8AE: CD1EF9  		call	nd_hcre
-F8B1: 78      		ld	a,b
-F8B2: B7      		or	a
-F8B3: C8      		ret	z
-F8B4: CD1EF9  	nd_get1:call	nd_hcre
-F8B7: D8      		ret	c
-F8B8: 77      		ld	(hl),a
-F8B9: 23      		inc	hl
-F8BA: 10F8    		djnz	nd_get1
-F8BC: B7      		or	a
-F8BD: C9      		ret
-F8BE: CD1BF9  	nd_get2:call	nd_hcrd	; Read the error message and exit
-F8C1: CD1EF9  		call	nd_hcre
-F8C4: 37      		scf
-F8C5: C9      		ret
+F8AB: CDB1F8  	nd_getb:call	nd_get0
+F8AE: C344F8  		jp	nd_dflt
+F8B1: EB      	nd_get0:ex	de,hl
+F8B2: 2221FA  		ld	(nd_m2bn),hl
+F8B5: EB      		ex	de,hl
+F8B6: E5      		push	hl
+F8B7: 211BFA  		ld	hl,nd_m2
+F8BA: 060C    		ld	b,12
+F8BC: CD38F9  		call	nd_send
+F8BF: E1      		pop	hl
+F8C0: D8      		ret	c
+F8C1: CD41F9  		call	nd_hcrd
+F8C4: CD44F9  		call	nd_hcre
+F8C7: D8      		ret	c
+F8C8: FE84    		cp	0x84
+F8CA: 37      		scf
+F8CB: 2017    		jr	nz,nd_get2
+F8CD: CD44F9  		call	nd_hcre
+F8D0: 3217FB  		ld	(nd_tran),a
+F8D3: 47      		ld	b,a
+F8D4: CD44F9  		call	nd_hcre
+F8D7: 78      		ld	a,b
+F8D8: B7      		or	a
+F8D9: C8      		ret	z
+F8DA: CD44F9  	nd_get1:call	nd_hcre
+F8DD: D8      		ret	c
+F8DE: 77      		ld	(hl),a
+F8DF: 23      		inc	hl
+F8E0: 10F8    		djnz	nd_get1
+F8E2: B7      		or	a
+F8E3: C9      		ret
+F8E4: CD41F9  	nd_get2:call	nd_hcrd	; Read the error message and exit
+F8E7: CD44F9  		call	nd_hcre
+F8EA: 37      		scf
+F8EB: C9      		ret
               		
               	; Puts a block into the currently open file
               	; from that location (hl)
@@ -6680,53 +6702,53 @@ F8C5: C9      		ret
               	;
               	; Carry flag set on error
               	; uses: af, b, hl
-F8C6: CDCCF8  	nd_putb:call	nd_put0
-F8C9: C31EF8  		jp	nd_dflt
-F8CC: EB      	nd_put0:ex	de,hl
-F8CD: 2207FA  		ld	(nd_m3bn),hl
-F8D0: EB      		ex	de,hl
-F8D1: E5      		push	hl
-F8D2: 2101FA  		ld	hl,nd_m3
-F8D5: 060C    		ld	b,12
-F8D7: CD12F9  		call	nd_send		; Send message precursor
-F8DA: E1      		pop	hl
-F8DB: D8      		ret	c
-F8DC: 0680    		ld	b,128
-F8DE: 7E      	nd_put1:ld	a,(hl)		; Send the block
-F8DF: CD68F9  		call	nd_hcwr
-F8E2: D8      		ret	c
-F8E3: 23      		inc	hl
-F8E4: 10F8    		djnz	nd_put1
-F8E6: 21F5FA  		ld	hl,nd_buff
-F8E9: CDF4F8  		call	nd_rece
-F8EC: 3AF5FA  		ld	a,(nd_buff)
-F8EF: FE81    		cp	0x81
-F8F1: C8      		ret	z
-F8F2: 37      		scf
-F8F3: C9      		ret
+F8EC: CDF2F8  	nd_putb:call	nd_put0
+F8EF: C344F8  		jp	nd_dflt
+F8F2: EB      	nd_put0:ex	de,hl
+F8F3: 222DFA  		ld	(nd_m3bn),hl
+F8F6: EB      		ex	de,hl
+F8F7: E5      		push	hl
+F8F8: 2127FA  		ld	hl,nd_m3
+F8FB: 060C    		ld	b,12
+F8FD: CD38F9  		call	nd_send		; Send message precursor
+F900: E1      		pop	hl
+F901: D8      		ret	c
+F902: 0680    		ld	b,128
+F904: 7E      	nd_put1:ld	a,(hl)		; Send the block
+F905: CD8EF9  		call	nd_hcwr
+F908: D8      		ret	c
+F909: 23      		inc	hl
+F90A: 10F8    		djnz	nd_put1
+F90C: 211BFB  		ld	hl,nd_buff
+F90F: CD1AF9  		call	nd_rece
+F912: 3A1BFB  		ld	a,(nd_buff)
+F915: FE81    		cp	0x81
+F917: C8      		ret	z
+F918: 37      		scf
+F919: C9      		ret
               		
               	; Receives a general response from the NHACP server
               	; hl = Destination of message
               	;
               	; Carry flag set on error
               	; uses: af, b, hl
-F8F4: CD35F8  	nd_rece:call	nd_dsnd
-F8F7: CDFDF8  		call	nd_rec0
-F8FA: C31EF8  		jp	nd_dflt
-F8FD: CD1EF9  	nd_rec0:call	nd_hcre
-F900: D8      		ret	c		; Existing error
-F901: 47      		ld	b,a
-F902: CD1EF9  		call	nd_hcre
-F905: D8      		ret	c		; Existing error
-F906: 37      		scf
-F907: C0      		ret	nz		; Message too big!
-F908: CD1EF9  	nd_rec1:call	nd_hcre
-F90B: D8      		ret	c		; Error!
-F90C: 77      		ld	(hl),a
-F90D: 23      		inc	hl
-F90E: 10F8    		djnz	nd_rec1
-F910: B7      		or	a
-F911: C9      		ret
+F91A: CD5BF8  	nd_rece:call	nd_dsnd
+F91D: CD23F9  		call	nd_rec0
+F920: C344F8  		jp	nd_dflt
+F923: CD44F9  	nd_rec0:call	nd_hcre
+F926: D8      		ret	c		; Existing error
+F927: 47      		ld	b,a
+F928: CD44F9  		call	nd_hcre
+F92B: D8      		ret	c		; Existing error
+F92C: 37      		scf
+F92D: C0      		ret	nz		; Message too big!
+F92E: CD44F9  	nd_rec1:call	nd_hcre
+F931: D8      		ret	c		; Error!
+F932: 77      		ld	(hl),a
+F933: 23      		inc	hl
+F934: 10F8    		djnz	nd_rec1
+F936: B7      		or	a
+F937: C9      		ret
               		
               	; Write a number of bytes to the HCCA port
               	; b = Bytes to write
@@ -6734,12 +6756,12 @@ F911: C9      		ret
               	;
               	; Carry flag set on error
               	; uses: af, b, hl
-F912: 7E      	nd_send:ld	a,(hl)
-F913: 23      		inc	hl
-F914: CD68F9  		call	nd_hcwr
-F917: D8      		ret	c		; Error!
-F918: 10F8    		djnz	nd_send
-F91A: C9      		ret
+F938: 7E      	nd_send:ld	a,(hl)
+F939: 23      		inc	hl
+F93A: CD8EF9  		call	nd_hcwr
+F93D: D8      		ret	c		; Error!
+F93E: 10F8    		djnz	nd_send
+F940: C9      		ret
               		
               	; Read from the HCCA port
               	; Assumes AY is set to reg 15
@@ -6748,59 +6770,59 @@ F91A: C9      		ret
               	; Returns result in a
               	; Carry flag set on error
               	; Uses: af
-F91B: CD1EF9  	nd_hcrd:call	nd_hcre
-F91E: AF      	nd_hcre:xor	a
-F91F: 32B5F9  		ld	(nd_inf),a
-F922: D5      		push	de
-F923: 3E09    		ld	a,0x09
-F925: D300    		out	(nd_nctl),a	; Turn on recv light
-F927: 11FFFF  		ld	de,0xFFFF
-F92A: 3AB5F9  	nd_hcr0:ld	a,(nd_inf)
-F92D: B7      		or	a
-F92E: 201D    		jr	nz,nd_hcr2
-F930: DB40    		in	a,(nd_ayda)
+F941: CD44F9  	nd_hcrd:call	nd_hcre
+F944: AF      	nd_hcre:xor	a
+F945: 32DBF9  		ld	(nd_inf),a
+F948: D5      		push	de
+F949: 3E09    		ld	a,0x09
+F94B: D300    		out	(nd_nctl),a	; Turn on recv light
+F94D: 11FFFF  		ld	de,0xFFFF
+F950: 3ADBF9  	nd_hcr0:ld	a,(nd_inf)
+F953: B7      		or	a
+F954: 201D    		jr	nz,nd_hcr2
+F956: DB40    		in	a,(nd_ayda)
               		;bit	0,a
               		;jr	z,nd_hcr0	; Await an interrupt
               		;bit	1,a
               		;jr	z,nd_hcr1
-F932: E60F    		and	0x0F
-F934: EE01    		xor	0b00000001
-F936: 280C    		jr	z,nd_hcr1
-F938: 1B      		dec	de
-F939: 7B      		ld	a,e
-F93A: B2      		or	d
-F93B: 20ED    		jr	nz,nd_hcr0
-F93D: 3E01    	nd_hcer:ld	a,0x01
-F93F: D300    		out	(nd_nctl),a	; Turn off recv light
-F941: 37      		scf
-F942: D1      		pop	de
-F943: C9      		ret			; Timed out waiting
-F944: 3E01    	nd_hcr1:ld	a,0x01
-F946: D300    		out	(nd_nctl),a	; Turn off recv light
-F948: DB80    		in	a,(nd_hcca)
-F94A: D1      		pop	de
-F94B: B7      		or	a
-F94C: C9      		ret
-F94D: 3E01    	nd_hcr2:ld	a,0x01
-F94F: D300    		out	(nd_nctl),a	; Turn off recv light
-F951: AF      		xor	a
-F952: 32B5F9  		ld	(nd_inf),a
-F955: 3AB4F9  		ld	a,(nd_inb)
-F958: D1      		pop	de
-F959: C9      		ret
+F958: E60F    		and	0x0F
+F95A: EE01    		xor	0b00000001
+F95C: 280C    		jr	z,nd_hcr1
+F95E: 1B      		dec	de
+F95F: 7B      		ld	a,e
+F960: B2      		or	d
+F961: 20ED    		jr	nz,nd_hcr0
+F963: 3E01    	nd_hcer:ld	a,0x01
+F965: D300    		out	(nd_nctl),a	; Turn off recv light
+F967: 37      		scf
+F968: D1      		pop	de
+F969: C9      		ret			; Timed out waiting
+F96A: 3E01    	nd_hcr1:ld	a,0x01
+F96C: D300    		out	(nd_nctl),a	; Turn off recv light
+F96E: DB80    		in	a,(nd_hcca)
+F970: D1      		pop	de
+F971: B7      		or	a
+F972: C9      		ret
+F973: 3E01    	nd_hcr2:ld	a,0x01
+F975: D300    		out	(nd_nctl),a	; Turn off recv light
+F977: AF      		xor	a
+F978: 32DBF9  		ld	(nd_inf),a
+F97B: 3ADAF9  		ld	a,(nd_inb)
+F97E: D1      		pop	de
+F97F: C9      		ret
               		
               	; HCCA read interrupt
               	; Reads from the HCCA, buffers it, and then sets the flag
               	;
               	; uses: none
-F95A: F5      	nd_rirq:push	af
-F95B: DB80    		in	a,(nd_hcca)
-F95D: 32B4F9  		ld	(nd_inb),a
-F960: 3E01    		ld	a,1
-F962: 32B5F9  		ld	(nd_inf),a
-F965: F1      		pop	af
-F966: FB      		ei
-F967: C9      		ret
+F980: F5      	nd_rirq:push	af
+F981: DB80    		in	a,(nd_hcca)
+F983: 32DAF9  		ld	(nd_inb),a
+F986: 3E01    		ld	a,1
+F988: 32DBF9  		ld	(nd_inf),a
+F98B: F1      		pop	af
+F98C: FB      		ei
+F98D: C9      		ret
               		
               		
               	; Write to the HCCA port
@@ -6810,121 +6832,121 @@ F967: C9      		ret
               	;
               	; Carry flag set on error
               	; Uses: f
-F968: D5      	nd_hcwr:push	de
-F969: 32B2F9  		ld	(nd_outb),a
-F96C: AF      		xor	a
-F96D: 32B3F9  		ld	(nd_outf),a
-F970: CD2BF8  		call	nd_esnd
-F973: 11FFFF  		ld	de,0xFFFF
-F976: 3E21    		ld	a,0x21
-F978: D300    		out	(nd_nctl),a	; Turn on send light
-F97A: 3AB3F9  	nd_hcw0:ld	a,(nd_outf)
-F97D: B7      		or	a
-F97E: 2017    		jr	nz,nd_hcw2
-F980: DB40    		in	a,(nd_ayda)
+F98E: D5      	nd_hcwr:push	de
+F98F: 32D8F9  		ld	(nd_outb),a
+F992: AF      		xor	a
+F993: 32D9F9  		ld	(nd_outf),a
+F996: CD51F8  		call	nd_esnd
+F999: 11FFFF  		ld	de,0xFFFF
+F99C: 3E21    		ld	a,0x21
+F99E: D300    		out	(nd_nctl),a	; Turn on send light
+F9A0: 3AD9F9  	nd_hcw0:ld	a,(nd_outf)
+F9A3: B7      		or	a
+F9A4: 2017    		jr	nz,nd_hcw2
+F9A6: DB40    		in	a,(nd_ayda)
               		;bit	0,a
               		;jr	z,nd_hcw0	; Await an interrupt
               		;bit	1,a
               		;jr	nz,nd_hcw1
-F982: E60F    		and	0x0F
-F984: EE03    		xor	0b00000011
-F986: 280A    		jr	z,nd_hcw1
-F988: 1B      		dec	de
-F989: 7B      		ld	a,e
-F98A: B2      		or	d
-F98B: 20ED    		jr	nz,nd_hcw0
-F98D: CD35F8  		call	nd_dsnd
-F990: 18AB    		jr	nd_hcer		; Timed out waiting
-F992: 3AB2F9  	nd_hcw1:ld	a,(nd_outb)
-F995: D380    		out	(nd_hcca),a
-F997: D1      	nd_hcw2:pop	de
-F998: 3E01    		ld	a,0x01
-F99A: D300    		out	(nd_nctl),a	; Turn off send light
-F99C: CD35F8  		call	nd_dsnd
-F99F: B7      		or	a
-F9A0: C9      		ret
+F9A8: E60F    		and	0x0F
+F9AA: EE03    		xor	0b00000011
+F9AC: 280A    		jr	z,nd_hcw1
+F9AE: 1B      		dec	de
+F9AF: 7B      		ld	a,e
+F9B0: B2      		or	d
+F9B1: 20ED    		jr	nz,nd_hcw0
+F9B3: CD5BF8  		call	nd_dsnd
+F9B6: 18AB    		jr	nd_hcer		; Timed out waiting
+F9B8: 3AD8F9  	nd_hcw1:ld	a,(nd_outb)
+F9BB: D380    		out	(nd_hcca),a
+F9BD: D1      	nd_hcw2:pop	de
+F9BE: 3E01    		ld	a,0x01
+F9C0: D300    		out	(nd_nctl),a	; Turn off send light
+F9C2: CD5BF8  		call	nd_dsnd
+F9C5: B7      		or	a
+F9C6: C9      		ret
               		
               	; HCCA write interrupt
               	; Writes to the HCCA from the buffer, and 
-F9A1: F5      	nd_wirq:push	af
-F9A2: 3AB2F9  		ld	a,(nd_outb)
-F9A5: D380    		out	(nd_hcca),a
-F9A7: 3E01    		ld	a,1
-F9A9: 32B3F9  		ld	(nd_outf),a
-F9AC: CD35F8  		call	nd_dsnd		; Y'all can't behave, turning off
-F9AF: F1      		pop	af
-F9B0: FB      		ei
-F9B1: C9      		ret
+F9C7: F5      	nd_wirq:push	af
+F9C8: 3AD8F9  		ld	a,(nd_outb)
+F9CB: D380    		out	(nd_hcca),a
+F9CD: 3E01    		ld	a,1
+F9CF: 32D9F9  		ld	(nd_outf),a
+F9D2: CD5BF8  		call	nd_dsnd		; Y'all can't behave, turning off
+F9D5: F1      		pop	af
+F9D6: FB      		ei
+F9D7: C9      		ret
               		
               	; Byte to send out of HCCA
-F9B2: 00      	nd_outb:defb	0
+F9D8: 00      	nd_outb:defb	0
               	
               	; HCCA output flag
-F9B3: 00      	nd_outf:defb	0
+F9D9: 00      	nd_outf:defb	0
               	
               	; Byte received from HCCA
-F9B4: 00      	nd_inb:	defb	0
+F9DA: 00      	nd_inb:	defb	0
               	
               	; HCCA input flag
-F9B5: 00      	nd_inf: defb	0
+F9DB: 00      	nd_inf: defb	0
               		
               	; Path to CP/M image
               	; Total length: 10 bytes
-F9B6: 43504D32	nd_p0:	defb	'CPM22.SYS',0
-F9BA: 322E5359	
-F9BE: 5300    	
+F9DC: 43504D32	nd_p0:	defb	'CPM22.SYS',0
+F9E0: 322E5359	
+F9E4: 5300    	
               	
               	; Path to GRB image
               	; Total length: 10 bytes
-F9C0: 464F4E54	nd_p1:	defb	'FONT.GRB',0,0
-F9C4: 2E475242	
-F9C8: 0000    	
+F9E6: 464F4E54	nd_p1:	defb	'FONT.GRB',0,0
+F9EA: 2E475242	
+F9EE: 0000    	
               	
               	; Path to a generic disk image
               	; Total length: 11
-F9CA: 4E44534B	nd_p2:	defb	'NDSK_'
-F9CE: 5F      	
-F9CF: 3F      	nd_p2im:defb	'?'		; Disk image name
-F9D0: 2E494D47		defb	'.IMG',0
-F9D4: 00      	
+F9F0: 4E44534B	nd_p2:	defb	'NDSK_'
+F9F4: 5F      	
+F9F5: 3F      	nd_p2im:defb	'?'		; Disk image name
+F9F6: 2E494D47		defb	'.IMG',0
+F9FA: 00      	
               	
               	; Message prototype to open a file
               	; Total length: 23 bytes
-F9D5: 8F00    	nd_m0:	defb	0x8F,0x00
-F9D7: 1300    		defw	19		; Message length
-F9D9: 01      		defb	0x01		; Cmd: STORAGE-OPEN
-F9DA: 80      		defb	nd_fild		; Default file descriptor
-F9DB: 0100    	nd_m0fl:defw	0x01		; Read/Write flags
-F9DD: 0E      		defb	0x0E		; Message length
-F9DE: 58585858	nd_m0na:defb	'XXXXXXXXXXXXXX'; File name field
-F9E2: 58...   	
-F9EC: 00      		defb	0x00		; Padding
+F9FB: 8F00    	nd_m0:	defb	0x8F,0x00
+F9FD: 1300    		defw	19		; Message length
+F9FF: 01      		defb	0x01		; Cmd: STORAGE-OPEN
+FA00: 80      		defb	nd_fild		; Default file descriptor
+FA01: 0100    	nd_m0fl:defw	0x01		; Read/Write flags
+FA03: 0E      		defb	0x0E		; Message length
+FA04: 58585858	nd_m0na:defb	'XXXXXXXXXXXXXX'; File name field
+FA08: 58...   	
+FA12: 00      		defb	0x00		; Padding
               		
               	; Message prototype to close a file
               	; Total length: 6 bytes
-F9ED: 8F00    	nd_m1:	defb	0x8F,0x00
-F9EF: 0200    		defw	2		; Message length
-F9F1: 05      		defb	0x05		; Cmd: FILE-CLOSE
-F9F2: 80      		defb	nd_fild		; Default file descriptor
-F9F3: 0000    		defw	0x00		; Magic bytes
+FA13: 8F00    	nd_m1:	defb	0x8F,0x00
+FA15: 0200    		defw	2		; Message length
+FA17: 05      		defb	0x05		; Cmd: FILE-CLOSE
+FA18: 80      		defb	nd_fild		; Default file descriptor
+FA19: 0000    		defw	0x00		; Magic bytes
               		
               	; Message prototype to read a block
               	; Total length: 12 bytes
-F9F5: 8F00    	nd_m2:	defb	0x8F,0x00
-F9F7: 0800    		defw	8		; Message length
-F9F9: 07      		defb	0x07		; Cmd: STORAGE-GET-BLOCK
-F9FA: 80      		defb	nd_fild		; Default file descritor
-F9FB: 00000000	nd_m2bn:defw	0x00,0x00	; Block number
-F9FF: 8000    		defw	128		; Block length
+FA1B: 8F00    	nd_m2:	defb	0x8F,0x00
+FA1D: 0800    		defw	8		; Message length
+FA1F: 07      		defb	0x07		; Cmd: STORAGE-GET-BLOCK
+FA20: 80      		defb	nd_fild		; Default file descritor
+FA21: 00000000	nd_m2bn:defw	0x00,0x00	; Block number
+FA25: 8000    		defw	128		; Block length
               		
               	; Message prototype to write a block
               	; Total length: 12 bytes
-FA01: 8F00    	nd_m3:	defb	0x8F,0x00
-FA03: 8800    		defw	136		; Message length
-FA05: 08      		defb	0x08		; Cmd: STORAGE-PUT-BLOCK
-FA06: 80      		defb	nd_fild		; Default file descritor
-FA07: 00000000	nd_m3bn:defw	0x00,0x00	; Block number
-FA0B: 8000    		defw	128		; Block length
+FA27: 8F00    	nd_m3:	defb	0x8F,0x00
+FA29: 8800    		defw	136		; Message length
+FA2B: 08      		defb	0x08		; Cmd: STORAGE-PUT-BLOCK
+FA2C: 80      		defb	nd_fild		; Default file descritor
+FA2D: 00000000	nd_m3bn:defw	0x00,0x00	; Block number
+FA31: 8000    		defw	128		; Block length
               	#include "../dev/nabu_prt.asm"
               	;
               	;**************************************************************
@@ -6944,60 +6966,60 @@ FA0B: 8000    		defw	128		; Block length
 0000:         	pr_ctrl	equ	0x00		; Device control register
               	
               	; Driver jump table 
-FA0D: B7      	prtdev:	or	a
-FA0E: 2808    		jr	z,pr_init
-FA10: 3D      		dec	a
-FA11: 2806    		jr	z,pr_stat
-FA13: 3D      		dec	a
-FA14: 2805    		jr	z,pr_read
-FA16: 1805    		jr	pr_writ
+FA33: B7      	prtdev:	or	a
+FA34: 2808    		jr	z,pr_init
+FA36: 3D      		dec	a
+FA37: 2806    		jr	z,pr_stat
+FA39: 3D      		dec	a
+FA3A: 2805    		jr	z,pr_read
+FA3C: 1805    		jr	pr_writ
               		
               	; Device init
               	; Does nothing
               	;
               	; uses: none
-FA18: C9      	pr_init:ret
+FA3E: C9      	pr_init:ret
               	
               	; Device status 
               	; There are never any characters to read
               	;
               	; Returns a=0xFF if there is a character to read
               	; uses: af
-FA19: AF      	pr_stat:xor	a
-FA1A: C9      		ret
+FA3F: AF      	pr_stat:xor	a
+FA40: C9      		ret
               		
               	; Waits for a character to come in and returns it
               	; No characters to read, returns 0
               	;
               	; Returns ASCII key in A
               	; uses: af
-FA1B: AF      	pr_read:xor	a
-FA1C: C9      		ret
+FA41: AF      	pr_read:xor	a
+FA42: C9      		ret
               		
               	; Writes a character to the device
               	; c = Character to write
               	;
               	; uses: af, bc
-FA1D: 3E0F    	pr_writ:ld	a,0x0F
-FA1F: D341    		out	(pr_atla),a	; AY register = 15
+FA43: 3E0F    	pr_writ:ld	a,0x0F
+FA45: D341    		out	(pr_atla),a	; AY register = 15
               		
-FA21: DB40    	pr_wri0:in	a,(pr_ayda)	; Wait for not busy
-FA23: E610    		and	0x10
-FA25: 20FA    		jr	nz,pr_wri0
+FA47: DB40    	pr_wri0:in	a,(pr_ayda)	; Wait for not busy
+FA49: E610    		and	0x10
+FA4B: 20FA    		jr	nz,pr_wri0
               		
-FA27: 79      		ld	a,c
-FA28: D3B0    		out	(pr_prnt),a	; Write data
+FA4D: 79      		ld	a,c
+FA4E: D3B0    		out	(pr_prnt),a	; Write data
               		
-FA2A: 3E05    		ld	a,0x05		; Strobe
-FA2C: D300    		out	(pr_ctrl),a
+FA50: 3E05    		ld	a,0x05		; Strobe
+FA52: D300    		out	(pr_ctrl),a
               		
-FA2E: 0620    		ld	b,32		
-FA30: 10FE    	pr_wri1:djnz	pr_wri1		; Wait a few cycles
+FA54: 0620    		ld	b,32		
+FA56: 10FE    	pr_wri1:djnz	pr_wri1		; Wait a few cycles
               		
-FA32: 3E01    		ld	a,0x01		; Strobe off
-FA34: D300    		out	(pr_ctrl),a
+FA58: 3E01    		ld	a,0x01		; Strobe off
+FA5A: D300    		out	(pr_ctrl),a
               		
-FA36: C9      		ret
+FA5C: C9      		ret
               		
               	#include "../dev/nabu_sio.asm"
               	;
@@ -7019,74 +7041,74 @@ FA36: C9      		ret
               	
               	
               	; Driver jump table 
-FA37: B7      	siodev:	or	a
-FA38: 2808    		jr	z,so_init
-FA3A: 3D      		dec	a
-FA3B: 2833    		jr	z,so_stat
-FA3D: 3D      		dec	a
-FA3E: 2841    		jr	z,so_read
-FA40: 1851    		jr	so_writ
+FA5D: B7      	siodev:	or	a
+FA5E: 2808    		jr	z,so_init
+FA60: 3D      		dec	a
+FA61: 2833    		jr	z,so_stat
+FA63: 3D      		dec	a
+FA64: 2841    		jr	z,so_read
+FA66: 1851    		jr	so_writ
               		
               	; Device init
               	; Tries to find the option card if it is installed
               	; hl = Device options
               	;
               	; uses: none
-FA42: 11A7FA  	so_init:ld	de,so_atab
-FA45: 45      		ld	b,l
-FA46: 04      		inc	b		; Slot 1,2,3,...
-FA47: 19      		add	hl,de 		; Get address table entry
-FA48: 0ECF    		ld	c,0xCF		; First slot
+FA68: 11CDFA  	so_init:ld	de,so_atab
+FA6B: 45      		ld	b,l
+FA6C: 04      		inc	b		; Slot 1,2,3,...
+FA6D: 19      		add	hl,de 		; Get address table entry
+FA6E: 0ECF    		ld	c,0xCF		; First slot
               		
-FA4A: ED78    	so_ini0:in	a,(c)
-FA4C: FE08    		cp	0x08
-FA4E: 2807    		jr	z,so_ini2
+FA70: ED78    	so_ini0:in	a,(c)
+FA72: FE08    		cp	0x08
+FA74: 2807    		jr	z,so_ini2
               		
-FA50: 3E10    	so_ini1:ld	a,0x10
-FA52: 81      		add	c
-FA53: F0      		ret	p		; Can't find, failure
-FA54: 4F      		ld	c,a
-FA55: 18F3    		jr	so_ini0
+FA76: 3E10    	so_ini1:ld	a,0x10
+FA78: 81      		add	c
+FA79: F0      		ret	p		; Can't find, failure
+FA7A: 4F      		ld	c,a
+FA7B: 18F3    		jr	so_ini0
               		
-FA57: 10F7    	so_ini2:djnz	so_ini1		; Repeat if looking for next card
-FA59: 79      		ld	a,c
-FA5A: D60F    		sub	0x0F
-FA5C: 4F      		ld	c,a
-FA5D: 71      		ld	(hl),c
-FA5E: 11ABFA  		ld	de,so_conf
-FA61: 060D    		ld	b,13
+FA7D: 10F7    	so_ini2:djnz	so_ini1		; Repeat if looking for next card
+FA7F: 79      		ld	a,c
+FA80: D60F    		sub	0x0F
+FA82: 4F      		ld	c,a
+FA83: 71      		ld	(hl),c
+FA84: 11D1FA  		ld	de,so_conf
+FA87: 060D    		ld	b,13
               		
               		; Lets set up the serial card for 9600 8N1
               		; First we set up the 8253, then the 8251
-FA63: 1A      	so_ini3:ld	a,(de)
-FA64: 13      		inc	de
-FA65: 86      		add	a,(hl)
-FA66: 4F      		ld	c,a
-FA67: 1A      		ld	a,(de)
-FA68: 13      		inc	de
-FA69: ED79    		out	(c),a
-FA6B: E5      		push	hl
-FA6C: E1      		pop	hl	; Small delay
-FA6D: 10F4    		djnz	so_ini3
-FA6F: C9      		ret
+FA89: 1A      	so_ini3:ld	a,(de)
+FA8A: 13      		inc	de
+FA8B: 86      		add	a,(hl)
+FA8C: 4F      		ld	c,a
+FA8D: 1A      		ld	a,(de)
+FA8E: 13      		inc	de
+FA8F: ED79    		out	(c),a
+FA91: E5      		push	hl
+FA92: E1      		pop	hl	; Small delay
+FA93: 10F4    		djnz	so_ini3
+FA95: C9      		ret
               	
               	; Device status 
               	; hl = Device options
               	;
               	; Returns a=0xFF if there is a character to read
               	; uses: af
-FA70: 11A7FA  	so_stat:ld	de,so_atab
-FA73: 19      		add	hl,de
-FA74: AF      		xor	a
-FA75: BE      		cp	(hl)
-FA76: C8      		ret	z	; No device, return 0
-FA77: 4E      		ld	c,(hl)
-FA78: 0C      		inc	c
-FA79: ED78    	so_sta0:in	a,(c)	; Check status register
-FA7B: E602    		and	0x02
-FA7D: C8      		ret	z
-FA7E: 3EFF    		ld	a,0xFF
-FA80: C9      		ret
+FA96: 11CDFA  	so_stat:ld	de,so_atab
+FA99: 19      		add	hl,de
+FA9A: AF      		xor	a
+FA9B: BE      		cp	(hl)
+FA9C: C8      		ret	z	; No device, return 0
+FA9D: 4E      		ld	c,(hl)
+FA9E: 0C      		inc	c
+FA9F: ED78    	so_sta0:in	a,(c)	; Check status register
+FAA1: E602    		and	0x02
+FAA3: C8      		ret	z
+FAA4: 3EFF    		ld	a,0xFF
+FAA6: C9      		ret
               		
               		
               	; Waits for a character to come in and returns it
@@ -7094,67 +7116,67 @@ FA80: C9      		ret
               	;
               	; Returns ASCII key in A
               	; uses: af
-FA81: 11A7FA  	so_read:ld	de,so_atab
-FA84: 19      		add	hl,de
-FA85: AF      		xor	a
-FA86: BE      		cp	(hl)
-FA87: C8      		ret	z	; No device, return 0
-FA88: 4E      		ld	c,(hl)
-FA89: 0C      		inc	c
-FA8A: CD79FA  	so_rea0:call	so_sta0	; Wait for a character
-FA8D: 28FB    		jr	z,so_rea0
-FA8F: 0D      		dec	c
-FA90: ED78    		in	a,(c)
-FA92: C9      		ret
+FAA7: 11CDFA  	so_read:ld	de,so_atab
+FAAA: 19      		add	hl,de
+FAAB: AF      		xor	a
+FAAC: BE      		cp	(hl)
+FAAD: C8      		ret	z	; No device, return 0
+FAAE: 4E      		ld	c,(hl)
+FAAF: 0C      		inc	c
+FAB0: CD9FFA  	so_rea0:call	so_sta0	; Wait for a character
+FAB3: 28FB    		jr	z,so_rea0
+FAB5: 0D      		dec	c
+FAB6: ED78    		in	a,(c)
+FAB8: C9      		ret
               		
               	; Writes a character to the device
               	; c = Character to write
               	; hl = Device options
               	;
               	; uses: af, bc
-FA93: 41      	so_writ:ld	b,c
-FA94: 11A7FA  		ld	de,so_atab
-FA97: 19      		add	hl,de
-FA98: AF      		xor	a
-FA99: BE      		cp	(hl)
-FA9A: C8      		ret	z	; No device, return 0
-FA9B: 4E      		ld	c,(hl)
-FA9C: 0C      		inc	c
-FA9D: ED78    	so_wri0:in	a,(c)
-FA9F: E601    		and	0x01
-FAA1: 28FA    		jr	z,so_wri0
-FAA3: 0D      		dec	c
-FAA4: ED41    		out	(c),b
-FAA6: C9      		ret
+FAB9: 41      	so_writ:ld	b,c
+FABA: 11CDFA  		ld	de,so_atab
+FABD: 19      		add	hl,de
+FABE: AF      		xor	a
+FABF: BE      		cp	(hl)
+FAC0: C8      		ret	z	; No device, return 0
+FAC1: 4E      		ld	c,(hl)
+FAC2: 0C      		inc	c
+FAC3: ED78    	so_wri0:in	a,(c)
+FAC5: E601    		and	0x01
+FAC7: 28FA    		jr	z,so_wri0
+FAC9: 0D      		dec	c
+FACA: ED41    		out	(c),b
+FACC: C9      		ret
               		
               		
               	; Variables
               	; 4 possible slots
-FAA7: 00000000	so_atab:defb	0x00,0x00,0x00,0x00
+FACD: 00000000	so_atab:defb	0x00,0x00,0x00,0x00
               	
               	; Configuration string
               	; Sets up counters 1 and 2 on the 8523 timer
-FAAB: 0737    	so_conf:defb	0x07,0x37	; Counter 1 setup
-FAAD: 0412    		defb	0x04,0x12
-FAAF: 0400    		defb	0x04,0x00
-FAB1: 0777    		defb	0x07,0x77	; Counter 2 setup
-FAB3: 0512    		defb	0x05,0x12
-FAB5: 0500    		defb	0x05,0x00
+FAD1: 0737    	so_conf:defb	0x07,0x37	; Counter 1 setup
+FAD3: 0412    		defb	0x04,0x12
+FAD5: 0400    		defb	0x04,0x00
+FAD7: 0777    		defb	0x07,0x77	; Counter 2 setup
+FAD9: 0512    		defb	0x05,0x12
+FADB: 0500    		defb	0x05,0x00
               		
-FAB7: 0100    		defb	0x01,0x00	; 8251 setup
-FAB9: 0100    		defb	0x01,0x00
-FABB: 0100    		defb	0x01,0x00
-FABD: 0100    		defb	0x01,0x00
-FABF: 0140    		defb	0x01,0x40
-FAC1: 014E    		defb	0x01,0x4E
-FAC3: 0137    		defb	0x01,0x37
+FADD: 0100    		defb	0x01,0x00	; 8251 setup
+FADF: 0100    		defb	0x01,0x00
+FAE1: 0100    		defb	0x01,0x00
+FAE3: 0100    		defb	0x01,0x00
+FAE5: 0140    		defb	0x01,0x40
+FAE7: 014E    		defb	0x01,0x4E
+FAE9: 0137    		defb	0x01,0x37
 
 
 ; +++ segments +++
 
-#CODE _TEXT        = $DC00 = 56320,  size = $1EC5 =  7877
-#DATA _BSS         = $FAC5 = 64197,  size = $0070 =   112
-#DATA _NOINIT      = $FB35 = 64309,  size = $0102 =   258
+#CODE _TEXT        = $DC00 = 56320,  size = $1EEB =  7915
+#DATA _BSS         = $FAEB = 64235,  size = $0070 =   112
+#DATA _NOINIT      = $FB5B = 64347,  size = $0102 =   258
 #DATA _JUMP_TABLE  = $FF00 = 65280,  size = $0090 =   144
 
 ; +++ global symbols +++
@@ -7405,18 +7427,18 @@ USRNUM           = $DF0B = 57099  _TEXT       zcpr1_ccp.asm:1235
 WIDE             = $00FF =   255  _TEXT       zcpr1_ccp.asm:448
 WSTYPE           = $00FF =   255  _TEXT       zcpr1_ccp.asm:353
 YESCR            = $E1F7 = 57847  _TEXT       zcpr1_ccp.asm:1940
-_BSS             = $FAC5 = 64197  _BSS        config_ndsk.asm:44 (unused)
-_BSS_end         = $FB35 = 64309  _BSS        config_ndsk.asm:44
+_BSS             = $FAEB = 64235  _BSS        config_ndsk.asm:44 (unused)
+_BSS_end         = $FB5B = 64347  _BSS        config_ndsk.asm:44
 _BSS_size        = $0070 =   112  _BSS        config_ndsk.asm:44
 _JUMP_TABLE      = $FF00 = 65280  _JUMP_TABLE config_ndsk.asm:46 (unused)
 _JUMP_TABLE_end  = $FF90 = 65424  _JUMP_TABLE config_ndsk.asm:46 (unused)
 _JUMP_TABLE_size = $0090 =   144  _JUMP_TABLE config_ndsk.asm:46 (unused)
-_NOINIT          = $FB35 = 64309  _NOINIT     config_ndsk.asm:45 (unused)
-_NOINIT_end      = $FC37 = 64567  _NOINIT     config_ndsk.asm:45 (unused)
+_NOINIT          = $FB5B = 64347  _NOINIT     config_ndsk.asm:45 (unused)
+_NOINIT_end      = $FC5D = 64605  _NOINIT     config_ndsk.asm:45 (unused)
 _NOINIT_size     = $0102 =   258  _NOINIT     config_ndsk.asm:45 (unused)
 _TEXT            = $DC00 = 56320  _TEXT       config_ndsk.asm:43 (unused)
-_TEXT_end        = $FAC5 = 64197  _TEXT       config_ndsk.asm:43
-_TEXT_size       = $1EC5 =  7877  _TEXT       config_ndsk.asm:43 (unused)
+_TEXT_end        = $FAEB = 64235  _TEXT       config_ndsk.asm:43
+_TEXT_size       = $1EEB =  7915  _TEXT       config_ndsk.asm:43 (unused)
 active           = $E742 = 59202  _TEXT       bdos.asm:489
 adda2hl          = $E964 = 59748  _TEXT       bdos.asm:918
 alloc0           = $F1CA = 61898  _TEXT       bdos.asm:2466
@@ -7620,79 +7642,79 @@ mode             = $F1D5 = 61909  _TEXT       bdos.asm:2475
 morefls          = $E97F = 59775  _TEXT       bdos.asm:951
 movedir          = $E9E9 = 59881  _TEXT       bdos.asm:1046
 moveword         = $EC94 = 60564  _TEXT       bdos.asm:1572
-nd_alva          = $FB35 = 64309  _NOINIT     nabu_ndsk.asm:36
-nd_alvb          = $FBB6 = 64438  _NOINIT     nabu_ndsk.asm:37
+nd_alva          = $FB5B = 64347  _NOINIT     nabu_ndsk.asm:36
+nd_alvb          = $FBDC = 64476  _NOINIT     nabu_ndsk.asm:37
 nd_atla          = $0041 =    65  _TEXT       nabu_ndsk.asm:42
 nd_ayda          = $0040 =    64  _TEXT       nabu_ndsk.asm:41
-nd_buff          = $FAF5 = 64245  _BSS        nabu_ndsk.asm:32
-nd_ccp           = $F83F = 63551  _TEXT       nabu_ndsk.asm:259
-nd_csec          = $FAF2 = 64242  _BSS        nabu_ndsk.asm:30
-nd_ctrk          = $FAF3 = 64243  _BSS        nabu_ndsk.asm:31
-nd_dfl0          = $F826 = 63526  _TEXT       nabu_ndsk.asm:234
-nd_dflt          = $F81E = 63518  _TEXT       nabu_ndsk.asm:229
-nd_dpb           = $F76E = 63342  _TEXT       nabu_ndsk.asm:72
-nd_dpha          = $F74E = 63310  _TEXT       nabu_ndsk.asm:58
-nd_dphb          = $F75E = 63326  _TEXT       nabu_ndsk.asm:65
-nd_dsnd          = $F835 = 63541  _TEXT       nabu_ndsk.asm:251
-nd_esnd          = $F82B = 63531  _TEXT       nabu_ndsk.asm:242
+nd_buff          = $FB1B = 64283  _BSS        nabu_ndsk.asm:32
+nd_ccp           = $F865 = 63589  _TEXT       nabu_ndsk.asm:259
+nd_csec          = $FB18 = 64280  _BSS        nabu_ndsk.asm:30
+nd_ctrk          = $FB19 = 64281  _BSS        nabu_ndsk.asm:31
+nd_dfl0          = $F84C = 63564  _TEXT       nabu_ndsk.asm:234
+nd_dflt          = $F844 = 63556  _TEXT       nabu_ndsk.asm:229
+nd_dpb           = $F794 = 63380  _TEXT       nabu_ndsk.asm:72
+nd_dpha          = $F774 = 63348  _TEXT       nabu_ndsk.asm:58
+nd_dphb          = $F784 = 63364  _TEXT       nabu_ndsk.asm:65
+nd_dsnd          = $F85B = 63579  _TEXT       nabu_ndsk.asm:251
+nd_esnd          = $F851 = 63569  _TEXT       nabu_ndsk.asm:242
 nd_fild          = $0080 =   128  _TEXT       nabu_ndsk.asm:46
-nd_gbno          = $F7F4 = 63476  _TEXT       nabu_ndsk.asm:191
-nd_get0          = $F88B = 63627  _TEXT       nabu_ndsk.asm:306
-nd_get1          = $F8B4 = 63668  _TEXT       nabu_ndsk.asm:328
-nd_get2          = $F8BE = 63678  _TEXT       nabu_ndsk.asm:335
-nd_getb          = $F885 = 63621  _TEXT       nabu_ndsk.asm:304
-nd_grb           = $F844 = 63556  _TEXT       nabu_ndsk.asm:263
-nd_grb0          = $F847 = 63559  _TEXT       nabu_ndsk.asm:264
-nd_grb1          = $F85E = 63582  _TEXT       nabu_ndsk.asm:272
+nd_gbno          = $F81A = 63514  _TEXT       nabu_ndsk.asm:191
+nd_get0          = $F8B1 = 63665  _TEXT       nabu_ndsk.asm:306
+nd_get1          = $F8DA = 63706  _TEXT       nabu_ndsk.asm:328
+nd_get2          = $F8E4 = 63716  _TEXT       nabu_ndsk.asm:335
+nd_getb          = $F8AB = 63659  _TEXT       nabu_ndsk.asm:304
+nd_grb           = $F86A = 63594  _TEXT       nabu_ndsk.asm:263
+nd_grb0          = $F86D = 63597  _TEXT       nabu_ndsk.asm:264
+nd_grb1          = $F884 = 63620  _TEXT       nabu_ndsk.asm:272
 nd_hcca          = $0080 =   128  _TEXT       nabu_ndsk.asm:43
-nd_hcer          = $F93D = 63805  _TEXT       nabu_ndsk.asm:437
-nd_hcr0          = $F92A = 63786  _TEXT       nabu_ndsk.asm:422
-nd_hcr1          = $F944 = 63812  _TEXT       nabu_ndsk.asm:442
-nd_hcr2          = $F94D = 63821  _TEXT       nabu_ndsk.asm:448
-nd_hcrd          = $F91B = 63771  _TEXT       nabu_ndsk.asm:415
-nd_hcre          = $F91E = 63774  _TEXT       nabu_ndsk.asm:416
-nd_hcw0          = $F97A = 63866  _TEXT       nabu_ndsk.asm:485
-nd_hcw1          = $F992 = 63890  _TEXT       nabu_ndsk.asm:502
-nd_hcw2          = $F997 = 63895  _TEXT       nabu_ndsk.asm:504
-nd_hcwr          = $F968 = 63848  _TEXT       nabu_ndsk.asm:477
-nd_hini          = $F804 = 63492  _TEXT       nabu_ndsk.asm:211
-nd_home          = $F796 = 63382  _TEXT       nabu_ndsk.asm:111
-nd_inb           = $F9B4 = 63924  _TEXT       nabu_ndsk.asm:530
-nd_inf           = $F9B5 = 63925  _TEXT       nabu_ndsk.asm:533
-nd_init          = $F795 = 63381  _TEXT       nabu_ndsk.asm:106
-nd_m0            = $F9D5 = 63957  _TEXT       nabu_ndsk.asm:551
-nd_m0fl          = $F9DB = 63963  _TEXT       nabu_ndsk.asm:555
-nd_m0na          = $F9DE = 63966  _TEXT       nabu_ndsk.asm:557
-nd_m1            = $F9ED = 63981  _TEXT       nabu_ndsk.asm:562
-nd_m2            = $F9F5 = 63989  _TEXT       nabu_ndsk.asm:570
-nd_m2bn          = $F9FB = 63995  _TEXT       nabu_ndsk.asm:574
-nd_m3            = $FA01 = 64001  _TEXT       nabu_ndsk.asm:579
-nd_m3bn          = $FA07 = 64007  _TEXT       nabu_ndsk.asm:583
+nd_hcer          = $F963 = 63843  _TEXT       nabu_ndsk.asm:437
+nd_hcr0          = $F950 = 63824  _TEXT       nabu_ndsk.asm:422
+nd_hcr1          = $F96A = 63850  _TEXT       nabu_ndsk.asm:442
+nd_hcr2          = $F973 = 63859  _TEXT       nabu_ndsk.asm:448
+nd_hcrd          = $F941 = 63809  _TEXT       nabu_ndsk.asm:415
+nd_hcre          = $F944 = 63812  _TEXT       nabu_ndsk.asm:416
+nd_hcw0          = $F9A0 = 63904  _TEXT       nabu_ndsk.asm:485
+nd_hcw1          = $F9B8 = 63928  _TEXT       nabu_ndsk.asm:502
+nd_hcw2          = $F9BD = 63933  _TEXT       nabu_ndsk.asm:504
+nd_hcwr          = $F98E = 63886  _TEXT       nabu_ndsk.asm:477
+nd_hini          = $F82A = 63530  _TEXT       nabu_ndsk.asm:211
+nd_home          = $F7BC = 63420  _TEXT       nabu_ndsk.asm:111
+nd_inb           = $F9DA = 63962  _TEXT       nabu_ndsk.asm:530
+nd_inf           = $F9DB = 63963  _TEXT       nabu_ndsk.asm:533
+nd_init          = $F7BB = 63419  _TEXT       nabu_ndsk.asm:106
+nd_m0            = $F9FB = 63995  _TEXT       nabu_ndsk.asm:551
+nd_m0fl          = $FA01 = 64001  _TEXT       nabu_ndsk.asm:555
+nd_m0na          = $FA04 = 64004  _TEXT       nabu_ndsk.asm:557
+nd_m1            = $FA13 = 64019  _TEXT       nabu_ndsk.asm:562
+nd_m2            = $FA1B = 64027  _TEXT       nabu_ndsk.asm:570
+nd_m2bn          = $FA21 = 64033  _TEXT       nabu_ndsk.asm:574
+nd_m3            = $FA27 = 64039  _TEXT       nabu_ndsk.asm:579
+nd_m3bn          = $FA2D = 64045  _TEXT       nabu_ndsk.asm:583
 nd_nctl          = $0000 =     0  _TEXT       nabu_ndsk.asm:44
-nd_opef          = $F86B = 63595  _TEXT       nabu_ndsk.asm:285
-nd_open          = $F868 = 63592  _TEXT       nabu_ndsk.asm:284
-nd_outb          = $F9B2 = 63922  _TEXT       nabu_ndsk.asm:524
-nd_outf          = $F9B3 = 63923  _TEXT       nabu_ndsk.asm:527
-nd_p0            = $F9B6 = 63926  _TEXT       nabu_ndsk.asm:537
-nd_p1            = $F9C0 = 63936  _TEXT       nabu_ndsk.asm:541
-nd_p2            = $F9CA = 63946  _TEXT       nabu_ndsk.asm:545
-nd_p2im          = $F9CF = 63951  _TEXT       nabu_ndsk.asm:546
-nd_put0          = $F8CC = 63692  _TEXT       nabu_ndsk.asm:349
-nd_put1          = $F8DE = 63710  _TEXT       nabu_ndsk.asm:359
-nd_putb          = $F8C6 = 63686  _TEXT       nabu_ndsk.asm:347
-nd_read          = $F7D2 = 63442  _TEXT       nabu_ndsk.asm:165
-nd_rec0          = $F8FD = 63741  _TEXT       nabu_ndsk.asm:380
-nd_rec1          = $F908 = 63752  _TEXT       nabu_ndsk.asm:387
-nd_rece          = $F8F4 = 63732  _TEXT       nabu_ndsk.asm:377
-nd_rirq          = $F95A = 63834  _TEXT       nabu_ndsk.asm:460
-nd_sel           = $F79D = 63389  _TEXT       nabu_ndsk.asm:120
-nd_send          = $F912 = 63762  _TEXT       nabu_ndsk.asm:401
-nd_ssec          = $F7CD = 63437  _TEXT       nabu_ndsk.asm:158
-nd_strk          = $F7C7 = 63431  _TEXT       nabu_ndsk.asm:148
-nd_tran          = $FAF1 = 64241  _BSS        nabu_ndsk.asm:29
-nd_wirq          = $F9A1 = 63905  _TEXT       nabu_ndsk.asm:513
-nd_writ          = $F7E3 = 63459  _TEXT       nabu_ndsk.asm:177
-ndkdev           = $F77D = 63357  _TEXT       nabu_ndsk.asm:87
+nd_opef          = $F891 = 63633  _TEXT       nabu_ndsk.asm:285
+nd_open          = $F88E = 63630  _TEXT       nabu_ndsk.asm:284
+nd_outb          = $F9D8 = 63960  _TEXT       nabu_ndsk.asm:524
+nd_outf          = $F9D9 = 63961  _TEXT       nabu_ndsk.asm:527
+nd_p0            = $F9DC = 63964  _TEXT       nabu_ndsk.asm:537
+nd_p1            = $F9E6 = 63974  _TEXT       nabu_ndsk.asm:541
+nd_p2            = $F9F0 = 63984  _TEXT       nabu_ndsk.asm:545
+nd_p2im          = $F9F5 = 63989  _TEXT       nabu_ndsk.asm:546
+nd_put0          = $F8F2 = 63730  _TEXT       nabu_ndsk.asm:349
+nd_put1          = $F904 = 63748  _TEXT       nabu_ndsk.asm:359
+nd_putb          = $F8EC = 63724  _TEXT       nabu_ndsk.asm:347
+nd_read          = $F7F8 = 63480  _TEXT       nabu_ndsk.asm:165
+nd_rec0          = $F923 = 63779  _TEXT       nabu_ndsk.asm:380
+nd_rec1          = $F92E = 63790  _TEXT       nabu_ndsk.asm:387
+nd_rece          = $F91A = 63770  _TEXT       nabu_ndsk.asm:377
+nd_rirq          = $F980 = 63872  _TEXT       nabu_ndsk.asm:460
+nd_sel           = $F7C3 = 63427  _TEXT       nabu_ndsk.asm:120
+nd_send          = $F938 = 63800  _TEXT       nabu_ndsk.asm:401
+nd_ssec          = $F7F3 = 63475  _TEXT       nabu_ndsk.asm:158
+nd_strk          = $F7ED = 63469  _TEXT       nabu_ndsk.asm:148
+nd_tran          = $FB17 = 64279  _BSS        nabu_ndsk.asm:29
+nd_wirq          = $F9C7 = 63943  _TEXT       nabu_ndsk.asm:513
+nd_writ          = $F809 = 63497  _TEXT       nabu_ndsk.asm:177
+ndkdev           = $F7A3 = 63395  _TEXT       nabu_ndsk.asm:87
 newline          = $E5B1 = 58801  _TEXT       bdos.asm:258
 newln1           = $E5B9 = 58809  _TEXT       bdos.asm:261
 nfuncts          = $0029 =    41  _TEXT       bdos.asm:74
@@ -7724,15 +7746,15 @@ positn5          = $EF8B = 61323  _TEXT       bdos.asm:2035
 pr_atla          = $0041 =    65  _TEXT       nabu_prt.asm:14
 pr_ayda          = $0040 =    64  _TEXT       nabu_prt.asm:13
 pr_ctrl          = $0000 =     0  _TEXT       nabu_prt.asm:16
-pr_init          = $FA18 = 64024  _TEXT       nabu_prt.asm:31
+pr_init          = $FA3E = 64062  _TEXT       nabu_prt.asm:31
 pr_prnt          = $00B0 =   176  _TEXT       nabu_prt.asm:15
-pr_read          = $FA1B = 64027  _TEXT       nabu_prt.asm:46
-pr_stat          = $FA19 = 64025  _TEXT       nabu_prt.asm:38
-pr_wri0          = $FA21 = 64033  _TEXT       nabu_prt.asm:56
-pr_wri1          = $FA30 = 64048  _TEXT       nabu_prt.asm:67
-pr_writ          = $FA1D = 64029  _TEXT       nabu_prt.asm:53
+pr_read          = $FA41 = 64065  _TEXT       nabu_prt.asm:46
+pr_stat          = $FA3F = 64063  _TEXT       nabu_prt.asm:38
+pr_wri0          = $FA47 = 64071  _TEXT       nabu_prt.asm:56
+pr_wri1          = $FA56 = 64086  _TEXT       nabu_prt.asm:67
+pr_writ          = $FA43 = 64067  _TEXT       nabu_prt.asm:53
 prstat           = $F312 = 62226  _TEXT       bios.asm:276
-prtdev           = $FA0D = 64013  _TEXT       nabu_prt.asm:19
+prtdev           = $FA33 = 64051  _TEXT       nabu_prt.asm:19
 prterr           = $E4E5 = 58597  _TEXT       bdos.asm:111
 prtflag          = $E70D = 59149  _TEXT       bdos.asm:477
 prtmesg          = $E5D3 = 58835  _TEXT       bdos.asm:278
@@ -7819,21 +7841,21 @@ shiftl1          = $E905 = 59653  _TEXT       bdos.asm:842
 shiftr           = $E8EA = 59626  _TEXT       bdos.asm:815
 shiftr1          = $E8EB = 59627  _TEXT       bdos.asm:816
 showit           = $E57F = 58751  _TEXT       bdos.asm:222
-siodev           = $FA37 = 64055  _TEXT       nabu_sio.asm:20
+siodev           = $FA5D = 64093  _TEXT       nabu_sio.asm:20
 slcterr          = $E747 = 59207  _TEXT       bdos.asm:495
-so_atab          = $FAA7 = 64167  _TEXT       nabu_sio.asm:131
-so_conf          = $FAAB = 64171  _TEXT       nabu_sio.asm:135
-so_ini0          = $FA4A = 64074  _TEXT       nabu_sio.asm:39
-so_ini1          = $FA50 = 64080  _TEXT       nabu_sio.asm:43
-so_ini2          = $FA57 = 64087  _TEXT       nabu_sio.asm:49
-so_ini3          = $FA63 = 64099  _TEXT       nabu_sio.asm:59
-so_init          = $FA42 = 64066  _TEXT       nabu_sio.asm:33
-so_rea0          = $FA8A = 64138  _TEXT       nabu_sio.asm:102
-so_read          = $FA81 = 64129  _TEXT       nabu_sio.asm:95
-so_sta0          = $FA79 = 64121  _TEXT       nabu_sio.asm:83
-so_stat          = $FA70 = 64112  _TEXT       nabu_sio.asm:76
-so_wri0          = $FA9D = 64157  _TEXT       nabu_sio.asm:121
-so_writ          = $FA93 = 64147  _TEXT       nabu_sio.asm:113
+so_atab          = $FACD = 64205  _TEXT       nabu_sio.asm:131
+so_conf          = $FAD1 = 64209  _TEXT       nabu_sio.asm:135
+so_ini0          = $FA70 = 64112  _TEXT       nabu_sio.asm:39
+so_ini1          = $FA76 = 64118  _TEXT       nabu_sio.asm:43
+so_ini2          = $FA7D = 64125  _TEXT       nabu_sio.asm:49
+so_ini3          = $FA89 = 64137  _TEXT       nabu_sio.asm:59
+so_init          = $FA68 = 64104  _TEXT       nabu_sio.asm:33
+so_rea0          = $FAB0 = 64176  _TEXT       nabu_sio.asm:102
+so_read          = $FAA7 = 64167  _TEXT       nabu_sio.asm:95
+so_sta0          = $FA9F = 64159  _TEXT       nabu_sio.asm:83
+so_stat          = $FA96 = 64150  _TEXT       nabu_sio.asm:76
+so_wri0          = $FAC3 = 64195  _TEXT       nabu_sio.asm:121
+so_writ          = $FAB9 = 64185  _TEXT       nabu_sio.asm:113
 starting         = $E70B = 59147  _TEXT       bdos.asm:475
 status           = $E745 = 59205  _TEXT       bdos.asm:491
 stbitmap         = $EA5C = 59996  _TEXT       bdos.asm:1149
@@ -7853,47 +7875,48 @@ tbase            = $0100 =   256  _TEXT       zcpr1_ccp.asm:18 (unused)
 tbuff            = $0080 =   128  _TEXT       zcpr1_ccp.asm:17
 tdrive           = $0004 =     4  _TEXT       zcpr1_ccp.asm:10
 tfcb             = $005C =    92  _TEXT       zcpr1_ccp.asm:14 (unused)
-tm_40c           = $F5F4 = 62964  _TEXT       nabu_vdp.asm:462
-tm_80c           = $F601 = 62977  _TEXT       nabu_vdp.asm:469
-tm_addh          = $F718 = 63256  _TEXT       nabu_vdp.asm:707
-tm_addr          = $F71A = 63258  _TEXT       nabu_vdp.asm:709
+tm_40c           = $F5F9 = 62969  _TEXT       nabu_vdp.asm:464
+tm_80c           = $F606 = 62982  _TEXT       nabu_vdp.asm:471
+tm_addh          = $F73E = 63294  _TEXT       nabu_vdp.asm:729
+tm_addr          = $F740 = 63296  _TEXT       nabu_vdp.asm:731
 tm_atla          = $0041 =    65  _TEXT       nabu_vdp.asm:37
 tm_ayda          = $0040 =    64  _TEXT       nabu_vdp.asm:36
+tm_bell          = $F619 = 63001  _TEXT       nabu_vdp.asm:486
 tm_bs            = $F54A = 62794  _TEXT       nabu_vdp.asm:348
-tm_cbuf          = $FAC9 = 64201  _BSS        nabu_vdp.asm:26
-tm_cha0          = $F6BC = 63164  _TEXT       nabu_vdp.asm:630
-tm_chat          = $F6B6 = 63158  _TEXT       nabu_vdp.asm:625
-tm_cle0          = $F5E0 = 62944  _TEXT       nabu_vdp.asm:447
-tm_clea          = $F5D1 = 62929  _TEXT       nabu_vdp.asm:438
-tm_cles          = $F5CF = 62927  _TEXT       nabu_vdp.asm:437
+tm_cbuf          = $FAEF = 64239  _BSS        nabu_vdp.asm:26
+tm_cha0          = $F6E2 = 63202  _TEXT       nabu_vdp.asm:652
+tm_chat          = $F6DC = 63196  _TEXT       nabu_vdp.asm:647
+tm_cle0          = $F5E5 = 62949  _TEXT       nabu_vdp.asm:449
+tm_clea          = $F5D6 = 62934  _TEXT       nabu_vdp.asm:440
+tm_cles          = $F5D4 = 62932  _TEXT       nabu_vdp.asm:439
 tm_cloc          = $F45B = 62555  _TEXT       nabu_vdp.asm:172
-tm_cls           = $F6FD = 63229  _TEXT       nabu_vdp.asm:684
-tm_cls0          = $F706 = 63238  _TEXT       nabu_vdp.asm:687
-tm_cold          = $F74D = 63309  _TEXT       nabu_vdp.asm:754
-tm_colr          = $F748 = 63304  _TEXT       nabu_vdp.asm:749
+tm_cls           = $F723 = 63267  _TEXT       nabu_vdp.asm:706
+tm_cls0          = $F72C = 63276  _TEXT       nabu_vdp.asm:709
+tm_cold          = $F773 = 63347  _TEXT       nabu_vdp.asm:776
+tm_colr          = $F76E = 63342  _TEXT       nabu_vdp.asm:771
 tm_cr            = $F547 = 62791  _TEXT       nabu_vdp.asm:345
 tm_cshm          = $F559 = 62809  _TEXT       nabu_vdp.asm:362
-tm_cupd          = $F5F8 = 62968  _TEXT       nabu_vdp.asm:464
-tm_curx          = $F74B = 63307  _TEXT       nabu_vdp.asm:752
-tm_cury          = $F74C = 63308  _TEXT       nabu_vdp.asm:753
+tm_cupd          = $F5FD = 62973  _TEXT       nabu_vdp.asm:466
+tm_curx          = $F771 = 63345  _TEXT       nabu_vdp.asm:774
+tm_cury          = $F772 = 63346  _TEXT       nabu_vdp.asm:775
 tm_data          = $00A0 =   160  _TEXT       nabu_vdp.asm:30
-tm_dint          = $F72B = 63275  _TEXT       nabu_vdp.asm:728
-tm_dsc0          = $F627 = 63015  _TEXT       nabu_vdp.asm:495
-tm_dsco          = $F614 = 62996  _TEXT       nabu_vdp.asm:488
-tm_eint          = $F73B = 63291  _TEXT       nabu_vdp.asm:740
-tm_esc           = $F58E = 62862  _TEXT       nabu_vdp.asm:394
-tm_esc0          = $F59F = 62879  _TEXT       nabu_vdp.asm:405
-tm_esc1          = $F5B9 = 62905  _TEXT       nabu_vdp.asm:420
-tm_esc2          = $F5C4 = 62916  _TEXT       nabu_vdp.asm:427
-tm_escd          = $F59A = 62874  _TEXT       nabu_vdp.asm:402
-tm_esci          = $F5B3 = 62899  _TEXT       nabu_vdp.asm:417
-tm_escr          = $F59B = 62875  _TEXT       nabu_vdp.asm:403
-tm_escs          = $FAC7 = 64199  _BSS        nabu_vdp.asm:24
-tm_get0          = $F650 = 63056  _TEXT       nabu_vdp.asm:530
-tm_getc          = $F63A = 63034  _TEXT       nabu_vdp.asm:516
+tm_dint          = $F751 = 63313  _TEXT       nabu_vdp.asm:750
+tm_dsc0          = $F64D = 63053  _TEXT       nabu_vdp.asm:517
+tm_dsco          = $F63A = 63034  _TEXT       nabu_vdp.asm:510
+tm_eint          = $F761 = 63329  _TEXT       nabu_vdp.asm:762
+tm_esc           = $F593 = 62867  _TEXT       nabu_vdp.asm:396
+tm_esc0          = $F5A4 = 62884  _TEXT       nabu_vdp.asm:407
+tm_esc1          = $F5BE = 62910  _TEXT       nabu_vdp.asm:422
+tm_esc2          = $F5C9 = 62921  _TEXT       nabu_vdp.asm:429
+tm_escd          = $F59F = 62879  _TEXT       nabu_vdp.asm:404
+tm_esci          = $F5B8 = 62904  _TEXT       nabu_vdp.asm:419
+tm_escr          = $F5A0 = 62880  _TEXT       nabu_vdp.asm:405
+tm_escs          = $FAED = 64237  _BSS        nabu_vdp.asm:24
+tm_get0          = $F676 = 63094  _TEXT       nabu_vdp.asm:552
+tm_getc          = $F660 = 63072  _TEXT       nabu_vdp.asm:538
 tm_home          = $F55C = 62812  _TEXT       nabu_vdp.asm:363
-tm_inb           = $F749 = 63305  _TEXT       nabu_vdp.asm:750
-tm_inf           = $F74A = 63306  _TEXT       nabu_vdp.asm:751
+tm_inb           = $F76F = 63343  _TEXT       nabu_vdp.asm:772
+tm_inf           = $F770 = 63344  _TEXT       nabu_vdp.asm:773
 tm_ini0          = $F42E = 62510  _TEXT       nabu_vdp.asm:140
 tm_ini1          = $F44E = 62542  _TEXT       nabu_vdp.asm:161
 tm_inir          = $F3D4 = 62420  _TEXT       nabu_vdp.asm:79
@@ -7901,20 +7924,20 @@ tm_init          = $F406 = 62470  _TEXT       nabu_vdp.asm:116
 tm_inr0          = $F3D5 = 62421  _TEXT       nabu_vdp.asm:80
 tm_keyd          = $0090 =   144  _TEXT       nabu_vdp.asm:33
 tm_keys          = $0091 =   145  _TEXT       nabu_vdp.asm:34
-tm_kirq          = $F658 = 63064  _TEXT       nabu_vdp.asm:539
-tm_last          = $FAC8 = 64200  _BSS        nabu_vdp.asm:25
+tm_kirq          = $F67E = 63102  _TEXT       nabu_vdp.asm:561
+tm_last          = $FAEE = 64238  _BSS        nabu_vdp.asm:25
 tm_latc          = $00A1 =   161  _TEXT       nabu_vdp.asm:31
 tm_lf            = $F53B = 62779  _TEXT       nabu_vdp.asm:336
-tm_map           = $F666 = 63078  _TEXT       nabu_vdp.asm:554
-tm_map0          = $F66A = 63082  _TEXT       nabu_vdp.asm:558
-tm_map2          = $F676 = 63094  _TEXT       nabu_vdp.asm:571
-tm_mapt          = $F67D = 63101  _TEXT       nabu_vdp.asm:578
-tm_mode          = $F746 = 63302  _TEXT       nabu_vdp.asm:748
+tm_map           = $F68C = 63116  _TEXT       nabu_vdp.asm:576
+tm_map0          = $F690 = 63120  _TEXT       nabu_vdp.asm:580
+tm_map2          = $F69C = 63132  _TEXT       nabu_vdp.asm:593
+tm_mapt          = $F6A3 = 63139  _TEXT       nabu_vdp.asm:600
+tm_mode          = $F76C = 63340  _TEXT       nabu_vdp.asm:770
 tm_oti0          = $F3CC = 62412  _TEXT       nabu_vdp.asm:66
 tm_otir          = $F3CB = 62411  _TEXT       nabu_vdp.asm:65
-tm_outc          = $FAC5 = 64197  _BSS        nabu_vdp.asm:22
-tm_putc          = $F692 = 63122  _TEXT       nabu_vdp.asm:596
-tm_putf          = $F6A0 = 63136  _TEXT       nabu_vdp.asm:604 (unused)
+tm_outc          = $FAEB = 64235  _BSS        nabu_vdp.asm:22
+tm_putc          = $F6B8 = 63160  _TEXT       nabu_vdp.asm:618
+tm_putf          = $F6C6 = 63174  _TEXT       nabu_vdp.asm:626 (unused)
 tm_rea0          = $F4B4 = 62644  _TEXT       nabu_vdp.asm:237
 tm_rea1          = $F4CA = 62666  _TEXT       nabu_vdp.asm:249
 tm_rea2          = $F4DF = 62687  _TEXT       nabu_vdp.asm:262
@@ -7922,11 +7945,11 @@ tm_rea3          = $F4EF = 62703  _TEXT       nabu_vdp.asm:272
 tm_read          = $F4A8 = 62632  _TEXT       nabu_vdp.asm:231
 tm_ri            = $F534 = 62772  _TEXT       nabu_vdp.asm:330
 tm_sclf          = $F473 = 62579  _TEXT       nabu_vdp.asm:188
-tm_scol          = $F607 = 62983  _TEXT       nabu_vdp.asm:474
+tm_scol          = $F60C = 62988  _TEXT       nabu_vdp.asm:476
 tm_scr0          = $F46B = 62571  _TEXT       nabu_vdp.asm:185
 tm_scr1          = $F471 = 62577  _TEXT       nabu_vdp.asm:187
 tm_scri          = $F461 = 62561  _TEXT       nabu_vdp.asm:180
-tm_scro          = $FAC6 = 64198  _BSS        nabu_vdp.asm:23
+tm_scro          = $FAEC = 64236  _BSS        nabu_vdp.asm:23
 tm_setp          = $F47D = 62589  _TEXT       nabu_vdp.asm:198
 tm_sta0          = $F3E9 = 62441  _TEXT       nabu_vdp.asm:98
 tm_sta1          = $F3F4 = 62452  _TEXT       nabu_vdp.asm:103
@@ -7934,11 +7957,11 @@ tm_sta2          = $F500 = 62720  _TEXT       nabu_vdp.asm:286
 tm_stal          = $F4FD = 62717  _TEXT       nabu_vdp.asm:284
 tm_stat          = $F3DD = 62429  _TEXT       nabu_vdp.asm:92
 tm_up            = $F554 = 62804  _TEXT       nabu_vdp.asm:357
-tm_updc          = $F60B = 62987  _TEXT       nabu_vdp.asm:478
-tm_usc0          = $F6E9 = 63209  _TEXT       nabu_vdp.asm:663
-tm_usco          = $F6DA = 63194  _TEXT       nabu_vdp.asm:656
-tm_vcpy          = $F6C2 = 63170  _TEXT       nabu_vdp.asm:642
-tm_virq          = $F725 = 63269  _TEXT       nabu_vdp.asm:718
+tm_updc          = $F610 = 62992  _TEXT       nabu_vdp.asm:480
+tm_usc0          = $F70F = 63247  _TEXT       nabu_vdp.asm:685
+tm_usco          = $F700 = 63232  _TEXT       nabu_vdp.asm:678
+tm_vcpy          = $F6E8 = 63208  _TEXT       nabu_vdp.asm:664
+tm_virq          = $F74B = 63307  _TEXT       nabu_vdp.asm:740
 tm_wri0          = $F521 = 62753  _TEXT       nabu_vdp.asm:318
 tm_wri1          = $F560 = 62816  _TEXT       nabu_vdp.asm:368
 tm_writ          = $F506 = 62726  _TEXT       nabu_vdp.asm:298
@@ -7982,5 +8005,5 @@ wtspecl          = $F19B = 61851  _TEXT       bdos.asm:2426
 xlate            = $F1D0 = 61904  _TEXT       bdos.asm:2469
 
 
-total time: 0.0716 sec.
+total time: 0.0714 sec.
 no errors

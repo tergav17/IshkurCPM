@@ -366,6 +366,8 @@ tm_home:xor	a
 	ret
 
 tm_wri1:ld	a,e
+	cp	0x07	; Bell
+	jp	z,tm_bell
 	cp	0x08	; '\b' (Cursor left)
 	jr	z,tm_bs
 	cp	0x12	; Cursor right
@@ -479,8 +481,28 @@ tm_updc:ld	a,e
 	ld	(tm_colr),a
 	call	tm_setp
 	jr	tm_escd
+
+	; Ring the bell
+tm_bell:xor	a
+	out	(tm_latc),a
+	out	(tm_data),a
+	inc	a
+	out	(tm_latc),a
+	ld	a,0x80
+	out	(tm_data),a
+	ld	a,7
+	out	(tm_latc),a
+	in	a,(tm_data)
+	and	0xC0
+	or	0x3E
+	out	(tm_data),a
+	ld	a,8
+	out	(tm_latc),a
+	ld	a,0x0F
+	out	(tm_data),a
+	ret
 	
-	
+
 	
 ; Scroll both frame buffers down one
 ;
