@@ -34,7 +34,7 @@ tm_keyd	equ	0x90	; Keyboard data register
 tm_keys	equ	0x91	; Keyboard status register
 
 tm_ayda	equ	0x40	; AY-3-8910 data port
-tm_atla	equ	0x41	; AY-3-8910 latch port
+tm_ayla	equ	0x41	; AY-3-8910 latch port
 
 ; --- VRAM MAP ---
 ; 0x0000 - 0x07FF: Font
@@ -484,22 +484,22 @@ tm_updc:ld	a,e
 
 	; Ring the bell
 tm_bell:xor	a
-	out	(tm_latc),a
-	out	(tm_data),a
+	out	(tm_ayla),a
+	out	(tm_ayda),a
 	inc	a
-	out	(tm_latc),a
+	out	(tm_ayla),a
 	ld	a,0x80
-	out	(tm_data),a
+	out	(tm_ayda),a
 	ld	a,7
-	out	(tm_latc),a
-	in	a,(tm_data)
+	out	(tm_ayla),a
+	in	a,(tm_ayda)
 	and	0xC0
 	or	0x3E
-	out	(tm_data),a
+	out	(tm_ayda),a
 	ld	a,8
-	out	(tm_latc),a
+	out	(tm_ayla),a
 	ld	a,0x0F
-	out	(tm_data),a
+	out	(tm_ayda),a
 	ret
 	
 
@@ -751,7 +751,7 @@ tm_dint:ld	a,0xC9
 	ld	(0x38),a
 	im	1
 	ld	a,0x0E
-	out	(tm_atla),a	; AY register = 14
+	out	(tm_ayla),a	; AY register = 14
 	ld	a,0x00
 	out	(tm_ayda),a	
 	ret
@@ -760,7 +760,7 @@ tm_dint:ld	a,0xC9
 ;
 ; uses: a
 tm_eint:ld	a,0x0E
-	out	(tm_atla),a	; AY register = 14
+	out	(tm_ayla),a	; AY register = 14
 	ld	a,0xB0
 	out	(tm_ayda),a
 	im	2
