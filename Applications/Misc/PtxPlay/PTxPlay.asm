@@ -10,6 +10,7 @@ Release EQU "1"
 ZX=0
 MSX=0
 NABU=1
+ATTACHE=0
 ;2) Current position counter at (START+11)
 CurPosCounter=0
 ;3) Allow channels allocation bits at (START+10)
@@ -60,7 +61,9 @@ FCB2	EQU #006C
 ; PTxPlay under user control.
 SHELL	
 	; No more interrupts
+	IF NABU
 	DI
+	ENDIF
 	
 	; Print hello message
 	LD C,#09
@@ -1754,6 +1757,64 @@ LOUT	OUT (C),A
 	DEC C
 	OUT (C),A
 	RET
+	ENDIF
+	
+	
+	IF ATTACHE
+	
+DPIOA	EQU	#F8	; PIO PORT A DATA
+SPIOA	EQU	#F9	; PIO PORT A STATUS
+DPIOB	EQU	#FA	; PIO PORT B DATA
+	
+;ATTACHE version of ROUT (tergav)
+	DI
+	LD HL,AYREGS
+	LD A,$CF	; Bit I/O mode
+	OUT (SPIOA),A
+	XOR A		; All 8 bits output
+	OUT (SPIOA),A
+	DEC A		; No devices selected
+	OUT (DPIOB),A
+	LD BC,DPIOA
+LOUT	OUT (C),B	; Set register #
+	LD A,#C3	; Enable chip select, command
+	OUT (DPIOB),A
+	LD A,#E3	; Disable chip select, command
+	OUT (DPIOB),A
+	OUTI		; Set register value
+	LD A,#E7	; Disable select, data
+	OUT (DPIOB),A
+	LD A,#C7	; Enable select, data
+	OUT (DPIOB),A
+	LD A,#E7	; Disable select, data
+	OUT (DPIOB),A
+	INC B		; Increment register #
+	LD A,13
+	CP B
+	JR NZ,LOUT	; If not 13, loop again
+	
+	; We may still have one more byte to write
+	OUT (C),B	; Set register #
+	LD A,#C3	; Enable chip select, command
+	OUT (DPIOB),A
+	LD A,#E3	; Disable chip select, command
+	OUT (DPIOB),A
+	
+	; Check magic
+	LD A,(HL)
+	AND A
+	RET M
+	
+	; Write it out if we don't return
+	OUT (C),A	; Set register value
+	LD A,#E7	; Disable select, data
+	OUT (DPIOB),A
+	LD A,#C7	; Enable select, data
+	OUT (DPIOB),A
+	LD A,#E7	; Disable select, data
+	OUT (DPIOB),A
+	RET
+	
 	ENDIF
 
 	IF ACBBAC
