@@ -9,8 +9,8 @@ Release EQU "1"
 ;1) Version of ROUT (ZX, MSX, or NABU standards)
 ZX=0
 MSX=0
-NABU=1
-ATTACHE=0
+NABU=0
+ATTACHE=1
 ;2) Current position counter at (START+11)
 CurPosCounter=0
 ;3) Allow channels allocation bits at (START+10)
@@ -20,7 +20,7 @@ LoopChecker=1
 ;5) Insert official identificator
 Id=1
 ;6) Optional SC2 loader
-DoSC2=1
+DoSC2=0
 
 ;Features
 ;--------
@@ -122,6 +122,11 @@ DOLOAD	PUSH HL
 	
 	LD A,0
 DOSTART	LD (START+10),A
+	
+	IF ATTACHE
+;	DI
+	ENDIF
+	
 	CALL START
 	
 	LD A,1
@@ -142,6 +147,10 @@ PLOOP	CALL START+5
 
 	; Wait a little bit
 DODELAY	CALL DELAY
+	
+	IF ATTACHE
+;	JR PLOOP	; No manual exit for attache
+	ENDIF
 	
 	; Check to see if we do a manual exit
 	LD C,#0B
@@ -164,6 +173,10 @@ DODELAY	CALL DELAY
 	
 	; Mute AY
 DONE	CALL START+8
+
+	IF ATTACHE
+;	RST 0		; End when done playing
+	ENDIF
 
 	; Get number of files
 	LD A,(MAXFILE)
@@ -257,7 +270,13 @@ LOOKUP0	LD A,L
 	
 ; We are not using any interrupts, so we need a delay loop instead
 DELAY
+	IF NABU
 	LD HL,$0A00 ; Modify me to play faster or slower!
+	ENDIF
+	IF ATTACHE
+	LD HL,$0B00
+	ENDIF
+	
 DELAY0	DEC HL
 	LD A,H
 	OR L
@@ -432,14 +451,21 @@ LOOKGLOB
 
 HELLOMSG
 	DB "PTxPlay r.",Release,", Written by S.V.Bulba",#0D,#0A
+	
+	IF NABU
 	DB "NABU support by tergav17 (Gavin) Rev 4d",#0D,#0A,"$"
+	ENDIF
+	
+	IF ATTACHE
+	DB "ATTACHE support by tergav17 (Gavin) Rev 1d",#0D,#0A,"$"
+	ENDIF
 	
 ERRORMSG
 	DB "Cannot find PTX file!$"
 	
 PLAYMSG
 	DB "Now playing: $"
-	
+
 NPLAY
 	DB 0
 	
@@ -1767,13 +1793,12 @@ SPIOA	EQU	#F9	; PIO PORT A STATUS
 DPIOB	EQU	#FA	; PIO PORT B DATA
 	
 ;ATTACHE version of ROUT (tergav)
-	DI
 	LD HL,AYREGS
-	LD A,$CF	; Bit I/O mode
+	LD A,#CF	; Bit I/O mode
 	OUT (SPIOA),A
 	XOR A		; All 8 bits output
 	OUT (SPIOA),A
-	DEC A		; No devices selected
+	LD A,#FF	; No devices selected
 	OUT (DPIOB),A
 	LD BC,DPIOA
 LOUT	OUT (C),B	; Set register #
@@ -1782,6 +1807,7 @@ LOUT	OUT (C),B	; Set register #
 	LD A,#E3	; Disable chip select, command
 	OUT (DPIOB),A
 	OUTI		; Set register value
+	INC B		; Recover from OUTI
 	LD A,#E7	; Disable select, data
 	OUT (DPIOB),A
 	LD A,#C7	; Enable select, data
@@ -1793,6 +1819,11 @@ LOUT	OUT (C),B	; Set register #
 	CP B
 	JR NZ,LOUT	; If not 13, loop again
 	
+	; Check magic
+	LD A,(HL)
+	AND A
+	RET M
+	
 	; We may still have one more byte to write
 	OUT (C),B	; Set register #
 	LD A,#C3	; Enable chip select, command
@@ -1800,12 +1831,6 @@ LOUT	OUT (C),B	; Set register #
 	LD A,#E3	; Disable chip select, command
 	OUT (DPIOB),A
 	
-	; Check magic
-	LD A,(HL)
-	AND A
-	RET M
-	
-	; Write it out if we don't return
 	OUT (C),A	; Set register value
 	LD A,#E7	; Disable select, data
 	OUT (DPIOB),A
