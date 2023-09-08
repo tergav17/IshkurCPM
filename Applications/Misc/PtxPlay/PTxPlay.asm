@@ -1831,6 +1831,7 @@ LOUT	OUT (C),B	; Set register #
 	LD A,#E3	; Disable chip select, command
 	OUT (DPIOB),A
 	
+	LD A,(HL)
 	OUT (C),A	; Set register value
 	LD A,#E7	; Disable select, data
 	OUT (DPIOB),A
