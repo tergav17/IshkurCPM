@@ -124,7 +124,7 @@ DOLOAD	PUSH HL
 DOSTART	LD (START+10),A
 	
 	IF ATTACHE
-;	DI
+	DI
 	ENDIF
 	
 	CALL START
@@ -149,7 +149,7 @@ PLOOP	CALL START+5
 DODELAY	CALL DELAY
 	
 	IF ATTACHE
-;	JR PLOOP	; No manual exit for attache
+	JR PLOOP	; No manual exit for attache
 	ENDIF
 	
 	; Check to see if we do a manual exit
@@ -175,7 +175,7 @@ DODELAY	CALL DELAY
 DONE	CALL START+8
 
 	IF ATTACHE
-;	RST 0		; End when done playing
+	RST 0		; End when done playing
 	ENDIF
 
 	; Get number of files
@@ -457,7 +457,7 @@ HELLOMSG
 	ENDIF
 	
 	IF ATTACHE
-	DB "ATTACHE support by tergav17 (Gavin) Rev 1d",#0D,#0A,"$"
+	DB "ATTACHE support by tergav17 (Gavin) Rev 1e",#0D,#0A,"$"
 	ENDIF
 	
 ERRORMSG
@@ -1801,19 +1801,7 @@ DPIOB	EQU	#FA	; PIO PORT B DATA
 	LD A,#FF	; No devices selected
 	OUT (DPIOB),A
 	LD BC,DPIOA
-LOUT	OUT (C),B	; Set register #
-	LD A,#C3	; Enable chip select, command
-	OUT (DPIOB),A
-	LD A,#E3	; Disable chip select, command
-	OUT (DPIOB),A
-	OUTI		; Set register value
-	INC B		; Recover from OUTI
-	LD A,#E7	; Disable select, data
-	OUT (DPIOB),A
-	LD A,#C7	; Enable select, data
-	OUT (DPIOB),A
-	LD A,#E7	; Disable select, data
-	OUT (DPIOB),A
+LOUT	CALL WOUT
 	INC B		; Increment register #
 	LD A,13
 	CP B
@@ -1824,15 +1812,13 @@ LOUT	OUT (C),B	; Set register #
 	AND A
 	RET M
 	
-	; We may still have one more byte to write
-	OUT (C),B	; Set register #
+WOUT	OUT (C),B	; Set register #
 	LD A,#C3	; Enable chip select, command
 	OUT (DPIOB),A
 	LD A,#E3	; Disable chip select, command
 	OUT (DPIOB),A
-	
-	LD A,(HL)
-	OUT (C),A	; Set register value
+	OUTI		; Set register value
+	INC B		; Recover from OUTI
 	LD A,#E7	; Disable select, data
 	OUT (DPIOB),A
 	LD A,#C7	; Enable select, data
