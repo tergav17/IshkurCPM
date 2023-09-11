@@ -9,8 +9,8 @@ Release EQU "1"
 ;1) Version of ROUT (ZX, MSX, or NABU standards)
 ZX=0
 MSX=0
-NABU=0
-ATTACHE=1
+NABU=1
+ATTACHE=0
 ;2) Current position counter at (START+11)
 CurPosCounter=0
 ;3) Allow channels allocation bits at (START+10)
@@ -20,7 +20,7 @@ LoopChecker=1
 ;5) Insert official identificator
 Id=1
 ;6) Optional SC2 loader
-DoSC2=0
+DoSC2=1
 
 ;Features
 ;--------
