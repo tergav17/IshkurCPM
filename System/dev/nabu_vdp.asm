@@ -706,7 +706,8 @@ tm_usc0:push	bc
 tm_cls:	ld	bc,0x4800
 	ld	de,0x1000-2
 	call	tm_addr
-tm_cls0:out	(c),0
+tm_cls0:xor	a
+	out	(c),a
 	dec	de
 	ld	a,d
 	or	e
